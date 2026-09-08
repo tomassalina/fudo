@@ -3,23 +3,42 @@
 // This is NOT the real natural-language search from the PRD (that needs a
 // real backend/LLM). It's a proportional stand-in for this low-priority SSR
 // pass: a case-insensitive substring match over name, type, tags,
-// neighborhood, and the featured dish — enough to make the search bar feel
-// real without faking AI understanding it doesn't have yet.
+// neighborhood, and the featured dish, narrowed by real `type`/`tags` filters
+// — enough to make the search bar and filter chips feel real without faking
+// AI understanding it doesn't have yet.
 
-import type { Merchant } from "@/lib/types";
+import type { Merchant, MerchantType } from "@/lib/types";
 import { MERCHANT_TYPE_LABELS, TAG_LABELS } from "@/lib/mock/merchants";
+
+export interface SearchFilters {
+  /** Free-text query, matched as a substring (see haystack below). */
+  query?: string;
+  /** Single merchant type — a merchant only has one, so this is exclusive. */
+  type?: MerchantType;
+  /** Tags a merchant must have at least one of (OR within tags, AND with type/query). */
+  tags?: string[];
+}
 
 export function searchMerchants(
   merchants: Merchant[],
-  query: string,
+  filters: SearchFilters,
 ): Merchant[] {
-  const normalized = query.trim().toLowerCase();
-
-  if (!normalized) {
-    return merchants;
-  }
+  const normalizedQuery = filters.query?.trim().toLowerCase() ?? "";
+  const tags = filters.tags ?? [];
 
   return merchants.filter((merchant) => {
+    if (filters.type && merchant.type !== filters.type) {
+      return false;
+    }
+
+    if (tags.length > 0 && !tags.some((tag) => merchant.tags.includes(tag))) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
     const haystack = [
       merchant.name,
       merchant.neighborhood,
@@ -32,7 +51,7 @@ export function searchMerchants(
       .join(" ")
       .toLowerCase();
 
-    return haystack.includes(normalized);
+    return haystack.includes(normalizedQuery);
   });
 }
 
@@ -44,12 +63,3 @@ export const SEARCH_EXAMPLES = [
   "Un lugar con buena onda para cumpleaños",
   "Hamburguesas con descuento hoy",
 ];
-
-/** Quick shortcuts shown under the search bar as plain links (no JS required). */
-export const QUICK_FILTER_TYPES = [
-  "restaurant",
-  "cafe",
-  "bar",
-  "pizzeria",
-  "brewery",
-] as const;

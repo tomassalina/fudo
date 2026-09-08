@@ -683,3 +683,24 @@ export const MOCK_MERCHANTS: Merchant[] = MOCK_MERCHANTS_BASE.map(
       Math.round(haversineDistanceKm(USER_LOCATION, merchant) * 10) / 10,
   }),
 );
+
+/**
+ * Merchant types that at least one seed merchant actually has, in
+ * MERCHANT_TYPE_LABELS order. Drives the /buscar type filter chips — only
+ * types with real data get a chip (e.g. "other" has zero merchants in the
+ * seed, so it's excluded rather than offering a filter that always empties
+ * the results).
+ */
+export const MERCHANT_TYPES_IN_USE: MerchantType[] = (
+  Object.keys(MERCHANT_TYPE_LABELS) as MerchantType[]
+).filter((type) => MOCK_MERCHANTS.some((merchant) => merchant.type === type));
+
+/**
+ * Tags that at least one seed merchant actually has, in TAG_LABELS order.
+ * Drives the /buscar tag filter chips — TAG_LABELS documents more tags than
+ * the 30 seed merchants use (e.g. "wifi", "delivery"), so this narrows to
+ * the ones with real data behind them.
+ */
+export const TAGS_IN_USE: string[] = Object.keys(TAG_LABELS).filter((tag) =>
+  MOCK_MERCHANTS.some((merchant) => merchant.tags.includes(tag)),
+);

@@ -9,10 +9,35 @@
 
 import Link from "next/link";
 import { SearchBar } from "@/components/buscar/SearchBar";
+import { FilterChips } from "@/components/buscar/FilterChips";
 import { MerchantCard } from "@/components/buscar/MerchantCard";
 import { MapPanel } from "@/components/buscar/MapPanel";
-import { MOCK_MERCHANTS, MERCHANT_TYPE_LABELS } from "@/lib/mock/merchants";
-import { searchMerchants, QUICK_FILTER_TYPES } from "@/lib/mock/search";
+import type { MerchantType } from "@/lib/types";
+import {
+  MOCK_MERCHANTS,
+  MERCHANT_TYPES_IN_USE,
+  TAGS_IN_USE,
+} from "@/lib/mock/merchants";
+import { searchMerchants } from "@/lib/mock/search";
+
+function parseType(raw: string | string[] | undefined): MerchantType | null {
+  const value = typeof raw === "string" ? raw : undefined;
+  return value && (MERCHANT_TYPES_IN_USE as string[]).includes(value)
+    ? (value as MerchantType)
+    : null;
+}
+
+function parseTags(raw: string | string[] | undefined): string[] {
+  const value = typeof raw === "string" ? raw : "";
+  const requested = value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  // Keep only real, filterable tags — an unknown value in the URL just gets
+  // dropped instead of silently zeroing out the results.
+  return TAGS_IN_USE.filter((tag) => requested.includes(tag));
+}
 
 export default async function BuscarPage({
   searchParams,
@@ -20,8 +45,15 @@ export default async function BuscarPage({
   const params = await searchParams;
   const rawQuery = params.q;
   const query = typeof rawQuery === "string" ? rawQuery : "";
+  const type = parseType(params.type);
+  const tags = parseTags(params.tags);
+  const hasFilters = type !== null || tags.length > 0;
 
-  const results = searchMerchants(MOCK_MERCHANTS, query);
+  const results = searchMerchants(MOCK_MERCHANTS, {
+    query,
+    type: type ?? undefined,
+    tags,
+  });
   const countLabel =
     results.length === 1
       ? "1 lugar encontrado"
@@ -32,17 +64,13 @@ export default async function BuscarPage({
       <div className="flex flex-col gap-4">
         <SearchBar defaultValue={query} />
 
-        <div className="flex flex-wrap gap-2">
-          {QUICK_FILTER_TYPES.map((type) => (
-            <Link
-              key={type}
-              href={`/buscar?q=${encodeURIComponent(type)}`}
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-semibold text-foreground-muted transition-colors hover:border-accent/50 hover:text-foreground"
-            >
-              {MERCHANT_TYPE_LABELS[type]}
-            </Link>
-          ))}
-        </div>
+        <FilterChips
+          query={query}
+          activeType={type}
+          activeTags={tags}
+          availableTypes={MERCHANT_TYPES_IN_USE}
+          availableTags={TAGS_IN_USE}
+        />
       </div>
 
       <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -51,12 +79,12 @@ export default async function BuscarPage({
             <span className="text-[13px] text-foreground-muted">
               {countLabel}
             </span>
-            {query ? (
+            {hasFilters || query ? (
               <Link
                 href="/buscar"
                 className="text-[13px] font-semibold text-accent hover:text-accent-light"
               >
-                Limpiar búsqueda
+                {hasFilters ? "Limpiar filtros" : "Limpiar búsqueda"}
               </Link>
             ) : null}
           </div>
@@ -70,7 +98,9 @@ export default async function BuscarPage({
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-12 text-center">
               <p className="font-heading text-lg font-bold text-foreground">
-                No encontramos lugares para &ldquo;{query}&rdquo;
+                {hasFilters
+                  ? "Ningún lugar con esos filtros"
+                  : `No encontramos lugares para “${query}”`}
               </p>
               <Link
                 href="/buscar"
