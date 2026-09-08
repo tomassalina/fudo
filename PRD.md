@@ -27,7 +27,7 @@ Ningún competidor puede ver lo que pasa adentro de un restaurante cuando no hay
 
 ## Modelo de datos
 
-Ver `db/schema.sql` (fuente de verdad ejecutable) y `docs/database-schema.drawio` (diagrama visual). 14 tablas + 7 enums. La pieza central: `consumers` es una identidad global, `visit_summaries`/`visits`/`loyalty_rules` resuelven el vínculo entre esa identidad global y la plataforma multi-tenant existente de Fudo (un tenant = un merchant).
+Ver `docs/database-schema.sql` (diseño de referencia) y `docs/database-schema.drawio` (diagrama visual). 14 tablas + 7 enums. La pieza central: `consumers` es una identidad global, `visit_summaries`/`visits`/`loyalty_rules` resuelven el vínculo entre esa identidad global y la plataforma multi-tenant existente de Fudo (un tenant = un merchant).
 
 ## Negocio
 
