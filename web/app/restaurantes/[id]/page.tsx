@@ -11,14 +11,26 @@
 // Layout below mirrors the design reference's own merchant-detail artboard
 // (docs/design-reference/Fudo App.dc.html, the `isDetail` branch: cover photo
 // with gradient + back button, Barlow 900 name, meta/address lines, price +
-// distance row, WhatsApp/Delivery pill buttons, then menu items grouped by
-// section) rather than inventing a new layout — the hours accordion and
-// loyalty-progress tab from that same artboard are deferred: they need
-// business_hours/loyalty_rules joins this mock layer doesn't expose yet.
+// distance row, WhatsApp/Delivery pill buttons, a plain weekly hours list —
+// same "Cerrado" / day-label / "HH:MM–HH:MM" conventions as that artboard's
+// hours accordion, just without the collapse/expand interaction, since this
+// is static SSG output — then menu items grouped by section. The
+// loyalty-progress tab from that same artboard is still deferred: it needs a
+// loyalty_rules join this mock layer doesn't expose yet.
+//
+// Also carries a schema.org JSON-LD block (Restaurant/FoodEstablishment,
+// depending on merchant.type — see SCHEMA_ORG_TYPE below) built from the same
+// merchant + business_hours data, the structured-data half of the SEO work.
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  DAY_LABELS_SHORT,
+  getBusinessHoursForMerchant,
+  groupBusinessHoursByDay,
+  SCHEMA_ORG_DAY,
+} from "@/lib/mock/business-hours";
 import {
   MERCHANT_TYPE_BADGE,
   MERCHANT_TYPE_LABELS,
@@ -28,7 +40,7 @@ import {
   getMenuItemsForMerchant,
   groupMenuItemsBySection,
 } from "@/lib/mock/menu-items";
-import type { Merchant } from "@/lib/types";
+import type { BusinessHours, Merchant, MerchantType } from "@/lib/types";
 
 function findMerchant(id: string): Merchant | undefined {
   const numericId = Number(id);
@@ -53,6 +65,75 @@ function formatPriceRange(merchant: Merchant) {
 /** wa.me only wants digits — strip the leading "+" and any formatting. */
 function whatsappLink(number: string) {
   return `https://wa.me/${number.replace(/[^\d]/g, "")}`;
+}
+
+// schema.org has no single type that covers every MerchantType — pick the
+// closest FoodEstablishment subtype per type, falling back to the generic
+// FoodEstablishment for the ones with no good match (food_truck, dark_kitchen,
+// other have no dine-in-shaped schema.org type).
+const SCHEMA_ORG_TYPE: Record<MerchantType, string> = {
+  restaurant: "Restaurant",
+  pizzeria: "Restaurant",
+  cafe: "CafeOrCoffeeShop",
+  bar: "BarOrPub",
+  brewery: "BarOrPub",
+  food_truck: "FoodEstablishment",
+  dark_kitchen: "FoodEstablishment",
+  other: "FoodEstablishment",
+};
+
+/** "$" / "$$" / "$$$" from the average of price_per_person_min/max — thresholds picked from this fixture's own ~30-merchant spread (roughly even tertiles). */
+function schemaPriceRange(merchant: Merchant): string | undefined {
+  const { price_per_person_min: min, price_per_person_max: max } = merchant;
+  if (min == null && max == null) return undefined;
+  const avg = min != null && max != null ? (min + max) / 2 : (min ?? max)!;
+  if (avg <= 25000) return "$";
+  if (avg <= 60000) return "$$";
+  return "$$$";
+}
+
+/**
+ * schema.org Restaurant/FoodEstablishment JSON-LD for this merchant — the
+ * structured-data half of the SEO work the PRD calls for (metadata/OG tags
+ * cover the rest). openingHoursSpecification has one entry per open shift
+ * (closed days are simply omitted, the standard convention); servesCuisine is
+ * left out because none of this merchant's tags (vegano/sin_tacc/picante/...)
+ * are actual cuisine names, just dietary/attribute tags.
+ */
+function buildJsonLd(merchant: Merchant, hours: BusinessHours[]) {
+  const priceRange = schemaPriceRange(merchant);
+
+  const openingHoursSpecification = hours
+    .filter((row) => !row.closed && row.opens_at && row.closes_at)
+    .map((row) => ({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: SCHEMA_ORG_DAY[row.day_of_week],
+      opens: row.opens_at!.slice(0, 5),
+      closes: row.closes_at!.slice(0, 5),
+    }));
+
+  return {
+    "@context": "https://schema.org",
+    "@type": SCHEMA_ORG_TYPE[merchant.type],
+    name: merchant.name,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: merchant.address,
+      addressLocality: merchant.city,
+      addressRegion: merchant.state,
+      addressCountry: merchant.country,
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: merchant.latitude,
+      longitude: merchant.longitude,
+    },
+    ...(merchant.cover_image_url ? { image: merchant.cover_image_url } : {}),
+    ...(priceRange ? { priceRange } : {}),
+    ...(openingHoursSpecification.length > 0
+      ? { openingHoursSpecification }
+      : {}),
+  };
 }
 
 export async function generateStaticParams() {
@@ -111,9 +192,17 @@ export default async function MerchantPage({
   const menuGroups = groupMenuItemsBySection(
     getMenuItemsForMerchant(merchant.id),
   );
+  const businessHours = getBusinessHoursForMerchant(merchant.id);
+  const weekHours = groupBusinessHoursByDay(businessHours);
+  const jsonLd = buildJsonLd(merchant, businessHours);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-16">
+      {/* Structured data for search engines — static, server-derived JSON, no user input involved. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="relative h-[232px] w-full flex-none bg-surface-2">
         {merchant.cover_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- external mock photos, not worth Image config for this low-priority pass
@@ -187,6 +276,35 @@ export default async function MerchantPage({
               </a>
             ) : null}
           </div>
+        ) : null}
+
+        {businessHours.length > 0 ? (
+          <section>
+            <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
+              Horarios
+            </h2>
+            <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-surface p-3 shadow-inner shadow-white/5">
+              {weekHours.map(({ day, shifts, closed }) => (
+                <div
+                  key={day}
+                  className="flex items-baseline justify-between gap-3 text-[13px]"
+                >
+                  <span className="font-semibold text-foreground">
+                    {DAY_LABELS_SHORT[day]}
+                  </span>
+                  <span
+                    className={
+                      closed
+                        ? "text-foreground-faint"
+                        : "text-right text-foreground-muted"
+                    }
+                  >
+                    {closed ? "Cerrado" : shifts.join(", ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
         ) : null}
 
         {menuGroups.length > 0 ? (

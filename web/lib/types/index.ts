@@ -23,6 +23,8 @@ export interface Merchant {
   name: string;
   type: MerchantType;
   address: string;
+  country: string;
+  state: string;
   /** Nullable in the schema (backend/db/structure.sql: no NOT NULL). */
   neighborhood?: string;
   city: string;
@@ -65,4 +67,24 @@ export interface MenuItem {
   section: string;
   image_url?: string;
   active: boolean;
+}
+
+export type DayOfWeek =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export interface BusinessHours {
+  id: number;
+  merchant_id: number;
+  day_of_week: DayOfWeek;
+  /** "HH:MM:SS", null when `closed` is true. */
+  opens_at: string | null;
+  /** "HH:MM:SS", null when `closed` is true. May be earlier than opens_at — the shift crosses midnight. */
+  closes_at: string | null;
+  closed: boolean;
 }
