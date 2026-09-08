@@ -29,7 +29,7 @@ import { apiFetch, ApiError } from "./client";
  * `parseMerchant` treats every field but the list's guaranteed five as
  * optional and defaults what's missing, so it works for both shapes.
  */
-interface RawMerchant {
+export interface RawMerchant {
   id: number;
   name: string;
   type: Merchant["type"];
@@ -80,7 +80,7 @@ export interface MerchantDetailResponse extends Merchant {
   business_hours?: BusinessHours[];
 }
 
-function parseDecimal(value: string | null | undefined): number | undefined {
+export function parseDecimal(value: string | null | undefined): number | undefined {
   if (value == null) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -99,7 +99,7 @@ function parseDecimal(value: string | null | undefined): number | undefined {
  * (price_per_person_min/max): `0` is a legitimate value for those, so they
  * keep using `undefined` (hide the field), not this NaN-sentinel pattern.
  */
-function parseCoordinate(
+export function parseCoordinate(
   value: string,
   field: "latitude" | "longitude",
   merchantId: number,
@@ -131,7 +131,7 @@ function parseBusinessHours(raw: RawBusinessHours): BusinessHours {
   };
 }
 
-function parseMerchant(raw: RawMerchant): Merchant {
+export function parseMerchant(raw: RawMerchant): Merchant {
   return {
     id: raw.id,
     name: raw.name,
