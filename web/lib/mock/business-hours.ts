@@ -1733,10 +1733,16 @@ function formatHm(time: string): string {
   return time.slice(0, 5);
 }
 
+/** One open shift, raw "HH:MM:SS" times as stored — closesAt may be earlier than opensAt (crosses midnight). */
+export interface DayShift {
+  opensAt: string;
+  closesAt: string;
+}
+
 export interface DayHours {
   day: DayOfWeek;
-  /** One entry per open shift that day, e.g. ["12:00–15:30", "20:00–00:30"]. Empty when closed. */
-  shifts: string[];
+  /** One entry per open shift that day. Empty when closed, and also when the day is open but every row's shift data was unusable (see groupBusinessHoursByDay). */
+  shifts: DayShift[];
   closed: boolean;
 }
 
@@ -1744,8 +1750,16 @@ export interface DayHours {
  * Groups a merchant's business_hours rows by day (Monday first, per DAY_ORDER),
  * joining multiple same-day shifts (schema allows it; the seed data doesn't
  * currently have any, but a merchant with two rows for the same day — e.g.
- * lunch + dinner — renders as multiple joined shifts here). A day with no
- * rows at all, or whose only row(s) are marked `closed`, renders closed.
+ * lunch + dinner — renders as multiple joined shifts here).
+ *
+ * `closed` is derived from each row's own `closed` field (trusted as-is), not
+ * from whether any usable shift data came out the other end — a row marked
+ * `closed: false` with null/malformed opens_at/closes_at is "open, bad data",
+ * not "closed": its shift is dropped from `shifts` (nothing sane to render as
+ * a time range) but the day is only marked closed when every row for it says
+ * so, or there are no rows at all. formatDayHours below surfaces that
+ * open-but-no-usable-shift case distinctly instead of silently showing
+ * "Cerrado".
  */
 export function groupBusinessHoursByDay(hours: BusinessHours[]): DayHours[] {
   const byDay = new Map<DayOfWeek, BusinessHours[]>();
@@ -1758,10 +1772,87 @@ export function groupBusinessHoursByDay(hours: BusinessHours[]): DayHours[] {
     const rows = byDay.get(day) ?? [];
     const shifts = rows
       .filter((row) => !row.closed && row.opens_at && row.closes_at)
-      .map((row) => `${formatHm(row.opens_at!)}–${formatHm(row.closes_at!)}`);
+      .map((row) => ({ opensAt: row.opens_at!, closesAt: row.closes_at! }));
+    const closed = rows.length === 0 || rows.every((row) => row.closed);
 
-    return { day, shifts, closed: shifts.length === 0 };
+    return { day, shifts, closed };
   });
+}
+
+/** "12:00–00:30" for one shift (raw "HH:MM:SS" times trimmed to "HH:MM"). */
+export function formatShiftRange(shift: DayShift): string {
+  return `${formatHm(shift.opensAt)}–${formatHm(shift.closesAt)}`;
+}
+
+/**
+ * Human-readable label for one day's hours — "Cerrado", the joined shift
+ * ranges, or (a day marked open with no usable shift data) a distinct
+ * "no disponible" label so bad data never silently reads as "Cerrado".
+ */
+export function formatDayHours(day: DayHours): string {
+  if (day.closed) return "Cerrado";
+  if (day.shifts.length === 0) return "Horario no disponible";
+  return day.shifts.map(formatShiftRange).join(", ");
+}
+
+export interface OpeningHoursSpecEntry {
+  "@type": "OpeningHoursSpecification";
+  dayOfWeek: string;
+  opens: string;
+  closes: string;
+}
+
+/**
+ * schema.org OpeningHoursSpecification entries derived from the same grouped
+ * DayHours the visible "Horarios" section renders — so the two can't drift
+ * apart. Overnight shifts (closesAt earlier than opensAt, e.g. 12:00–00:30 —
+ * 135 of this fixture's 210 rows) are split into two entries per Google's
+ * structured-data guidance for hours that cross midnight: one ending at
+ * 23:59 on the day the shift starts, and one on the following day starting
+ * at 00:00 and ending at the real close time.
+ */
+export function buildOpeningHoursSpecification(
+  weekHours: DayHours[],
+): OpeningHoursSpecEntry[] {
+  const entries: OpeningHoursSpecEntry[] = [];
+
+  weekHours.forEach(({ day, shifts }, index) => {
+    const nextDay = DAY_ORDER[(index + 1) % DAY_ORDER.length];
+
+    for (const shift of shifts) {
+      const opens = formatHm(shift.opensAt);
+      const closes = formatHm(shift.closesAt);
+
+      if (closes > opens) {
+        // Same-day shift — closes later than it opens, no midnight crossing.
+        entries.push({
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: SCHEMA_ORG_DAY[day],
+          opens,
+          closes,
+        });
+        continue;
+      }
+
+      entries.push({
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: SCHEMA_ORG_DAY[day],
+        opens,
+        closes: "23:59",
+      });
+      // Skip a zero-length early-morning entry for the rare exact-midnight close.
+      if (closes !== "00:00") {
+        entries.push({
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: SCHEMA_ORG_DAY[nextDay],
+          opens: "00:00",
+          closes,
+        });
+      }
+    }
+  });
+
+  return entries;
 }
 
 export function getBusinessHoursForMerchant(merchantId: number): BusinessHours[] {

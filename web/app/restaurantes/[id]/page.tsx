@@ -26,12 +26,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  buildOpeningHoursSpecification,
   DAY_LABELS_SHORT,
+  formatDayHours,
   getBusinessHoursForMerchant,
   groupBusinessHoursByDay,
-  SCHEMA_ORG_DAY,
 } from "@/lib/mock/business-hours";
+import type { DayHours } from "@/lib/mock/business-hours";
 import {
+  MERCHANT_COUNTRY_CODE,
   MERCHANT_TYPE_BADGE,
   MERCHANT_TYPE_LABELS,
   MOCK_MERCHANTS,
@@ -40,7 +43,7 @@ import {
   getMenuItemsForMerchant,
   groupMenuItemsBySection,
 } from "@/lib/mock/menu-items";
-import type { BusinessHours, Merchant, MerchantType } from "@/lib/types";
+import type { Merchant, MerchantType } from "@/lib/types";
 
 function findMerchant(id: string): Merchant | undefined {
   const numericId = Number(id);
@@ -95,22 +98,17 @@ function schemaPriceRange(merchant: Merchant): string | undefined {
 /**
  * schema.org Restaurant/FoodEstablishment JSON-LD for this merchant — the
  * structured-data half of the SEO work the PRD calls for (metadata/OG tags
- * cover the rest). openingHoursSpecification has one entry per open shift
- * (closed days are simply omitted, the standard convention); servesCuisine is
+ * cover the rest). openingHoursSpecification is derived from the same
+ * grouped/validated weekHours the visible "Horarios" section renders (via
+ * buildOpeningHoursSpecification), so the two can't silently drift apart and
+ * overnight shifts get split into two entries the same way in both places;
+ * closed days are simply omitted, the standard convention. servesCuisine is
  * left out because none of this merchant's tags (vegano/sin_tacc/picante/...)
  * are actual cuisine names, just dietary/attribute tags.
  */
-function buildJsonLd(merchant: Merchant, hours: BusinessHours[]) {
+function buildJsonLd(merchant: Merchant, weekHours: DayHours[]) {
   const priceRange = schemaPriceRange(merchant);
-
-  const openingHoursSpecification = hours
-    .filter((row) => !row.closed && row.opens_at && row.closes_at)
-    .map((row) => ({
-      "@type": "OpeningHoursSpecification",
-      dayOfWeek: SCHEMA_ORG_DAY[row.day_of_week],
-      opens: row.opens_at!.slice(0, 5),
-      closes: row.closes_at!.slice(0, 5),
-    }));
+  const openingHoursSpecification = buildOpeningHoursSpecification(weekHours);
 
   return {
     "@context": "https://schema.org",
@@ -121,7 +119,9 @@ function buildJsonLd(merchant: Merchant, hours: BusinessHours[]) {
       streetAddress: merchant.address,
       addressLocality: merchant.city,
       addressRegion: merchant.state,
-      addressCountry: merchant.country,
+      // ISO 3166-1 alpha-2, per Google's Rich Results guidance — not the
+      // full country name (merchant.country stays "Argentina" for display).
+      addressCountry: MERCHANT_COUNTRY_CODE,
     },
     geo: {
       "@type": "GeoCoordinates",
@@ -194,7 +194,7 @@ export default async function MerchantPage({
   );
   const businessHours = getBusinessHoursForMerchant(merchant.id);
   const weekHours = groupBusinessHoursByDay(businessHours);
-  const jsonLd = buildJsonLd(merchant, businessHours);
+  const jsonLd = buildJsonLd(merchant, weekHours);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-16">
@@ -278,34 +278,32 @@ export default async function MerchantPage({
           </div>
         ) : null}
 
-        {businessHours.length > 0 ? (
-          <section>
-            <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
-              Horarios
-            </h2>
-            <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-surface p-3 shadow-inner shadow-white/5">
-              {weekHours.map(({ day, shifts, closed }) => (
-                <div
-                  key={day}
-                  className="flex items-baseline justify-between gap-3 text-[13px]"
+        <section>
+          <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
+            Horarios
+          </h2>
+          <div className="flex flex-col gap-1.5 rounded-2xl border border-border bg-surface p-3 shadow-inner shadow-white/5">
+            {weekHours.map((dayHours) => (
+              <div
+                key={dayHours.day}
+                className="flex items-baseline justify-between gap-3 text-[13px]"
+              >
+                <span className="font-semibold text-foreground">
+                  {DAY_LABELS_SHORT[dayHours.day]}
+                </span>
+                <span
+                  className={
+                    dayHours.closed
+                      ? "text-foreground-faint"
+                      : "text-right text-foreground-muted"
+                  }
                 >
-                  <span className="font-semibold text-foreground">
-                    {DAY_LABELS_SHORT[day]}
-                  </span>
-                  <span
-                    className={
-                      closed
-                        ? "text-foreground-faint"
-                        : "text-right text-foreground-muted"
-                    }
-                  >
-                    {closed ? "Cerrado" : shifts.join(", ")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
+                  {formatDayHours(dayHours)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {menuGroups.length > 0 ? (
           <section className="flex flex-col gap-5 pt-2">
