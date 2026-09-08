@@ -127,11 +127,19 @@ function buildJsonLd(merchant: Merchant, weekHours: DayHours[]) {
       // full country name (merchant.country stays "Argentina" for display).
       addressCountry: MERCHANT_COUNTRY_CODE,
     },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: merchant.latitude,
-      longitude: merchant.longitude,
-    },
+    // Omitted (not emitted as null/NaN) when the backend gave us an
+    // unparseable coordinate — parseCoordinate (lib/api/merchants.ts) returns
+    // NaN for that case, and JSON.stringify would silently turn it into
+    // `null`, publishing invalid GeoCoordinates JSON-LD.
+    ...(Number.isFinite(merchant.latitude) && Number.isFinite(merchant.longitude)
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: merchant.latitude,
+            longitude: merchant.longitude,
+          },
+        }
+      : {}),
     ...(merchant.cover_image_url ? { image: merchant.cover_image_url } : {}),
     ...(priceRange ? { priceRange } : {}),
     ...(openingHoursSpecification.length > 0
