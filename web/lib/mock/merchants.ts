@@ -6,7 +6,8 @@
 //
 // distanceKm and rewardTeaser are pre-derived here for the UI (see comments
 // on Merchant in lib/types) since the mock layer has no request-time user
-// location or loyalty_rules join to compute them from.
+// location or loyalty_rules join to compute them from. distanceKm is computed
+// below via a real haversine calculation — it is NOT a hand-typed literal.
 
 import type { Merchant, MerchantType } from "@/lib/types";
 
@@ -18,7 +19,39 @@ export const MERCHANT_TYPE_LABELS: Record<MerchantType, string> = {
   pizzeria: "Pizzería",
   food_truck: "Food truck",
   dark_kitchen: "Dark kitchen",
+  other: "Otro",
 };
+
+/**
+ * Simulated user location for distance calculations — there is no real
+ * geolocation yet (per the PRD). Fixed to Plaza Serrano, Palermo Soho,
+ * CABA, a plausible spot for this mock/UI-only layer.
+ */
+const USER_LOCATION = { latitude: -34.5885, longitude: -58.4371 };
+
+const EARTH_RADIUS_KM = 6371;
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+/** Great-circle distance between two lat/lng points, in kilometers. */
+function haversineDistanceKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+): number {
+  const dLat = toRadians(to.latitude - from.latitude);
+  const dLon = toRadians(to.longitude - from.longitude);
+  const lat1 = toRadians(from.latitude);
+  const lat2 = toRadians(to.latitude);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return EARTH_RADIUS_KM * c;
+}
 
 export const TAG_LABELS: Record<string, string> = {
   vegano: "Vegano",
@@ -32,7 +65,7 @@ export const TAG_LABELS: Record<string, string> = {
   economico: "Económico",
 };
 
-export const MOCK_MERCHANTS: Merchant[] = [
+const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
   {
     id: 1,
     name: "Don Chile Cantina",
@@ -50,7 +83,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Tacos al pastor (3u)",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 1.2,
   },
   {
     id: 2,
@@ -69,7 +101,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["sin_tacc", "vegano", "economico"],
     topDish: "Flat white",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 0.9,
   },
   {
     id: 3,
@@ -88,7 +119,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Papas bravas",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 1.8,
   },
   {
     id: 4,
@@ -107,7 +137,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Bife de chorizo",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 2.5,
   },
   {
     id: 5,
@@ -126,7 +155,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante", "economico", "vegano"],
     topDish: "Wok picante de fideos",
     rewardTeaser: "Envío gratis en tu 2ª visita",
-    distanceKm: 2.2,
   },
   {
     id: 6,
@@ -145,7 +173,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Muzzarella grande",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 5.6,
   },
   {
     id: 7,
@@ -164,7 +191,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["sin_tacc", "vegano"],
     topDish: "Espresso de origen",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 6.8,
   },
   {
     id: 8,
@@ -183,7 +209,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Combinado 30 piezas",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 3.6,
   },
   {
     id: 9,
@@ -202,7 +227,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Pinta IPA",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 5.6,
   },
   {
     id: 10,
@@ -221,7 +245,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["vegano", "sin_tacc"],
     topDish: "Bowl de estación",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 1.3,
   },
   {
     id: 11,
@@ -240,7 +263,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Choripán completo",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 4.2,
   },
   {
     id: 12,
@@ -259,7 +281,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Costillar al asador",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 7.6,
   },
   {
     id: 13,
@@ -278,7 +299,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Milanesa napolitana",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 3.8,
   },
   {
     id: 14,
@@ -297,7 +317,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["sin_tacc"],
     topDish: "Cappuccino",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 3.6,
   },
   {
     id: 15,
@@ -316,7 +335,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Ramen tonkotsu",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 3.6,
   },
   {
     id: 16,
@@ -335,7 +353,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico", "vegano"],
     topDish: "Croissant de manteca",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 3.1,
   },
   {
     id: 17,
@@ -354,7 +371,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Copa de malbec",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 0.5,
   },
   {
     id: 18,
@@ -373,7 +389,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Doble cheddar",
     rewardTeaser: "Envío gratis en tu 2ª visita",
-    distanceKm: 5.5,
   },
   {
     id: 19,
@@ -392,7 +407,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Ojo de bife",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 6.7,
   },
   {
     id: 20,
@@ -411,7 +425,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Cóctel de autor",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 5.7,
   },
   {
     id: 21,
@@ -430,7 +443,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Ravioles caseros",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 5.2,
   },
   {
     id: 22,
@@ -449,7 +461,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["vegano"],
     topDish: "Margherita de masa madre",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 7.1,
   },
   {
     id: 23,
@@ -468,7 +479,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["sin_tacc"],
     topDish: "Cortado en jarrita",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 3.8,
   },
   {
     id: 24,
@@ -487,7 +497,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Ramen miso picante",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 1.2,
   },
   {
     id: 25,
@@ -506,7 +515,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Pinta rubia",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 6.4,
   },
   {
     id: 26,
@@ -525,7 +533,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["vegano", "sin_tacc"],
     topDish: "Poke de salmón",
     rewardTeaser: "Envío gratis en tu 2ª visita",
-    distanceKm: 0.5,
   },
   {
     id: 27,
@@ -544,7 +551,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: [],
     topDish: "Copa de blend",
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
-    distanceKm: 6.5,
   },
   {
     id: 28,
@@ -563,7 +569,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante", "economico"],
     topDish: "Docena surtida",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 2.7,
   },
   {
     id: 29,
@@ -582,7 +587,6 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["picante"],
     topDish: "Tiradito nikkei",
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
-    distanceKm: 3.5,
   },
   {
     id: 30,
@@ -601,6 +605,13 @@ export const MOCK_MERCHANTS: Merchant[] = [
     tags: ["economico"],
     topDish: "Pan de masa madre",
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
-    distanceKm: 2.5,
   },
 ];
+
+export const MOCK_MERCHANTS: Merchant[] = MOCK_MERCHANTS_BASE.map(
+  (merchant) => ({
+    ...merchant,
+    distanceKm:
+      Math.round(haversineDistanceKm(USER_LOCATION, merchant) * 10) / 10,
+  }),
+);

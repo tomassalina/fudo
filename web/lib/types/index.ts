@@ -15,7 +15,8 @@ export type MerchantType =
   | "brewery"
   | "pizzeria"
   | "food_truck"
-  | "dark_kitchen";
+  | "dark_kitchen"
+  | "other";
 
 export interface Merchant {
   id: number;
@@ -26,12 +27,14 @@ export interface Merchant {
   city: string;
   latitude: number;
   longitude: number;
-  cover_image_url: string;
-  whatsapp_number: string;
+  /** Nullable in the schema (backend/db/structure.sql: no NOT NULL). */
+  cover_image_url?: string;
+  /** Nullable in the schema. */
+  whatsapp_number?: string;
   delivery_url?: string;
-  /** ARS, per person. */
-  price_per_person_min: number;
-  price_per_person_max: number;
+  /** ARS, per person. Nullable in the schema — hide the price range when either is missing. */
+  price_per_person_min?: number;
+  price_per_person_max?: number;
 
   /**
    * Derived for this mock/UI layer only — flattens the real `merchants_tags`
