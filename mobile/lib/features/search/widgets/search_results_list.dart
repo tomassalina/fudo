@@ -4,8 +4,18 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/merchant.dart';
+import '../../../data/models/visit_summary.dart';
 import '../../../data/providers.dart';
 import 'search_utils.dart';
+
+/// Merchant id → visit count, built from `visitSummariesProvider(null)`.
+/// Returns an empty map while that provider hasn't resolved yet, so
+/// `applySearchFilters`' "hideVisited"/"mostVisited" behavior just has no
+/// effect in that brief window instead of throwing.
+Map<int, int> _visitCountsByMerchant(List<VisitSummary>? summaries) {
+  if (summaries == null) return const {};
+  return {for (final summary in summaries) summary.merchantId: summary.count};
+}
 
 /// Results list view for the "Buscar" tab (design-brief §2.3): merchant
 /// cards filtered by [query], result-count copy, and an empty state.
@@ -14,23 +24,51 @@ class SearchResultsList extends ConsumerWidget {
     required this.query,
     required this.onClearSearch,
     required this.onOpenMerchant,
+    this.filters = const SearchFilters(),
+    this.onClearFilters,
     super.key,
   });
 
   final String query;
+  final SearchFilters filters;
   final VoidCallback onClearSearch;
   final ValueChanged<int> onOpenMerchant;
+
+  /// Resets [filters] to the default (no filters). Only used by the empty
+  /// state's "Limpiar filtros" action when filters (rather than the text
+  /// query) are the reason the list is empty — `null` falls back to
+  /// [onClearSearch] instead, e.g. when a caller doesn't own filter state.
+  final VoidCallback? onClearFilters;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final merchantsAsync = ref.watch(merchantsProvider);
     final favoriteIds = ref.watch(favoriteIdsProvider);
+    // Both default to an empty map while still loading — `applySearchFilters`
+    // treats that as "no effect yet" for the filters that need them (dieta,
+    // ocultar visitados, más visitados), rather than blocking the whole list
+    // on two extra fetches.
+    final merchantTagIds = ref.watch(merchantTagIdsProvider).value ?? const {};
+    final visitCountsByMerchant = _visitCountsByMerchant(
+      ref.watch(visitSummariesProvider(null)).value,
+    );
 
     return merchantsAsync.when(
       data: (merchants) {
-        final filtered = filterMerchants(merchants, query);
+        final filtered = applySearchFilters(
+          filterMerchants(merchants, query),
+          filters,
+          merchantTagIds: merchantTagIds,
+          visitCountsByMerchant: visitCountsByMerchant,
+        );
         if (filtered.isEmpty) {
-          return _EmptyResults(query: query, onClear: onClearSearch);
+          return _EmptyResults(
+            query: query,
+            hasActiveFilters: filters.activeCount > 0,
+            onClear: filters.activeCount > 0
+                ? (onClearFilters ?? onClearSearch)
+                : onClearSearch,
+          );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,10 +309,19 @@ class _PriceChip extends StatelessWidget {
 }
 
 class _EmptyResults extends StatelessWidget {
-  const _EmptyResults({required this.query, required this.onClear});
+  const _EmptyResults({
+    required this.query,
+    required this.onClear,
+    this.hasActiveFilters = false,
+  });
 
   final String query;
   final VoidCallback onClear;
+
+  /// When the empty result is caused by the advanced filters (design-brief
+  /// §2.3) rather than the text query, show "Ningún lugar con esos
+  /// filtros"/"Limpiar filtros" instead of the text-search copy.
+  final bool hasActiveFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -291,14 +338,18 @@ class _EmptyResults extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Sin resultados para "$query"',
+              hasActiveFilters
+                  ? 'Ningún lugar con esos filtros'
+                  : 'Sin resultados para "$query"',
               textAlign: TextAlign.center,
               style: AppTheme.body.copyWith(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 20),
             OutlinedButton(
               onPressed: onClear,
-              child: const Text('Limpiar búsqueda'),
+              child: Text(
+                hasActiveFilters ? 'Limpiar filtros' : 'Limpiar búsqueda',
+              ),
             ),
           ],
         ),

@@ -50,6 +50,14 @@ abstract class DataSource {
   /// Tags associated with a merchant via `merchants_tags`.
   Future<List<Tag>> getTagsForMerchant(int merchantId);
 
+  /// All `merchants_tags` associations, grouped by merchant id.
+  ///
+  /// Exists for callers that need to filter/group merchants by tag across
+  /// the *whole* merchant list (e.g. the search filters sheet's "dieta"
+  /// filter, design brief §2.9) without issuing one [getTagsForMerchant]
+  /// call per merchant.
+  Future<Map<int, Set<int>>> getMerchantTagIdsByMerchant();
+
   /// Tags associated with a menu item via `menu_items_tags`.
   Future<List<Tag>> getTagsForMenuItem(int menuItemId);
 

@@ -88,6 +88,14 @@ final tagsForMerchantProvider = FutureProvider.family<List<Tag>, int>((
   return dataSource.getTagsForMerchant(merchantId);
 });
 
+/// All merchant→tag associations, grouped by merchant id. Used by the search
+/// filters sheet's "dieta" filter (design brief §2.9) to filter the whole
+/// merchant list by tag without one request per merchant.
+final merchantTagIdsProvider = FutureProvider<Map<int, Set<int>>>((ref) {
+  final dataSource = ref.watch(dataSourceProvider);
+  return dataSource.getMerchantTagIdsByMerchant();
+});
+
 /// Tags associated with a menu item (detail screen's "Menú" sub-tab, diet
 /// tags like vegano/sin TACC on each dish card).
 final tagsForMenuItemProvider = FutureProvider.family<List<Tag>, int>((

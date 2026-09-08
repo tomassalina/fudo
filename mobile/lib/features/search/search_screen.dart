@@ -5,10 +5,12 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
+import 'widgets/filters_sheet.dart';
 import 'widgets/search_home_view.dart';
 import 'widgets/search_loading_view.dart';
 import 'widgets/search_map_view.dart';
 import 'widgets/search_results_list.dart';
+import 'widgets/search_utils.dart';
 
 /// Internal view state for the "Buscar" tab (design-brief §0, §2.1-2.4): a
 /// single screen whose body swaps between home/loading/list/map depending on
@@ -35,6 +37,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   _SearchView _view = _SearchView.home;
   String _query = '';
+  SearchFilters _filters = const SearchFilters();
   final TextEditingController _resultsSearchController =
       TextEditingController();
 
@@ -69,6 +72,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _query = '');
   }
 
+  void _clearFilters() {
+    setState(() => _filters = const SearchFilters());
+  }
+
   void _toggleResultsMode() {
     setState(() {
       _view = _view == _SearchView.map ? _SearchView.list : _SearchView.map;
@@ -77,6 +84,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _openMerchant(int merchantId) {
     context.push(AppRoutes.merchantDetail(merchantId));
+  }
+
+  Future<void> _openFiltersSheet() async {
+    final result = await showModalBottomSheet<SearchFilters>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => FiltersSheet(initialFilters: _filters),
+    );
+    // A `null` result means the sheet was dismissed without tapping
+    // "Aplicar" (swipe down, scrim tap, close button) — keep the previous
+    // filters in that case instead of clearing them.
+    if (result == null || !mounted) return;
+    setState(() => _filters = result);
   }
 
   @override
@@ -95,6 +115,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onClear: _clearQuery,
                 showingMap: _view == _SearchView.map,
                 onToggleMode: _toggleResultsMode,
+                activeFilterCount: _filters.activeCount,
+                onOpenFilters: _openFiltersSheet,
               ),
               Expanded(
                 child: _view == _SearchView.map
@@ -105,7 +127,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       )
                     : SearchResultsList(
                         query: _query,
+                        filters: _filters,
                         onClearSearch: _clearQuery,
+                        onClearFilters: _clearFilters,
                         onOpenMerchant: _openMerchant,
                       ),
               ),
@@ -128,6 +152,8 @@ class _ResultsHeader extends StatelessWidget {
     required this.onClear,
     required this.showingMap,
     required this.onToggleMode,
+    required this.activeFilterCount,
+    required this.onOpenFilters,
   });
 
   final TextEditingController controller;
@@ -135,6 +161,8 @@ class _ResultsHeader extends StatelessWidget {
   final VoidCallback onClear;
   final bool showingMap;
   final VoidCallback onToggleMode;
+  final int activeFilterCount;
+  final VoidCallback onOpenFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -143,26 +171,37 @@ class _ResultsHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: controller,
-            onChanged: onChanged,
-            style: AppTheme.body,
-            decoration: InputDecoration(
-              hintText: 'Buscar por nombre, tipo o barrio',
-              prefixIcon: const Icon(
-                Symbols.search,
-                color: AppTheme.textTertiary,
-              ),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(
-                        Symbols.close,
-                        color: AppTheme.textTertiary,
-                      ),
-                      onPressed: onClear,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  onChanged: onChanged,
+                  style: AppTheme.body,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por nombre, tipo o barrio',
+                    prefixIcon: const Icon(
+                      Symbols.search,
+                      color: AppTheme.textTertiary,
                     ),
-            ),
+                    suffixIcon: controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(
+                              Symbols.close,
+                              color: AppTheme.textTertiary,
+                            ),
+                            onPressed: onClear,
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _FiltersButton(
+                activeCount: activeFilterCount,
+                onTap: onOpenFilters,
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Align(
@@ -170,6 +209,64 @@ class _ResultsHeader extends StatelessWidget {
             child: _ModeToggle(showingMap: showingMap, onToggle: onToggleMode),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Filters entry point (design-brief §2.3/§2.9): opens [FiltersSheet] and
+/// shows a small badge with the current active-filter count.
+class _FiltersButton extends StatelessWidget {
+  const _FiltersButton({required this.activeCount, required this.onTap});
+
+  final int activeCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        side: const BorderSide(color: AppTheme.border),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Symbols.tune, color: AppTheme.textSecondary),
+              if (activeCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.accent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$activeCount',
+                      textAlign: TextAlign.center,
+                      style: AppTheme.body.copyWith(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

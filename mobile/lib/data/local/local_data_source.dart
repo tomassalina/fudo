@@ -161,6 +161,16 @@ class LocalDataSource implements DataSource {
     return tags.where((tag) => tagIds.contains(tag.id)).toList();
   }
 
+  @override
+  Future<Map<int, Set<int>>> getMerchantTagIdsByMerchant() async {
+    final links = await _allMerchantTagLinks();
+    final result = <int, Set<int>>{};
+    for (final link in links) {
+      result.putIfAbsent(link.merchantId, () => <int>{}).add(link.tagId);
+    }
+    return result;
+  }
+
   Future<List<({int menuItemId, int tagId})>> _allMenuItemTagLinks() async {
     final cached = _menuItemTagLinks;
     if (cached != null) return cached;
