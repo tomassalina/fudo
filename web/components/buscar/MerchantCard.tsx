@@ -45,7 +45,8 @@ export function MerchantCard({ merchant }: { merchant: Merchant }) {
           </h3>
         </Link>
         <p className="truncate text-[12.5px] text-foreground-muted">
-          {merchant.neighborhood} · {MERCHANT_TYPE_LABELS[merchant.type]}
+          {merchant.neighborhood ?? merchant.city} ·{" "}
+          {MERCHANT_TYPE_LABELS[merchant.type]}
         </p>
         {merchant.topDish ? (
           <p className="truncate text-[12.5px] text-foreground-faint">

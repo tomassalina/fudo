@@ -71,8 +71,11 @@ export async function generateMetadata({
 
   const typeLabel = MERCHANT_TYPE_LABELS[merchant.type];
   const priceRange = formatPriceRange(merchant);
+  // Falls back to city when neighborhood is null (schema allows it) so SEO
+  // title/description never render the literal string "null".
+  const locationLabel = merchant.neighborhood ?? merchant.city;
   const description = [
-    `${typeLabel} en ${merchant.neighborhood}, ${merchant.city}.`,
+    `${typeLabel} en ${locationLabel}.`,
     priceRange,
     merchant.topDish ? `Probá: ${merchant.topDish}.` : null,
   ]
@@ -80,7 +83,7 @@ export async function generateMetadata({
     .join(" ");
 
   return {
-    title: `${merchant.name} — ${typeLabel} en ${merchant.neighborhood} | Fudo`,
+    title: `${merchant.name} — ${typeLabel} en ${locationLabel} | Fudo`,
     description,
     openGraph: {
       title: merchant.name,
@@ -143,7 +146,7 @@ export default async function MerchantPage({
           </h1>
           <p className="pt-1 text-[13px] text-foreground-muted">
             {typeBadge} {MERCHANT_TYPE_LABELS[merchant.type]} ·{" "}
-            {merchant.neighborhood}
+            {merchant.neighborhood ?? merchant.city}
           </p>
           <p className="flex items-center gap-1.5 pt-1.5 text-[12.5px] text-foreground-faint">
             📍 {merchant.address}, {merchant.city}

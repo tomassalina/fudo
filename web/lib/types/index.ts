@@ -23,7 +23,8 @@ export interface Merchant {
   name: string;
   type: MerchantType;
   address: string;
-  neighborhood: string;
+  /** Nullable in the schema (backend/db/structure.sql: no NOT NULL). */
+  neighborhood?: string;
   city: string;
   latitude: number;
   longitude: number;
