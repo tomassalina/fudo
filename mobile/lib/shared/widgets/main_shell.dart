@@ -1,10 +1,16 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../data/providers.dart';
 import '../../features/loyalty/qr_sheet.dart';
+
+/// Tab labels in [MainShell.currentIndex] order, also used as the
+/// `tab_name` analytics property (see [AnalyticsService.trackTabChanged]).
+const List<String> _tabNames = ['Buscar', 'Mis Lugares', 'Regalar'];
 
 /// Bottom navigation shell shared by the three main tabs (Search,
 /// My Places, Gifting). Wraps whatever branch go_router is currently
@@ -14,7 +20,7 @@ import '../../features/loyalty/qr_sheet.dart';
 /// blurred pill — not a standard Material [BottomNavigationBar] pinned flush
 /// to the screen edge — with a raised central QR action that opens
 /// [LoyaltyQrSheet] instead of taking part in tab navigation.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({
     required this.currentIndex,
     required this.onTap,
@@ -34,8 +40,13 @@ class MainShell extends StatelessWidget {
     );
   }
 
+  void _handleTap(WidgetRef ref, int index) {
+    ref.read(analyticsServiceProvider).trackTabChanged(_tabNames[index]);
+    onTap(index);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       // The pill floats over the content instead of pushing it up — the
       // body draws behind the nav bar's transparent margins.
@@ -43,7 +54,7 @@ class MainShell extends StatelessWidget {
       body: child,
       bottomNavigationBar: _FloatingBottomNav(
         currentIndex: currentIndex,
-        onTap: onTap,
+        onTap: (index) => _handleTap(ref, index),
         onQrTap: () => _openQrSheet(context),
       ),
     );

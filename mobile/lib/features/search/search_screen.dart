@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/providers.dart';
 import 'widgets/filters_sheet.dart';
 import 'widgets/search_home_view.dart';
 import 'widgets/search_loading_view.dart';
@@ -50,6 +51,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _startSearch(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
+    ref.read(analyticsServiceProvider).trackSearchSubmitted(trimmed);
     setState(() {
       _query = trimmed;
       _resultsSearchController.text = trimmed;

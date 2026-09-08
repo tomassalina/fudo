@@ -3,6 +3,7 @@
 // widget-building `Consumer`.
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
 
+import '../core/analytics/analytics_service.dart';
 import 'data_source.dart';
 import 'local/local_data_source.dart';
 import 'models/business_hour.dart';
@@ -29,6 +30,14 @@ import 'models/visit_summary.dart';
 /// keeps working unmodified.
 final dataSourceProvider = Provider<DataSource>((ref) {
   return LocalDataSource();
+});
+
+/// Wraps PostHog behind business-named tracking methods (see
+/// `core/analytics/analytics_service.dart`) so screens depend on
+/// [AnalyticsService], not the raw PostHog SDK, and can be read via
+/// `ref.read(analyticsServiceProvider)`.
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  return const AnalyticsService();
 });
 
 /// All merchants available in the app (search results, map pins).

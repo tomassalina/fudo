@@ -61,7 +61,7 @@ Contexto técnico completo de cada variable: ver los comentarios dentro de `back
   ```bash
   flutter run --dart-define-from-file=.env
   ```
-- [ ] Nota: hoy el código de `mobile/lib/` todavía no lee estas variables (no hay ningún `String.fromEnvironment` implementado) — eso es trabajo de la Fase 4 del `PLAN.md` (conectar mobile al backend real). El archivo ya está listo para cuando se implemente esa fase.
+- [ ] `mobile/lib/core/analytics/analytics_service.dart` ya lee `POSTHOG_API_KEY`/`POSTHOG_HOST` vía `String.fromEnvironment` — sin `--dart-define-from-file=.env` (o sin llenar esas variables), la app arranca igual con analytics deshabilitado (no hace ninguna llamada de red a PostHog). El resto de las variables (`GEMINI_API_KEY`, las de backend, etc.) sigue sin leerse desde `mobile/lib/` — eso es trabajo de la Fase 4 del `PLAN.md` (conectar mobile al backend real).
 
 ## 6. Web — cómo correr la app con estas variables
 

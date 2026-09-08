@@ -37,6 +37,10 @@ class _RestaurantDetailScreenState extends ConsumerState<RestaurantDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Fires once per screen instance — matches "a restaurant detail was
+    // opened" regardless of which route pushed here (search results, map,
+    // or a future deep link).
+    ref.read(analyticsServiceProvider).trackMerchantOpened(widget.merchantId);
   }
 
   @override
