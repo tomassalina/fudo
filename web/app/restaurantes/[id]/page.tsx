@@ -25,6 +25,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MerchantViewedTracker } from "@/components/analytics/MerchantViewedTracker";
 import {
   buildOpeningHoursSpecification,
   DAY_LABELS_SHORT,
@@ -198,6 +199,7 @@ export default async function MerchantPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-16">
+      <MerchantViewedTracker merchantId={merchant.id} merchantType={merchant.type} />
       {/* Structured data for search engines — static, server-derived JSON, no user input involved. */}
       <script
         type="application/ld+json"

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Barlow, Inter } from "next/font/google";
 import { Header } from "@/components/layout/Header";
+import { PostHogProvider } from "@/components/analytics/PostHogProvider";
+import { PostHogPageview } from "@/components/analytics/PostHogPageview";
 import "./globals.css";
 
 // Typography per the design reference: Barlow (heavy weights, incl. the
@@ -42,8 +45,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Header />
-        {children}
+        <PostHogProvider>
+          {/* useSearchParams requires a Suspense boundary so prerendered
+              routes aren't forced into fully client-side rendering. */}
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          <Header />
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );

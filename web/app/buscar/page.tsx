@@ -12,6 +12,7 @@ import { SearchBar } from "@/components/buscar/SearchBar";
 import { FilterChips } from "@/components/buscar/FilterChips";
 import { MerchantCard } from "@/components/buscar/MerchantCard";
 import { MapPanel } from "@/components/buscar/MapPanel";
+import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import type { MerchantType } from "@/lib/types";
 import {
   MOCK_MERCHANTS,
@@ -61,6 +62,13 @@ export default async function BuscarPage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8">
+      <SearchAnalytics
+        hasQuery={query.length > 0}
+        filterTypes={type ? [type] : []}
+        filterTags={tags}
+        resultCount={results.length}
+      />
+
       <div className="flex flex-col gap-4">
         <SearchBar defaultValue={query} />
 
