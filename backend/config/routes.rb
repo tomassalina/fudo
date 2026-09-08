@@ -21,6 +21,11 @@ Rails.application.routes.draw do
       # app/models/search_history.rb), but the route/controller follow the
       # standard Rails plural resource convention.
       resources :search_histories, except: %i[new edit]
+      # Natural-language search: POST /api/v1/search parses free text via
+      # Gemini (see SearchQueryParser) into merchant filters. A plain route
+      # (not `resource :search`) so the controller stays SearchController
+      # instead of Rails' default pluralized SearchesController.
+      post "search", to: "search#create"
     end
   end
 

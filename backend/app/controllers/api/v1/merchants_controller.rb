@@ -77,29 +77,11 @@ module Api
       end
 
       def filtered_merchants
-        scope = Merchant.all
-        scope = scope.where(neighborhood: params[:neighborhood]) if params[:neighborhood].present?
-        scope = scope.where(type: params[:type]) if params[:type].present?
-        scope = filter_by_tags(scope)
-        scope = filter_by_price_per_person(scope)
-        scope
-      end
-
-      def filter_by_tags(scope)
-        return scope if params[:tags].blank?
-
-        tag_names = params[:tags].to_s.split(",").map(&:strip).reject(&:blank?)
-        return scope if tag_names.empty?
-
-        scope.joins(:tags).where(tags: { name: tag_names }).distinct
-      end
-
-      def filter_by_price_per_person(scope)
-        return scope if params[:price_per_person].blank?
-
-        scope.where(
-          "price_per_person_min <= :price AND price_per_person_max >= :price",
-          price: params[:price_per_person]
+        Merchant.search(
+          neighborhood: params[:neighborhood],
+          type: params[:type],
+          tags: params[:tags].to_s.split(","),
+          price_per_person: params[:price_per_person]
         )
       end
     end

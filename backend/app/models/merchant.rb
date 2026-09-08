@@ -43,4 +43,36 @@ class Merchant < ApplicationRecord
   validates :city, presence: true
   validates :latitude, presence: true
   validates :longitude, presence: true
+
+  # Shared filtering logic used by both Api::V1::MerchantsController#index
+  # (raw query params) and Api::V1::SearchController#create (filters parsed
+  # from natural language via SearchQueryParser). Callers own parsing their
+  # own input into this shape — in particular, `tags` here is expected to
+  # already be an array of tag names, not a comma-separated string.
+  def self.search(neighborhood: nil, type: nil, tags: [], price_per_person: nil)
+    scope = all
+    scope = scope.where(neighborhood: neighborhood) if neighborhood.present?
+    scope = scope.where(type: type) if type.present?
+    scope = filter_by_tags(scope, tags)
+    scope = filter_by_price_per_person(scope, price_per_person)
+    scope
+  end
+
+  def self.filter_by_tags(scope, tags)
+    tag_names = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?)
+    return scope if tag_names.empty?
+
+    scope.joins(:tags).where(tags: { name: tag_names }).distinct
+  end
+  private_class_method :filter_by_tags
+
+  def self.filter_by_price_per_person(scope, price_per_person)
+    return scope if price_per_person.blank?
+
+    scope.where(
+      "price_per_person_min <= :price AND price_per_person_max >= :price",
+      price: price_per_person
+    )
+  end
+  private_class_method :filter_by_price_per_person
 end

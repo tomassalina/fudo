@@ -21,7 +21,12 @@ module Api
       # holds true is the one invoked"), and RecordNotUnique < StatementInvalid,
       # so registering StatementInvalid afterwards would shadow it and turn
       # every unique-index violation into a generic 400 instead of a 409.
-      rescue_from ActiveRecord::StatementInvalid, with: :render_bad_request
+      #
+      # Uses its own handler (not render_bad_request) because
+      # StatementInvalid#message is populated from the underlying DB driver
+      # error, which includes the raw SQL statement (table/column names,
+      # query shape) — that must never reach the client.
+      rescue_from ActiveRecord::StatementInvalid, with: :render_invalid_filter
       # A DB-level unique index can reject an insert that model-level
       # validation let through — e.g. two concurrent requests both pass the
       # (validate-then-insert, not atomic) uniqueness check before either
@@ -48,6 +53,14 @@ module Api
 
       def render_bad_request(exception)
         render json: { error: exception.message }, status: :bad_request
+      end
+
+      # Deliberately does NOT expose exception.message (see the rescue_from
+      # comment above) — a malformed filter value (e.g. a non-UUID
+      # consumer_id, an out-of-range numeric) must not leak raw SQL/schema
+      # details to the client.
+      def render_invalid_filter
+        render json: { error: "Invalid request parameters" }, status: :bad_request
       end
 
       def paginate(scope)
