@@ -80,6 +80,24 @@ abstract class DataSource {
   /// The demo consumer's favorited merchants ("Mis Lugares" / Favoritos).
   Future<List<Favorite>> getFavorites();
 
+  /// Favorites [merchantId] for the demo consumer.
+  ///
+  /// Takes a **merchant id**, not a favorite id — see [removeFavorite]'s doc
+  /// for why the two methods key on different ids.
+  Future<void> addFavorite(int merchantId);
+
+  /// Un-favorites [merchantId] for the demo consumer.
+  ///
+  /// Takes a **merchant id**, for symmetry with [addFavorite] and because
+  /// that's what callers (`FavoriteIdsNotifier.toggle`) actually have on
+  /// hand. This is a deliberate asymmetry with the real backend, which has
+  /// no "delete by merchant_id" route — only `DELETE
+  /// /api/v1/favorites/{id}` (the favorite row's own id). [RemoteDataSource]
+  /// resolves `merchantId` to a favorite id internally (by looking it up in
+  /// the already-cached [getFavorites] list) before issuing the request; see
+  /// that implementation's doc for the full explanation.
+  Future<void> removeFavorite(int merchantId);
+
   /// Gift cards sent by the demo consumer ("Regalar" history, if surfaced).
   Future<List<Gift>> getGifts();
 

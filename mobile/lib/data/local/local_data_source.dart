@@ -281,6 +281,33 @@ class LocalDataSource implements DataSource {
     return favorites;
   }
 
+  /// Adds a fake [Favorite] to the in-memory cache, with an incremental id
+  /// one higher than the current max (or `1` if the cache is empty) — same
+  /// "mutate the cached list directly" approach every other in-memory write
+  /// in this class would use, there's just no real persistence behind it.
+  /// A no-op if [merchantId] is already favorited (mirrors the real
+  /// backend's 422-on-duplicate behavior without needing to throw here).
+  @override
+  Future<void> addFavorite(int merchantId) async {
+    final favorites = await getFavorites();
+    if (favorites.any((f) => f.merchantId == merchantId)) return;
+    final consumer = await getCurrentConsumer();
+    final nextId = favorites.isEmpty
+        ? 1
+        : favorites.map((f) => f.id).reduce((a, b) => a > b ? a : b) + 1;
+    _favorites = [
+      ...favorites,
+      Favorite(id: nextId, consumerId: consumer.id, merchantId: merchantId),
+    ];
+  }
+
+  /// Removes the cached [Favorite] matching [merchantId], if any.
+  @override
+  Future<void> removeFavorite(int merchantId) async {
+    final favorites = await getFavorites();
+    _favorites = favorites.where((f) => f.merchantId != merchantId).toList();
+  }
+
   @override
   Future<List<Gift>> getGifts() async {
     final cached = _gifts;

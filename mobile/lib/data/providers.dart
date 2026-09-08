@@ -63,9 +63,9 @@ final dataSourceProvider = Provider<DataSource>((ref) {
 final connectionModeProvider = Provider<ConnectionMode>((ref) => connectionMode);
 
 /// Shared [Dio] client for [RemoteDataSource] and [AuthRepository], built by
-/// `core/config/dio_client.dart`. Only ever touched when [connectionMode] is
-/// [ConnectionMode.remote], or by something that explicitly reads
-/// [authRepositoryProvider] (there's no login screen wired up to it yet).
+/// `core/config/dio_client.dart`. Only exercised when [connectionMode] is
+/// [ConnectionMode.remote] — `features/my_places/my_places_screen.dart` is
+/// the real caller of [authRepositoryProvider] in that mode.
 final dioProvider = Provider<Dio>((ref) => DioClient.create());
 
 /// Single [CurrentConsumerSession] instance shared between
@@ -234,9 +234,14 @@ final searchHistoryProvider = FutureProvider<List<SearchHistory>>((ref) {
 /// In-memory set of favorited merchant ids.
 ///
 /// Seeded from [favoritesProvider] the first time it's read, then mutated
-/// directly by the UI (e.g. tapping a heart icon on a merchant card) so the
-/// toggle feels instant without re-reading or writing the fixture. This is a
-/// demo-only affordance — there's no persistence layer behind it yet.
+/// directly by the UI (e.g. tapping a heart icon on a merchant card) via
+/// [toggle] so the tap feels instant. In [ConnectionMode.remote], [toggle]
+/// also persists the change against the real backend
+/// (`DataSource.addFavorite`/`removeFavorite`) in the background and reverts
+/// the optimistic state if that call fails — see [toggle]'s doc. In
+/// [ConnectionMode.local], the persistence call is a same-process in-memory
+/// mutation on [LocalDataSource] that never throws, so the optimistic update
+/// is effectively the only thing that happens.
 class FavoriteIdsNotifier extends Notifier<Set<int>> {
   @override
   Set<int> build() {
@@ -256,14 +261,43 @@ class FavoriteIdsNotifier extends Notifier<Set<int>> {
     return favorites.map((f) => f.merchantId).toSet();
   }
 
-  /// Adds or removes [merchantId] from the favorited set.
+  /// Adds or removes [merchantId] from the favorited set, optimistically —
+  /// the UI updates immediately, before the network call below resolves —
+  /// then fires the matching `DataSource.addFavorite`/`removeFavorite` call
+  /// in the background.
+  ///
+  /// If that call throws a [DioException] (only reachable in
+  /// [ConnectionMode.remote] — `LocalDataSource` never throws here), the
+  /// optimistic change is reverted back to whatever [merchantId]'s
+  /// membership was before this call. There's no toast/snackbar mechanism
+  /// established elsewhere in this codebase to surface the failure, so this
+  /// deliberately keeps the error handling to "don't leave the UI showing a
+  /// favorite that isn't actually persisted" rather than inventing a new
+  /// error-notification system for just this one case.
   void toggle(int merchantId) {
     final current = state;
-    if (current.contains(merchantId)) {
-      state = {...current}..remove(merchantId);
-    } else {
-      state = {...current, merchantId};
-    }
+    final wasFavorited = current.contains(merchantId);
+    state = wasFavorited
+        ? ({...current}..remove(merchantId))
+        : {...current, merchantId};
+
+    final dataSource = ref.read(dataSourceProvider);
+    final future = wasFavorited
+        ? dataSource.removeFavorite(merchantId)
+        : dataSource.addFavorite(merchantId);
+
+    future.catchError((Object error) {
+      if (error is! DioException) throw error;
+      // Revert to the pre-toggle membership — not just "flip back" — in
+      // case other toggles landed on [state] while this call was in flight.
+      final reverted = {...state};
+      if (wasFavorited) {
+        reverted.add(merchantId);
+      } else {
+        reverted.remove(merchantId);
+      }
+      state = reverted;
+    });
   }
 }
 

@@ -285,6 +285,45 @@ class RemoteDataSource implements DataSource {
     return _getAllPages('/favorites', Favorite.fromJson);
   }
 
+  /// `POST /api/v1/favorites`, body `{"favorite": {"merchant_id": N}}`
+  /// (confirmed via the OpenAPI doc). `consumer_id` always comes from the
+  /// authenticated consumer server-side, never from client input. 201 on
+  /// success; 422 if this merchant is already favorited by this consumer
+  /// (duplicate `consumer_id`/`merchant_id` pair) — left as a thrown
+  /// [DioException] for the caller ([FavoriteIdsNotifier.toggle]) to decide
+  /// what to do with, same as every other write in this app.
+  @override
+  Future<void> addFavorite(int merchantId) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/favorites',
+      data: {
+        'favorite': {'merchant_id': merchantId},
+      },
+    );
+  }
+
+  /// **Asymmetric with [addFavorite] on purpose** — the real API has no
+  /// "delete by merchant_id" route, only `DELETE /api/v1/favorites/{id}`
+  /// (confirmed via the OpenAPI doc), keyed on the favorite row's own `id`,
+  /// not `merchant_id`. So this first calls [getFavorites] to find the
+  /// favorite whose `merchant_id` matches, then deletes it by its `id`. If
+  /// no matching favorite is cached (already removed, or never favorited),
+  /// this is a no-op rather than an error — mirrors [addFavorite]'s
+  /// duplicate-is-fine posture from the other direction.
+  ///
+  /// Confirmed live: `DELETE /favorites/{id}` returns `204 No Content` (a
+  /// soft-delete server-side) with no response body.
+  @override
+  Future<void> removeFavorite(int merchantId) async {
+    final favorites = await getFavorites();
+    final favorite = favorites.cast<Favorite?>().firstWhere(
+      (f) => f?.merchantId == merchantId,
+      orElse: () => null,
+    );
+    if (favorite == null) return;
+    await _dio.delete<void>('/favorites/${favorite.id}');
+  }
+
   @override
   Future<List<Gift>> getGifts() {
     return _getAllPages('/gifts', Gift.fromJson);
