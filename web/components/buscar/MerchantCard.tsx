@@ -1,19 +1,10 @@
 import Link from "next/link";
 import type { Merchant } from "@/lib/types";
-import { MERCHANT_TYPE_LABELS, TAG_LABELS } from "@/lib/mock/merchants";
-
-// Small emoji stand-ins for the design reference's Material Symbols icon
-// badge on the thumbnail — avoids pulling in an icon font for one badge.
-const TYPE_BADGE: Record<Merchant["type"], string> = {
-  restaurant: "🍽️",
-  cafe: "☕",
-  bar: "🍹",
-  brewery: "🍺",
-  pizzeria: "🍕",
-  food_truck: "🚚",
-  dark_kitchen: "🧑‍🍳",
-  other: "🍴",
-};
+import {
+  MERCHANT_TYPE_BADGE,
+  MERCHANT_TYPE_LABELS,
+  TAG_LABELS,
+} from "@/lib/mock/merchants";
 
 function formatFromPrice(min: number) {
   return `desde $${min.toLocaleString("es-AR")}`;
@@ -21,7 +12,7 @@ function formatFromPrice(min: number) {
 
 export function MerchantCard({ merchant }: { merchant: Merchant }) {
   const visibleTags = merchant.tags.slice(0, 3);
-  const typeBadge = TYPE_BADGE[merchant.type];
+  const typeBadge = MERCHANT_TYPE_BADGE[merchant.type];
 
   return (
     <article className="flex gap-3 rounded-[18px] border border-border bg-surface p-2.5 shadow-inner shadow-white/5 transition-colors hover:border-accent/50">

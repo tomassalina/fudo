@@ -22,6 +22,19 @@ export const MERCHANT_TYPE_LABELS: Record<MerchantType, string> = {
   other: "Otro",
 };
 
+// Small emoji stand-ins for the design reference's Material Symbols icon
+// badge on merchant thumbnails — avoids pulling in an icon font for one badge.
+export const MERCHANT_TYPE_BADGE: Record<MerchantType, string> = {
+  restaurant: "🍽️",
+  cafe: "☕",
+  bar: "🍹",
+  brewery: "🍺",
+  pizzeria: "🍕",
+  food_truck: "🚚",
+  dark_kitchen: "🧑‍🍳",
+  other: "🍴",
+};
+
 /**
  * Simulated user location for distance calculations — there is no real
  * geolocation yet (per the PRD). Fixed to Plaza Serrano, Palermo Soho,
