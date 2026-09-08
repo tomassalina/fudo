@@ -12,8 +12,9 @@ export default function MarketingLandingPage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-16 text-center">
       <h1 className="max-w-2xl font-heading text-4xl font-black leading-tight tracking-tight text-foreground sm:text-5xl">
-        Encontrá donde comer.{" "}
-        <span className="text-accent">Ganá descuentos</span> por cada visita.
+        Encontrá dónde comer.{" "}
+        <span className="italic text-accent">Ganá descuentos</span> por cada
+        visita.
       </h1>
       <p className="max-w-md text-base text-foreground-muted">
         Buscá restaurantes, bares y cafés cerca tuyo en lenguaje natural, y

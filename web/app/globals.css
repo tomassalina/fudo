@@ -61,3 +61,26 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Material Symbols Outlined icon glyphs — same family/axes as the design
+ * reference (see the layout <head> stylesheet link). Usage: a <span> whose
+ * text content is the glyph name, e.g. `<span className="material-symbols">
+ * location_on</span>`. Keeps icons as clean monochrome line-glyphs instead
+ * of platform-inconsistent color emoji. */
+.material-symbols {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 300,
+    "GRAD" 0,
+    "opsz" 24;
+}

@@ -3,12 +3,14 @@ import { Barlow, Inter } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import "./globals.css";
 
-// Typography per the design reference: Barlow (heavy weights) for headings,
-// Inter for body/UI text.
+// Typography per the design reference: Barlow (heavy weights, incl. the
+// italic cut used for the "Ganá descuentos" emphasis) for headings, Inter
+// for body/UI text.
 const barlow = Barlow({
   variable: "--font-barlow",
   subsets: ["latin"],
   weight: ["700", "800", "900"],
+  style: ["normal", "italic"],
 });
 
 const inter = Inter({
@@ -19,7 +21,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Fudo Consumers",
   description:
-    "Encontrá donde comer. Ganá descuentos por cada visita — buscá restaurantes, bares y cafés en Palermo.",
+    "Encontrá dónde comer. Ganá descuentos por cada visita — buscá restaurantes, bares y cafés en Palermo.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -28,6 +30,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${barlow.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        {/* Material Symbols Outlined — the exact icon font the design
+            reference uses for every glyph (location pins, delivery, chat,
+            reward, etc.). Loaded the same way the reference does: a plain
+            Google Fonts stylesheet (not in next/font's curated Google set). */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- this rule targets the Pages Router's _document.js; the App Router's root layout *is* the once-per-app shell, so it applies here on every page already. */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Header />
         {children}

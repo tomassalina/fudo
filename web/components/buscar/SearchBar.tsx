@@ -35,8 +35,8 @@ export function SearchBar({ defaultValue }: { defaultValue: string }) {
           aria-label="Buscar"
           className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-gradient-to-b from-[#FF6337] to-[#E8431A] text-white shadow-md shadow-accent/30 transition-transform hover:scale-105 active:scale-95"
         >
-          <span aria-hidden className="text-lg leading-none">
-            →
+          <span aria-hidden className="material-symbols text-lg leading-none">
+            arrow_forward
           </span>
         </button>
       </div>

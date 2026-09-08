@@ -29,12 +29,18 @@ export function MerchantCard({ merchant }: { merchant: Merchant }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-surface-2 text-3xl">
-            {typeBadge}
+          <div
+            className="material-symbols flex h-full w-full items-center justify-center bg-surface-2 text-3xl"
+            style={{ color: typeBadge.color }}
+          >
+            {typeBadge.icon}
           </div>
         )}
-        <span className="absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[13px] leading-none">
-          {typeBadge}
+        <span
+          className="material-symbols absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[14px] leading-none"
+          style={{ color: typeBadge.color }}
+        >
+          {typeBadge.icon}
         </span>
       </Link>
 
@@ -45,8 +51,8 @@ export function MerchantCard({ merchant }: { merchant: Merchant }) {
           </h3>
         </Link>
         <p className="truncate text-[12.5px] text-foreground-muted">
-          {merchant.neighborhood ?? merchant.city} ·{" "}
-          {MERCHANT_TYPE_LABELS[merchant.type]}
+          {MERCHANT_TYPE_LABELS[merchant.type]} ·{" "}
+          {merchant.neighborhood ?? merchant.city}
         </p>
         {merchant.topDish ? (
           <p className="truncate text-[12.5px] text-foreground-faint">
@@ -60,12 +66,14 @@ export function MerchantCard({ merchant }: { merchant: Merchant }) {
               {formatFromPrice(merchant.price_per_person_min)}
             </span>
           ) : null}
-          <span className="text-[12.5px] text-foreground-faint">
-            📍 {merchant.distanceKm.toLocaleString("es-AR")} km
+          <span className="flex items-center gap-0.5 text-[12.5px] text-foreground-faint">
+            <span className="material-symbols text-[14px]">location_on</span>
+            {merchant.distanceKm.toLocaleString("es-AR")} km
           </span>
           {merchant.rewardTeaser ? (
-            <span className="text-[12px] font-semibold text-success">
-              🎁 {merchant.rewardTeaser}
+            <span className="flex items-center gap-0.5 text-[12px] font-semibold text-success">
+              <span className="material-symbols text-[14px]">redeem</span>
+              {merchant.rewardTeaser}
             </span>
           ) : null}
         </div>

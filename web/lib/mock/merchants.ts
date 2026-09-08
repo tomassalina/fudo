@@ -26,17 +26,24 @@ export const MERCHANT_TYPE_LABELS: Record<MerchantType, string> = {
   other: "Otro",
 };
 
-// Small emoji stand-ins for the design reference's Material Symbols icon
-// badge on merchant thumbnails — avoids pulling in an icon font for one badge.
-export const MERCHANT_TYPE_BADGE: Record<MerchantType, string> = {
-  restaurant: "🍽️",
-  cafe: "☕",
-  bar: "🍹",
-  brewery: "🍺",
-  pizzeria: "🍕",
-  food_truck: "🚚",
-  dark_kitchen: "🧑‍🍳",
-  other: "🍴",
+// Type badge icon + tint, straight from the design reference's own `TYPES`
+// table (same Material Symbols Outlined glyph names and colors) — replaces
+// an earlier emoji stand-in that clashed with the reference's monochrome
+// icon-font look. Render with the `.material-symbols` class, e.g.
+// `<span className="material-symbols" style={{ color }}>{icon}</span>`.
+// "other" has no reference counterpart; falls back to a neutral glyph/tint.
+export const MERCHANT_TYPE_BADGE: Record<
+  MerchantType,
+  { icon: string; color: string }
+> = {
+  restaurant: { icon: "restaurant", color: "#FF5023" },
+  cafe: { icon: "local_cafe", color: "#8FD46A" },
+  bar: { icon: "local_bar", color: "#7B7BE0" },
+  brewery: { icon: "sports_bar", color: "#7B7BE0" },
+  pizzeria: { icon: "local_pizza", color: "#FF5023" },
+  food_truck: { icon: "local_shipping", color: "#FF5023" },
+  dark_kitchen: { icon: "takeout_dining", color: "#8FD46A" },
+  other: { icon: "restaurant", color: "var(--foreground-faint)" },
 };
 
 /**

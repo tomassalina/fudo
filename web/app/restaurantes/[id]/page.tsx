@@ -212,8 +212,11 @@ export default async function MerchantPage({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-6xl">
-            {typeBadge}
+          <div
+            className="material-symbols flex h-full w-full items-center justify-center text-6xl"
+            style={{ color: typeBadge.color }}
+          >
+            {typeBadge.icon}
           </div>
         )}
         <span
@@ -222,9 +225,9 @@ export default async function MerchantPage({
         />
         <Link
           href="/buscar"
-          className="absolute left-4 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur"
+          className="material-symbols absolute left-4 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur"
         >
-          ←
+          arrow_back
         </Link>
       </div>
 
@@ -233,12 +236,21 @@ export default async function MerchantPage({
           <h1 className="font-heading text-[27px] font-black leading-tight text-foreground">
             {merchant.name}
           </h1>
-          <p className="pt-1 text-[13px] text-foreground-muted">
-            {typeBadge} {MERCHANT_TYPE_LABELS[merchant.type]} ·{" "}
+          <p className="flex items-center gap-1 pt-1 text-[13px] text-foreground-muted">
+            <span
+              className="material-symbols text-[15px]"
+              style={{ color: typeBadge.color }}
+            >
+              {typeBadge.icon}
+            </span>
+            {MERCHANT_TYPE_LABELS[merchant.type]} ·{" "}
             {merchant.neighborhood ?? merchant.city}
           </p>
           <p className="flex items-center gap-1.5 pt-1.5 text-[12.5px] text-foreground-faint">
-            📍 {merchant.address}, {merchant.city}
+            <span className="material-symbols text-[15px]">place</span>
+            {merchant.address}
+            {merchant.neighborhood ? `, ${merchant.neighborhood}` : ""},{" "}
+            {merchant.city}
           </p>
         </div>
 
@@ -249,7 +261,8 @@ export default async function MerchantPage({
             </span>
           ) : null}
           <span className="flex items-center gap-1 text-[13px] text-foreground-muted">
-            🧭 {merchant.distanceKm.toLocaleString("es-AR")} km
+            <span className="material-symbols text-[15px]">near_me</span>
+            {merchant.distanceKm.toLocaleString("es-AR")} km
           </span>
         </div>
 
@@ -262,7 +275,8 @@ export default async function MerchantPage({
                 rel="noreferrer"
                 className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-foreground shadow-inner shadow-white/5"
               >
-                💬 WhatsApp
+                <span className="material-symbols text-[16px]">chat</span>
+                WhatsApp
               </a>
             ) : null}
             {merchant.delivery_url ? (
@@ -272,7 +286,10 @@ export default async function MerchantPage({
                 rel="noreferrer"
                 className="flex items-center gap-1.5 rounded-full bg-linear-to-b from-accent-light to-accent-dark px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-lg shadow-accent/30"
               >
-                🛵 Delivery
+                <span className="material-symbols text-[16px]">
+                  delivery_dining
+                </span>
+                Delivery
               </a>
             ) : null}
           </div>
