@@ -257,11 +257,12 @@ CREATE TABLE gifts (
 -- ============================================================================
 
 CREATE TABLE consumer_settings (
-  consumer_id           UUID PRIMARY KEY REFERENCES consumers (id),
-  theme                 theme_enum NOT NULL DEFAULT 'system',
-  notifications_enabled BOOLEAN NOT NULL DEFAULT true,
-  updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_by            UUID
+  id                     BIGSERIAL PRIMARY KEY,
+  consumer_id            UUID NOT NULL UNIQUE REFERENCES consumers (id),
+  theme                  theme_enum NOT NULL DEFAULT 'system',
+  notifications_enabled  BOOLEAN NOT NULL DEFAULT true,
+  updated_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_by             UUID
 );
 
 -- ============================================================================
