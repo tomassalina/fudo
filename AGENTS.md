@@ -29,8 +29,6 @@ Fudo Consumers es una app mobile de fidelización, descubrimiento con IA y regal
 | `PRD.md` | Documento de producto |
 | `PLAN.md` | Plan de fases del proyecto |
 
-Nota: al momento de escribir este documento, `PLAN.md`, `db/schema.sql` y `docs/database-schema.drawio` todavía no existen en el repo — otro agente los está armando en paralelo en otro worktree. No asumas su contenido; leelos cuando existan.
-
 ## Documentos a leer primero, en este orden
 
 1. `PRD.md`
@@ -48,13 +46,11 @@ Nota: al momento de escribir este documento, `PLAN.md`, `db/schema.sql` y `docs/
 
 ## Cómo levantar cada app
 
-Comandos aproximados — todavía pueden no estar 100% probados en este repo.
-
 **Backend**
 ```bash
 cd backend && bundle install && rails db:setup && rails server
-# o vía Docker:
-docker compose up
+# o vía Docker (recomendado, ya verificado — curl localhost:3000/up responde 200):
+cd backend && docker compose up
 ```
 
 **Mobile**
@@ -64,5 +60,6 @@ cd mobile && flutter pub get && flutter run
 
 **Web**
 ```bash
-cd web && npm install && npm run dev
+cd web && pnpm install && pnpm dev
 ```
+Nota: el proyecto usa pnpm (ver `packageManager` en `web/package.json` y `web/pnpm-lock.yaml`), no npm.

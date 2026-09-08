@@ -1,6 +1,6 @@
 # PLAN.md — Fudo Consumers
 
-Plan técnico de construcción para la demo, en 6 fases. Contexto de negocio y decisiones de producto: `PRD.md`. Fuente de verdad del modelo de datos: `db/schema.sql` (17 tablas + 6 enums) y su diagrama en `docs/database-schema.drawio` / `docs/database-schema.png`.
+Plan técnico de construcción para la demo, en 6 fases. Contexto de negocio y decisiones de producto: `PRD.md`. Fuente de verdad del modelo de datos: `db/schema.sql` (14 tablas + 7 enums) y su diagrama en `docs/database-schema.drawio` / `docs/database-schema.png`.
 
 ## Cómo correr esto en paralelo (worktrees de git)
 

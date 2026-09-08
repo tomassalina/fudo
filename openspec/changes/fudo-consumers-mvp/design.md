@@ -92,12 +92,12 @@ Registro de decisiones técnicas (decision log) para el proyecto Fudo Consumers.
 
 **Por qué:** El puesto que se está evaluando con este proyecto (Consumers Founding Engineer) pide explícitamente mobile + backend, no web. Priorizar la web por sobre esas dos áreas iría en contra de lo que el puesto realmente necesita demostrar. La web queda planificada a futuro principalmente para SEO (que Google indexe cada restaurante), pero no es crítica para el objetivo actual.
 
-## Decisión 11: Esquema de base de datos — 17 tablas + 6 enums
+## Decisión 11: Esquema de base de datos — 14 tablas + 7 enums
 
 **Fecha:** 2026-09-08 (aproximada)
 **Estado:** Aceptada
 
-**Decisión:** El modelo de datos completo se compone de 17 tablas y 6 enums. El detalle ejecutable vive en `db/schema.sql` y el diagrama visual en `docs/database-schema.drawio` — ninguno de los dos existe todavía en el repo al momento de escribir este documento.
+**Decisión:** El modelo de datos completo se compone de 14 tablas (`tags`, `merchants`, `consumers`, `menu_items`, `merchants_tags`, `menu_items_tags`, `visit_summaries`, `visits`, `loyalty_rules`, `business_hours`, `favorites`, `gifts`, `consumer_settings`, `search_history`) y 7 enums (`merchant_type_enum`, `gift_type_enum`, `gift_status_enum`, `theme_enum`, `currency_enum`, `reward_type_enum`, `day_of_week_enum`). El detalle ejecutable vive en `db/schema.sql` y el diagrama visual en `docs/database-schema.drawio` (ambos ya existen en el repo).
 
 **Por qué:** Durante la revisión del schema se aplicaron las siguientes correcciones respecto de un borrador anterior:
 
@@ -144,4 +144,4 @@ Registro de decisiones técnicas (decision log) para el proyecto Fudo Consumers.
 
 ## Decisiones pendientes / abiertas
 
-El esquema definitivo de base de datos (`db/schema.sql`) y su diagrama visual (`docs/database-schema.drawio`), así como el plan de fases del proyecto (`PLAN.md`), se están redactando en paralelo por otro agente al momento de escribir este documento y todavía no existen en el repo. Este `design.md` refleja el estado de las decisiones tomadas hasta la fecha (2026-09-08) y debería revisarse y actualizarse cuando esos tres archivos existan, para confirmar que el detalle ejecutable coincide con lo documentado acá (en particular la Decisión 11).
+`db/schema.sql`, `docs/database-schema.drawio` y `PLAN.md` ya existen en el repo y fueron revisados contra este documento (2026-09-08, integración de ramas paralelas): la Decisión 11 tenía un conteo desactualizado (decía "17 tablas + 6 enums") y fue corregida a "14 tablas + 7 enums", que es lo que `db/schema.sql` implementa de verdad. El resto del detalle ejecutable coincide con lo documentado en este archivo.

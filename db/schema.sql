@@ -1,6 +1,6 @@
 -- Fudo Consumers — PostgreSQL schema (source of truth)
 -- See docs/database-schema.drawio / docs/database-schema.png for the visual diagram.
--- 17 tables + 6 enums. Soft-delete convention: deleted_at/deleted_by nullable, no hard deletes.
+-- 14 tables + 7 enums. Soft-delete convention: deleted_at/deleted_by nullable, no hard deletes.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
