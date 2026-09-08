@@ -86,6 +86,37 @@ function parseDecimal(value: string | null | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/**
+ * Latitude/longitude specifically must never silently fall back to `0` —
+ * `(0, 0)` is a real place (off the coast of West Africa), so a defaulted
+ * `?? 0` would plot a fake-valid map marker there instead of surfacing that
+ * the backend sent something unparseable. `NaN` is used as the "invalid"
+ * sentinel instead: it keeps `Merchant.latitude`/`longitude` as plain
+ * `number` (no type change), and every real consumer (LeafletMap's
+ * markers, the merchant-detail JSON-LD `geo`) can — and does — check
+ * `Number.isFinite` before treating it as a real coordinate. This is
+ * intentionally narrower than `parseDecimal`'s other callers
+ * (price_per_person_min/max): `0` is a legitimate value for those, so they
+ * keep using `undefined` (hide the field), not this NaN-sentinel pattern.
+ */
+function parseCoordinate(
+  value: string,
+  field: "latitude" | "longitude",
+  merchantId: number,
+): number {
+  const parsed = parseDecimal(value);
+  if (parsed === undefined) {
+    console.warn(
+      `Merchant ${merchantId}: unparseable ${field} value ${JSON.stringify(
+        value,
+      )} from the API — excluding it from map markers instead of ` +
+        "defaulting to 0 (which would silently place a fake marker at (0, 0)).",
+    );
+    return NaN;
+  }
+  return parsed;
+}
+
 function parseTimeOfDay(value: string | null): string | null {
   if (value == null) return null;
   const match = /T(\d{2}:\d{2}:\d{2})/.exec(value);
@@ -113,8 +144,8 @@ function parseMerchant(raw: RawMerchant): Merchant {
     state: raw.state ?? "",
     neighborhood: raw.neighborhood ?? undefined,
     city: raw.city,
-    latitude: parseDecimal(raw.latitude) ?? 0,
-    longitude: parseDecimal(raw.longitude) ?? 0,
+    latitude: parseCoordinate(raw.latitude, "latitude", raw.id),
+    longitude: parseCoordinate(raw.longitude, "longitude", raw.id),
     cover_image_url: raw.cover_image_url ?? undefined,
     whatsapp_number: raw.whatsapp_number ?? undefined,
     delivery_url: raw.delivery_url ?? undefined,

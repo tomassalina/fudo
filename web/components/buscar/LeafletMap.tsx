@@ -47,11 +47,21 @@ const merchantIcon = L.divIcon({
   popupAnchor: [0, -10],
 });
 
+// Excludes merchants with a non-finite latitude/longitude (see
+// `parseCoordinate` in lib/api/merchants.ts, which already `console.warn`s
+// per merchant when this happens) instead of plotting them at a fake-valid
+// `(0, 0)` — Leaflet would also throw when handed NaN coordinates, so this
+// doubles as a crash guard.
+function hasValidCoordinates(merchant: Merchant): boolean {
+  return Number.isFinite(merchant.latitude) && Number.isFinite(merchant.longitude);
+}
+
 export function LeafletMap({ merchants }: { merchants: Merchant[] }) {
   const center: [number, number] = [
     USER_LOCATION.latitude,
     USER_LOCATION.longitude,
   ];
+  const markers = merchants.filter(hasValidCoordinates);
 
   return (
     <MapContainer
@@ -61,7 +71,7 @@ export function LeafletMap({ merchants }: { merchants: Merchant[] }) {
       className="h-full w-full"
     >
       <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
-      {merchants.map((merchant) => (
+      {markers.map((merchant) => (
         <Marker
           key={merchant.id}
           position={[merchant.latitude, merchant.longitude]}
