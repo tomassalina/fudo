@@ -1,0 +1,31 @@
+/* Leaflet popup classes are global, non-scoped DOM classes Leaflet itself
+ * generates — can't be styled via Tailwind utility classes or CSS Modules,
+ * so this small override sheet gives the popup the app's dark surface
+ * instead of Leaflet's default white card. Imported only by LeafletMap.tsx,
+ * which is client-only, so it never reaches the SSR'd part of the app. */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #1f2130;
+  color: #ffffff;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
+
+.leaflet-popup-close-button {
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+/* leaflet.css sets `.leaflet-container a { color: #0078A8 }`, a
+ * (class + tag) selector that beats Tailwind's single-class arbitrary-value
+ * utility on specificity — confirmed live (getComputedStyle returned
+ * Leaflet's blue, not the accent color, until this was added). Match on
+ * `.leaflet-container` too so specificity wins outright. */
+.leaflet-container .leaflet-popup-content a {
+  color: #ff5023;
+}
+
+.leaflet-container .leaflet-popup-content a:hover {
+  color: #ff7a55;
+}

@@ -49,9 +49,11 @@ export const MERCHANT_TYPE_BADGE: Record<
 /**
  * Simulated user location for distance calculations — there is no real
  * geolocation yet (per the PRD). Fixed to Plaza Serrano, Palermo Soho,
- * CABA, a plausible spot for this mock/UI-only layer.
+ * CABA, a plausible spot for this mock/UI-only layer. Exported so other
+ * UI (e.g. the /buscar map center) can reuse the same reference point
+ * instead of picking a new one.
  */
-const USER_LOCATION = { latitude: -34.5885, longitude: -58.4371 };
+export const USER_LOCATION = { latitude: -34.5885, longitude: -58.4371 };
 
 const EARTH_RADIUS_KM = 6371;
 
