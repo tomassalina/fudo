@@ -37,6 +37,37 @@ round trip before every page render, every real request fails fast via
 `AbortSignal.timeout` instead of hanging indefinitely when the backend is
 down or unreachable.
 
+## Confirmed contract details (backend track, Fase 3)
+
+Most of this directory was written before Fase 3 existed anywhere, so it's
+still largely inference from PLAN.md. Two details have since been confirmed
+by the backend track's own passing request specs for `GET
+/api/v1/merchants` (not yet true end-to-end against a booted server in
+*this* worktree, but backed by their test suite):
+
+- **Decimal columns serialize as JSON strings, not numbers.** Rails'
+  default `BigDecimal#to_json` behavior — applies to
+  `price_per_person_min`/`price_per_person_max` and `latitude`/`longitude`
+  on merchants, and `price` on menu items (same reasoning, unconfirmed for
+  that specific endpoint but the same underlying serialization). Parsed
+  back to numbers in `merchants.ts`/`menu-items.ts` at the API boundary —
+  `lib/data/*` and page components keep using plain numbers, same as the
+  mock layer.
+- **`GET /api/v1/merchants` returns a paginated `{ data, meta }` envelope**
+  (`meta: { current_page, total_pages, total_count, per_page }`), not a
+  bare array. `fetchMerchants()` walks all pages (`per_page=100`, capped at
+  20 requests as a sanity bound) so callers still get the full list, since
+  nothing in this app has pagination UI.
+- Confirmed filter query params on that same endpoint: `neighborhood`,
+  `type`, `tags` (CSV), `price_per_person`, `page`, `per_page`. Not wired
+  up here yet — nothing in this app currently calls `fetchMerchants()` with
+  filters (the `/buscar` page's filtering goes through `POST
+  /api/v1/search` instead), so there's no caller to build that query string
+  for. Documented here for whoever adds merchant-list filtering later.
+
+Everything else below (business_hours embedding, the search request shape)
+is still an unconfirmed guess — flagged individually.
+
 ## Endpoint coverage
 
 Implements the read-only, public-facing subset of the Fase 3 contract that

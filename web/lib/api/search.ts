@@ -3,8 +3,9 @@
 // this makes about request shape (type/tags alongside the documented
 // free-text `query`).
 
-import type { Merchant, MerchantType } from "@/lib/types";
+import type { MerchantType, Merchant } from "@/lib/types";
 import { apiFetch } from "./client";
+import { parseMerchant, type RawMerchant } from "./merchants";
 
 export interface RemoteSearchFilters {
   query?: string;
@@ -15,7 +16,10 @@ export interface RemoteSearchFilters {
 export async function fetchSearchMerchants(
   filters: RemoteSearchFilters,
 ): Promise<Merchant[]> {
-  return apiFetch<Merchant[]>("/search", {
+  // Search results are merchants, so the same BigDecimal-as-string
+  // serialization confirmed for GET /api/v1/merchants applies here too —
+  // normalized through the same parseMerchant used there.
+  const raw = await apiFetch<RawMerchant[]>("/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -24,4 +28,5 @@ export async function fetchSearchMerchants(
       tags: filters.tags,
     }),
   });
+  return raw.map(parseMerchant);
 }
