@@ -1816,8 +1816,11 @@ export function buildOpeningHoursSpecification(
 ): OpeningHoursSpecEntry[] {
   const entries: OpeningHoursSpecEntry[] = [];
 
-  weekHours.forEach(({ day, shifts }, index) => {
-    const nextDay = DAY_ORDER[(index + 1) % DAY_ORDER.length];
+  weekHours.forEach(({ day, shifts }) => {
+    // Derived from the entry's own `day`, not the loop index, so this stays
+    // correct even if a future caller passes a filtered/reordered subset of
+    // the week instead of the full 7-day array groupBusinessHoursByDay returns.
+    const nextDay = DAY_ORDER[(DAY_ORDER.indexOf(day) + 1) % DAY_ORDER.length];
 
     for (const shift of shifts) {
       const opens = formatHm(shift.opensAt);
