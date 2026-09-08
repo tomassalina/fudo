@@ -1,6 +1,15 @@
 module Api
   module V1
+    # ACCEPTED LIMITATION (not fixed as part of the auth-with-token stage):
+    # any authenticated consumer can create/update/soft-delete ANY
+    # merchant (and, by the same gap, menu_items/tags/business_hours/
+    # loyalty_rules on any merchant) — there is no staff/merchant-role
+    # model yet, so `authenticate_consumer!` is the only gate on catalog
+    # writes. Building real staff/ownership permissions is a separate
+    # feature, intentionally out of scope here. Flagging this loudly on
+    # purpose so it isn't mistaken for "solved".
     class MerchantsController < BaseController
+      before_action :authenticate_consumer!, except: %i[index show]
       before_action :set_merchant, only: %i[show update destroy]
 
       def index
@@ -20,29 +29,23 @@ module Api
       end
 
       def create
-        return unless (actor_id = require_actor_id!)
-
         merchant = Merchant.new(merchant_params)
-        merchant.created_by = actor_id
+        merchant.created_by = current_consumer.id
         merchant.save!
 
         render json: MerchantBlueprint.render_as_hash(merchant, view: :extended), status: :created
       end
 
       def update
-        return unless (actor_id = require_actor_id!)
-
         @merchant.assign_attributes(merchant_params)
-        @merchant.updated_by = actor_id
+        @merchant.updated_by = current_consumer.id
         @merchant.save!
 
         render json: MerchantBlueprint.render_as_hash(@merchant, view: :extended)
       end
 
       def destroy
-        return unless (actor_id = require_actor_id!)
-
-        @merchant.soft_delete!(actor_id)
+        @merchant.soft_delete!(current_consumer.id)
         head :no_content
       end
 

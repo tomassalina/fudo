@@ -6,7 +6,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
   end
 
   describe "GET /api/v1/tags" do
-    it "paginates and filters by name" do
+    it "paginates and filters by name, without authentication" do
       matching = create_tag(name: "vegano")
       create_tag(name: "parrilla")
 
@@ -20,7 +20,7 @@ RSpec.describe "Api::V1::Tags", type: :request do
   end
 
   describe "GET /api/v1/tags/:id" do
-    it "returns the tag" do
+    it "returns the tag without authentication" do
       tag = create_tag
 
       get "/api/v1/tags/#{tag.id}"
@@ -38,57 +38,95 @@ RSpec.describe "Api::V1::Tags", type: :request do
 
   describe "POST /api/v1/tags" do
     it "creates a tag" do
-      post "/api/v1/tags", params: { tag: { name: "sin_tacc" } }, headers: actor_headers
+      consumer = create_consumer
+
+      post "/api/v1/tags", params: { tag: { name: "sin_tacc" } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:created)
-      expect(Tag.find(json_response["id"]).created_by).to eq(actor_id)
+      expect(Tag.find(json_response["id"]).created_by).to eq(consumer.id)
     end
 
     it "returns 422 when name is missing" do
-      post "/api/v1/tags", params: { tag: { name: nil } }, headers: actor_headers
+      consumer = create_consumer
+
+      post "/api/v1/tags", params: { tag: { name: nil } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json_response["errors"]).to have_key("name")
     end
 
-    it "returns 400 without an X-Actor-Id header" do
+    it "returns 401 without authentication" do
       post "/api/v1/tags", params: { tag: { name: "sin_tacc" } }
 
-      expect(response).to have_http_status(:bad_request)
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 
   describe "PATCH /api/v1/tags/:id" do
     it "updates the tag" do
       tag = create_tag
+      consumer = create_consumer
 
-      patch "/api/v1/tags/#{tag.id}", params: { tag: { name: "renamed" } }, headers: actor_headers
+      patch "/api/v1/tags/#{tag.id}", params: { tag: { name: "renamed" } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       expect(tag.reload.name).to eq("renamed")
     end
 
     it "returns 404 for a non-existent tag" do
-      patch "/api/v1/tags/999999", params: { tag: { name: "renamed" } }, headers: actor_headers
+      consumer = create_consumer
+
+      patch "/api/v1/tags/999999", params: { tag: { name: "renamed" } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 without authentication" do
+      tag = create_tag
+
+      patch "/api/v1/tags/#{tag.id}", params: { tag: { name: "renamed" } }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 401 (not 404) for a non-existent id without authentication" do
+      patch "/api/v1/tags/999999", params: { tag: { name: "renamed" } }
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 
   describe "DELETE /api/v1/tags/:id" do
     it "soft-deletes the tag" do
       tag = create_tag
+      consumer = create_consumer
 
-      delete "/api/v1/tags/#{tag.id}", headers: actor_headers
+      delete "/api/v1/tags/#{tag.id}", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:no_content)
       expect(Tag.unscoped.find(tag.id).deleted_at).to be_present
     end
 
     it "returns 404 for a non-existent tag" do
-      delete "/api/v1/tags/999999", headers: actor_headers
+      consumer = create_consumer
+
+      delete "/api/v1/tags/999999", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 without authentication" do
+      tag = create_tag
+
+      delete "/api/v1/tags/#{tag.id}"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 401 (not 404) for a non-existent id without authentication" do
+      delete "/api/v1/tags/999999"
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 end

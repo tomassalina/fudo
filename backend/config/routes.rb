@@ -17,6 +17,8 @@ Rails.application.routes.draw do
       resources :favorites, except: %i[new edit]
       resources :gifts, except: %i[new edit]
       resources :consumer_settings, except: %i[new edit]
+      post "registrations", to: "registrations#create"
+      post "sessions", to: "sessions#create"
       # The `search_history` table name is singular (see
       # app/models/search_history.rb), but the route/controller follow the
       # standard Rails plural resource convention.

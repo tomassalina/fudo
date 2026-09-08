@@ -1,16 +1,5 @@
 # Shared helpers for request specs under spec/requests/api/v1.
 module ApiHelpers
-  # A valid, arbitrary actor id to send as the X-Actor-Id header. Since there
-  # is no auth system yet (see app/controllers/concerns/trackable.rb), any
-  # well-formed UUID is accepted.
-  def actor_id
-    @actor_id ||= SecureRandom.uuid
-  end
-
-  def actor_headers
-    { "X-Actor-Id" => actor_id }
-  end
-
   def json_response
     JSON.parse(response.body)
   end
@@ -20,7 +9,7 @@ module ApiHelpers
       first_name: "Test",
       last_name: "Consumer",
       email: "consumer-#{SecureRandom.hex(6)}@example.com",
-      password_hash: "hashed-password",
+      password: "password123",
       dni: SecureRandom.random_number(10**8).to_s,
       created_by: SecureRandom.uuid
     }.merge(attrs))
@@ -41,6 +30,18 @@ module ApiHelpers
       price_per_person_max: 3000,
       created_by: SecureRandom.uuid
     }.merge(attrs))
+  end
+
+  # A valid JWT for `consumer`, built directly (no HTTP round-trip through
+  # POST /api/v1/sessions) so specs that only need an authenticated
+  # consumer don't also exercise — and don't get throttled by — the login
+  # endpoint's rate limit (see spec/support/rack_attack.rb).
+  def jwt_for(consumer)
+    JsonWebToken.encode(sub: consumer.id)
+  end
+
+  def auth_headers_for(consumer)
+    { "Authorization" => "Bearer #{jwt_for(consumer)}" }
   end
 end
 

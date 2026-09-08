@@ -1,6 +1,10 @@
 module Api
   module V1
+    # ACCEPTED LIMITATION: see the comment atop MerchantsController — any
+    # authenticated consumer can write menu items for any merchant, no
+    # staff/ownership model exists yet.
     class MenuItemsController < BaseController
+      before_action :authenticate_consumer!, except: %i[index show]
       before_action :set_menu_item, only: %i[show update destroy]
 
       def index
@@ -17,29 +21,23 @@ module Api
       end
 
       def create
-        return unless (actor_id = require_actor_id!)
-
         menu_item = MenuItem.new(menu_item_params)
-        menu_item.created_by = actor_id
+        menu_item.created_by = current_consumer.id
         menu_item.save!
 
         render json: MenuItemBlueprint.render_as_hash(menu_item, view: :extended), status: :created
       end
 
       def update
-        return unless (actor_id = require_actor_id!)
-
         @menu_item.assign_attributes(menu_item_params)
-        @menu_item.updated_by = actor_id
+        @menu_item.updated_by = current_consumer.id
         @menu_item.save!
 
         render json: MenuItemBlueprint.render_as_hash(@menu_item, view: :extended)
       end
 
       def destroy
-        return unless (actor_id = require_actor_id!)
-
-        @menu_item.soft_delete!(actor_id)
+        @menu_item.soft_delete!(current_consumer.id)
         head :no_content
       end
 

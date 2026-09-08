@@ -48,10 +48,18 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       ids = json_response["data"].map { |m| m["id"] }
       expect(ids).to eq([ matching.id ])
     end
+
+    it "requires no authentication — merchant discovery is public" do
+      create_merchant
+
+      get "/api/v1/merchants"
+
+      expect(response).to have_http_status(:ok)
+    end
   end
 
   describe "GET /api/v1/merchants/:id" do
-    it "returns the merchant detail with tags and business hours" do
+    it "returns the merchant detail with tags and business hours, without authentication" do
       merchant = create_merchant
       tag = Tag.create!(name: "vegano", created_by: SecureRandom.uuid)
       MerchantsTag.create!(merchant: merchant, tag: tag)
@@ -81,76 +89,118 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       }
     end
 
-    it "creates a merchant and stamps created_by from X-Actor-Id" do
-      post "/api/v1/merchants", params: { merchant: valid_attrs }, headers: actor_headers
+    it "creates a merchant and stamps created_by from the authenticated consumer" do
+      consumer = create_consumer
+
+      post "/api/v1/merchants", params: { merchant: valid_attrs }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:created)
-      expect(Merchant.find(json_response["id"]).created_by).to eq(actor_id)
+      expect(Merchant.find(json_response["id"]).created_by).to eq(consumer.id)
     end
 
     it "returns 422 when required fields are missing" do
-      post "/api/v1/merchants", params: { merchant: valid_attrs.merge(name: nil) }, headers: actor_headers
+      consumer = create_consumer
+
+      post "/api/v1/merchants", params: { merchant: valid_attrs.merge(name: nil) }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json_response["errors"]).to have_key("name")
     end
 
-    it "returns 400 without an X-Actor-Id header" do
+    it "returns 401 without authentication" do
       post "/api/v1/merchants", params: { merchant: valid_attrs }
 
-      expect(response).to have_http_status(:bad_request)
-      expect(json_response["error"]).to eq("Missing or invalid X-Actor-Id header")
+      expect(response).to have_http_status(:unauthorized)
+      expect(json_response["error"]).to eq("Not authenticated")
     end
   end
 
   describe "PATCH /api/v1/merchants/:id" do
     it "updates the merchant and stamps updated_by" do
       merchant = create_merchant
+      consumer = create_consumer
 
-      patch "/api/v1/merchants/#{merchant.id}", params: { merchant: { name: "Renamed" } }, headers: actor_headers
+      patch "/api/v1/merchants/#{merchant.id}", params: { merchant: { name: "Renamed" } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       expect(merchant.reload.name).to eq("Renamed")
-      expect(merchant.updated_by).to eq(actor_id)
+      expect(merchant.updated_by).to eq(consumer.id)
     end
 
     it "returns 404 for a non-existent merchant" do
-      patch "/api/v1/merchants/999999", params: { merchant: { name: "Renamed" } }, headers: actor_headers
+      consumer = create_consumer
+
+      patch "/api/v1/merchants/999999", params: { merchant: { name: "Renamed" } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 without authentication" do
+      merchant = create_merchant
+
+      patch "/api/v1/merchants/#{merchant.id}", params: { merchant: { name: "Renamed" } }
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    # authenticate_consumer! must run BEFORE set_merchant — otherwise a
+    # non-existent id would 404 for an unauthenticated caller, leaking
+    # whether that id exists to someone who was never let in at all.
+    it "returns 401 (not 404) for a non-existent id without authentication" do
+      patch "/api/v1/merchants/999999", params: { merchant: { name: "Renamed" } }
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 
   describe "DELETE /api/v1/merchants/:id" do
     it "soft-deletes the merchant and cascades dependent: :destroy associations (business_hours, merchants_tags)" do
       merchant = create_merchant
+      consumer = create_consumer
       tag = Tag.create!(name: "vegano", created_by: SecureRandom.uuid)
       merchants_tag = MerchantsTag.create!(merchant: merchant, tag: tag)
       business_hour = BusinessHour.create!(merchant: merchant, day_of_week: "monday", opens_at: "09:00", closes_at: "18:00")
 
-      delete "/api/v1/merchants/#{merchant.id}", headers: actor_headers
+      delete "/api/v1/merchants/#{merchant.id}", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:no_content)
       expect(Merchant.unscoped.find(merchant.id).deleted_at).to be_present
-      expect(Merchant.unscoped.find(merchant.id).deleted_by).to eq(actor_id)
+      expect(Merchant.unscoped.find(merchant.id).deleted_by).to eq(consumer.id)
       expect(BusinessHour.where(id: business_hour.id)).not_to exist
       expect(MerchantsTag.where(id: merchants_tag.id)).not_to exist
     end
 
     it "fails with 422 when the merchant still has active menu items" do
       merchant = create_merchant
+      consumer = create_consumer
       MenuItem.create!(merchant: merchant, name: "Item", price: 10, currency: "usd", created_by: SecureRandom.uuid)
 
-      delete "/api/v1/merchants/#{merchant.id}", headers: actor_headers
+      delete "/api/v1/merchants/#{merchant.id}", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(merchant.reload.deleted_at).to be_nil
     end
 
     it "returns 404 for a non-existent merchant" do
-      delete "/api/v1/merchants/999999", headers: actor_headers
+      consumer = create_consumer
+
+      delete "/api/v1/merchants/999999", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 401 without authentication" do
+      merchant = create_merchant
+
+      delete "/api/v1/merchants/#{merchant.id}"
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 401 (not 404) for a non-existent id without authentication" do
+      delete "/api/v1/merchants/999999"
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 end

@@ -1,13 +1,14 @@
 module Api
   module V1
     # VisitSummary has no audit columns (see db/structure.sql) and no soft
-    # delete, so this controller never touches X-Actor-Id and destroy is a
-    # real DELETE.
+    # delete, so destroy is a real DELETE. All actions are scoped to
+    # current_consumer's own visit summaries.
     class VisitSummariesController < BaseController
+      before_action :authenticate_consumer!
       before_action :set_visit_summary, only: %i[show update destroy]
 
       def index
-        visit_summaries = paginate(filtered_visit_summaries)
+        visit_summaries = paginate(current_consumer.visit_summaries)
 
         render json: {
           data: VisitSummaryBlueprint.render_as_hash(visit_summaries, view: :list),
@@ -20,7 +21,7 @@ module Api
       end
 
       def create
-        visit_summary = VisitSummary.new(visit_summary_params)
+        visit_summary = current_consumer.visit_summaries.new(visit_summary_params)
         visit_summary.save!
 
         render json: VisitSummaryBlueprint.render_as_hash(visit_summary), status: :created
@@ -39,18 +40,16 @@ module Api
 
       private
 
+      # Scoped to current_consumer.visit_summaries, not VisitSummary.find —
+      # a summary belonging to another consumer must 404, not leak.
       def set_visit_summary
-        @visit_summary = VisitSummary.find(params[:id])
+        @visit_summary = current_consumer.visit_summaries.find(params[:id])
       end
 
+      # consumer_id is intentionally not permitted here: ownership always
+      # comes from current_consumer, never from client input.
       def visit_summary_params
-        params.require(:visit_summary).permit(:consumer_id, :merchant_id, :count, :current_tier, :last_visit_at)
-      end
-
-      def filtered_visit_summaries
-        scope = VisitSummary.all
-        scope = scope.where(consumer_id: params[:consumer_id]) if params[:consumer_id].present?
-        scope
+        params.require(:visit_summary).permit(:merchant_id, :count, :current_tier, :last_visit_at)
       end
     end
   end

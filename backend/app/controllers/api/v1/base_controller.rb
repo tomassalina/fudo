@@ -1,7 +1,7 @@
 module Api
   module V1
     class BaseController < ApplicationController
-      include Trackable
+      include Authenticatable
 
       rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
       rescue_from ActiveRecord::RecordInvalid, with: :render_unprocessable_entity

@@ -3,6 +3,20 @@
 # lookups/uniqueness, since it can't be queried directly once encrypted.
 # See config/initializers/lockbox.rb for the master keys wiring.
 class Consumer < ApplicationRecord
+  # `password_hash` is the actual column name (see db/structure.sql), but
+  # has_secure_password's `attribute` argument only ever points at a column
+  # named "#{attribute}_digest" (e.g. the default :password expects
+  # password_digest) — it has no option to target an arbitrarily-named
+  # column directly, in this Rails version. alias_attribute bridges that
+  # gap: has_secure_password's generated methods read/write
+  # `password_digest`, which now transparently reads/writes the real
+  # `password_hash` column, without renaming it.
+  alias_attribute :password_digest, :password_hash
+  # Also covers the presence validation that used to be declared manually
+  # below (has_secure_password adds its own password presence/confirmation
+  # validations).
+  has_secure_password
+
   has_encrypted :dni, encrypted_attribute: "dni_encrypted"
   blind_index :dni
 
@@ -31,6 +45,5 @@ class Consumer < ApplicationRecord
   validates :first_name, presence: true
   validates :last_name, presence: true
   validates :email, presence: true, uniqueness: true
-  validates :password_hash, presence: true
   validates :dni, presence: true, uniqueness: true
 end

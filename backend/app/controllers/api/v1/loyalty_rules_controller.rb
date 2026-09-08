@@ -1,6 +1,10 @@
 module Api
   module V1
+    # ACCEPTED LIMITATION: see the comment atop MerchantsController — any
+    # authenticated consumer can write loyalty rules for any merchant, no
+    # staff/ownership model exists yet.
     class LoyaltyRulesController < BaseController
+      before_action :authenticate_consumer!, except: %i[index show]
       before_action :set_loyalty_rule, only: %i[show update destroy]
 
       def index
@@ -17,29 +21,23 @@ module Api
       end
 
       def create
-        return unless (actor_id = require_actor_id!)
-
         loyalty_rule = LoyaltyRule.new(loyalty_rule_params)
-        loyalty_rule.created_by = actor_id
+        loyalty_rule.created_by = current_consumer.id
         loyalty_rule.save!
 
         render json: LoyaltyRuleBlueprint.render_as_hash(loyalty_rule, view: :extended), status: :created
       end
 
       def update
-        return unless (actor_id = require_actor_id!)
-
         @loyalty_rule.assign_attributes(loyalty_rule_params)
-        @loyalty_rule.updated_by = actor_id
+        @loyalty_rule.updated_by = current_consumer.id
         @loyalty_rule.save!
 
         render json: LoyaltyRuleBlueprint.render_as_hash(@loyalty_rule, view: :extended)
       end
 
       def destroy
-        return unless (actor_id = require_actor_id!)
-
-        @loyalty_rule.soft_delete!(actor_id)
+        @loyalty_rule.soft_delete!(current_consumer.id)
         head :no_content
       end
 

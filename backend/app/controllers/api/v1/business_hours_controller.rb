@@ -1,9 +1,14 @@
 module Api
   module V1
     # BusinessHour has no audit columns (see db/structure.sql) and no soft
-    # delete, so this controller never touches X-Actor-Id and destroy is a
-    # real DELETE.
+    # delete, so there's nothing to stamp here — but writes still require
+    # authentication like the rest of the catalog.
+    #
+    # ACCEPTED LIMITATION: see the comment atop MerchantsController — any
+    # authenticated consumer can write business hours for any merchant, no
+    # staff/ownership model exists yet.
     class BusinessHoursController < BaseController
+      before_action :authenticate_consumer!, except: %i[index show]
       before_action :set_business_hour, only: %i[show update destroy]
 
       def index

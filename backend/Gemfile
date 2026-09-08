@@ -51,6 +51,13 @@ gem "kaminari"
 # JSON serialization for API responses
 gem "blueprinter"
 
+# Encode/decode JSON Web Tokens for consumer authentication
+gem "jwt"
+
+# Rate limiting / throttling middleware to slow down brute-force and
+# generic abuse against the public API
+gem "rack-attack"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

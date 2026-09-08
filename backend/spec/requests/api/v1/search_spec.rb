@@ -22,9 +22,7 @@ RSpec.describe "Api::V1::Search", type: :request do
         consumer = create_consumer
 
         expect {
-          post "/api/v1/search",
-            params: { query: query, consumer_id: consumer.id },
-            headers: actor_headers
+          post "/api/v1/search", params: { query: query }, headers: auth_headers_for(consumer)
         }.to change(SearchHistory, :count).by(1)
 
         expect(response).to have_http_status(:ok)
@@ -34,7 +32,7 @@ RSpec.describe "Api::V1::Search", type: :request do
         search_history = SearchHistory.order(:id).last
         expect(search_history.consumer_id).to eq(consumer.id)
         expect(search_history.query_text).to eq(query)
-        expect(search_history.created_by).to eq(actor_id)
+        expect(search_history.created_by).to eq(consumer.id)
 
         structured_output = search_history.structured_output
         expect(structured_output).to be_a(Hash).or be_a(ActiveSupport::HashWithIndifferentAccess)
@@ -50,20 +48,28 @@ RSpec.describe "Api::V1::Search", type: :request do
       end
     end
 
-    it "returns 400 without an X-Actor-Id header" do
-      consumer = create_consumer
+    it "returns 401 without authentication" do
+      post "/api/v1/search", params: { query: "pizza" }
 
-      post "/api/v1/search", params: { query: "pizza", consumer_id: consumer.id }
-
-      expect(response).to have_http_status(:bad_request)
+      expect(response).to have_http_status(:unauthorized)
     end
 
     it "returns 400 when query is missing" do
       consumer = create_consumer
 
-      post "/api/v1/search", params: { consumer_id: consumer.id }, headers: actor_headers
+      post "/api/v1/search", params: {}, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:bad_request)
+    end
+
+    it "does not leak into another consumer's search history" do
+      consumer = create_consumer
+      other = create_consumer
+
+      get "/api/v1/search_histories", params: { consumer_id: other.id }, headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:ok)
+      expect(json_response["data"]).to eq([])
     end
   end
 end

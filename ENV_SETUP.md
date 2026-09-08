@@ -38,7 +38,17 @@ Contexto técnico completo de cada variable: ver los comentarios dentro de `back
 - [ ] Creá una API key nueva (es gratis para uso de desarrollo).
 - [ ] Pegala tal cual te la da Google en `GEMINI_API_KEY=` dentro de `backend/.env` — no le cambies el formato ni le agregues comillas.
 
-## 4. PostHog (mobile + web)
+## 4. Backend — JWT_SECRET (autenticación de consumers)
+
+- [ ] Generá una clave dedicada para firmar los JWT de sesión corriendo, desde `backend/`:
+  ```bash
+  bin/rails secret
+  ```
+  (o el equivalente en Docker: `docker compose run --rm web bin/rails secret`).
+- [ ] Pegá el resultado tal cual en `JWT_SECRET=` dentro de `backend/.env`.
+- [ ] En desarrollo/test, si te olvidás este paso, la app arranca igual (cae a `Rails.application.secret_key_base` como fallback) — pero **en producción es obligatoria**: si `JWT_SECRET` no está seteada, la app aborta el boot (ver `config/initializers/jwt_secret_check.rb`). Nunca reutilices `secret_key_base` a propósito en producción: son usos distintos (uno firma cookies/sesión de Rails, el otro firma tokens de auth de consumers) y rotar uno no debería invalidar el otro.
+
+## 5. PostHog (mobile + web)
 
 - [ ] Creá una cuenta / proyecto en **https://posthog.com** (PostHog Cloud — nunca self-hosteado en este proyecto).
 - [ ] Dentro del proyecto, andá a **Project Settings** y copiá el **Project API Key**.
@@ -55,7 +65,7 @@ Contexto técnico completo de cada variable: ver los comentarios dentro de `back
   ```
   Esta key **no se puede generar localmente** — sale de tu cuenta de PostHog Cloud sí o sí.
 
-## 5. Mobile — cómo correr la app con estas variables
+## 6. Mobile — cómo correr la app con estas variables
 
 - [ ] Flutter lee `mobile/.env` de forma nativa con:
   ```bash
@@ -63,23 +73,23 @@ Contexto técnico completo de cada variable: ver los comentarios dentro de `back
   ```
 - [ ] Nota: hoy el código de `mobile/lib/` todavía no lee estas variables (no hay ningún `String.fromEnvironment` implementado) — eso es trabajo de la Fase 4 del `PLAN.md` (conectar mobile al backend real). El archivo ya está listo para cuando se implemente esa fase.
 
-## 6. Web — cómo correr la app con estas variables
+## 7. Web — cómo correr la app con estas variables
 
 - [ ] Next.js lee automáticamente `web/.env.local` al correr `pnpm dev` — no hace falta ningún flag adicional.
 - [ ] `NEXT_PUBLIC_API_BASE_URL` ya está siendo usada por `web/lib/api/client.ts` — con dejar el default (`http://localhost:3000/api/v1`) alcanza si el backend corre local en el puerto 3000.
 
-## 7. Rails master key — nota, no bloqueante
+## 8. Rails master key — nota, no bloqueante
 
 - [ ] No hace falta hacer nada por ahora. `backend/config/credentials.yml.enc` ya existe en el repo (viene del scaffold inicial de `rails new`), pero ningún código del proyecto lee `Rails.application.credentials` todavía, así que la ausencia de `config/master.key` no rompe nada hoy.
 - [ ] Si en el futuro algo empieza a pedirlo (error tipo `ActiveSupport::MessageEncryptor::InvalidMessage` o "Missing master key"), **no corras `rails credentials:edit` para generar una clave nueva** — eso re-encripta el archivo ya commiteado con una clave distinta a la que tiene el resto del equipo. Pedile el `config/master.key` real a quien corrió `rails new` originalmente (o coordinen para regenerar credenciales entre todos si se perdió).
 
-## 8. Verificación final
+## 9. Verificación final
 
 - [ ] Backend: `cd backend && docker compose up` y confirmá que `curl localhost:3000/up` responde `200`.
 - [ ] Backend (una vez que Fase 1 tenga migraciones + seeders): `rails db:setup` corre sin errores y `Consumer.first.dni_bidx` es buscable.
 - [ ] Mobile: `cd mobile && flutter pub get && flutter run --dart-define-from-file=.env`.
 - [ ] Web: `cd web && pnpm install && pnpm dev`, la página carga en `localhost:3000`.
 
-## 9. Nunca comitear
+## 10. Nunca comitear
 
 Los tres `.gitignore` (`backend/`, `mobile/`, `web/`) ya están configurados para ignorar `.env`, `.env.local` y variantes, pero **sí** dejan pasar los `.env.example` (son plantillas sin secretos reales). Antes de cualquier commit, revisá con `git status` que ningún archivo con valores reales quede staged.

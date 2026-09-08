@@ -8,78 +8,106 @@ RSpec.describe "Api::V1::Favorites", type: :request do
   end
 
   describe "GET /api/v1/favorites" do
-    it "paginates and filters by consumer_id" do
+    it "paginates and scopes to the authenticated consumer's own favorites" do
       consumer = create_consumer
       matching = create_favorite(consumer: consumer)
       create_favorite
 
-      get "/api/v1/favorites", params: { consumer_id: consumer.id, per_page: 5 }
+      get "/api/v1/favorites", params: { per_page: 5 }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       ids = json_response["data"].map { |f| f["id"] }
       expect(ids).to eq([ matching.id ])
     end
 
-    # Postgres's uuid column type-casts client-side (see
-    # ActiveRecord::ConnectionAdapters::PostgreSQL::OID::Uuid#cast_value):
-    # anything that doesn't already look like a UUID is cast to nil before
-    # it ever reaches SQL, so this never raises — it's just an empty result.
-    it "returns an empty (not an error) result when the consumer_id filter is not a valid UUID" do
-      create_favorite
+    it "does not leak another consumer's favorites via a consumer_id param" do
+      consumer = create_consumer
+      other = create_consumer
+      create_favorite(consumer: other)
 
-      get "/api/v1/favorites", params: { consumer_id: "not-a-uuid" }
+      get "/api/v1/favorites", params: { consumer_id: other.id }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       expect(json_response["data"]).to eq([])
+    end
+
+    it "returns 401 without authentication" do
+      get "/api/v1/favorites"
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 
   describe "GET /api/v1/favorites/:id" do
     it "returns the favorite" do
-      favorite = create_favorite
+      consumer = create_consumer
+      favorite = create_favorite(consumer: consumer)
 
-      get "/api/v1/favorites/#{favorite.id}"
+      get "/api/v1/favorites/#{favorite.id}", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       expect(json_response["id"]).to eq(favorite.id)
     end
 
     it "returns 404 for a non-existent favorite" do
-      get "/api/v1/favorites/999999"
+      consumer = create_consumer
+
+      get "/api/v1/favorites/999999", headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 (not the favorite) for another consumer's favorite" do
+      owner = create_consumer
+      intruder = create_consumer
+      favorite = create_favorite(consumer: owner)
+
+      get "/api/v1/favorites/#{favorite.id}", headers: auth_headers_for(intruder)
 
       expect(response).to have_http_status(:not_found)
     end
   end
 
   describe "POST /api/v1/favorites" do
-    it "creates a favorite" do
+    it "creates a favorite owned by the authenticated consumer" do
       consumer = create_consumer
       merchant = create_merchant
 
-      post "/api/v1/favorites", params: { favorite: { consumer_id: consumer.id, merchant_id: merchant.id } }, headers: actor_headers
+      post "/api/v1/favorites", params: { favorite: { merchant_id: merchant.id } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:created)
-      expect(Favorite.find(json_response["id"]).created_by).to eq(actor_id)
+      created = Favorite.find(json_response["id"])
+      expect(created.created_by).to eq(consumer.id)
+      expect(created.consumer_id).to eq(consumer.id)
+    end
+
+    it "ignores a client-supplied consumer_id and always uses current_consumer" do
+      consumer = create_consumer
+      other = create_consumer
+      merchant = create_merchant
+
+      post "/api/v1/favorites", params: { favorite: { consumer_id: other.id, merchant_id: merchant.id } }, headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:created)
+      expect(Favorite.find(json_response["id"]).consumer_id).to eq(consumer.id)
     end
 
     it "returns 422 for a duplicate consumer/merchant pair" do
-      favorite = create_favorite
+      consumer = create_consumer
+      favorite = create_favorite(consumer: consumer)
 
-      post "/api/v1/favorites",
-        params: { favorite: { consumer_id: favorite.consumer_id, merchant_id: favorite.merchant_id } },
-        headers: actor_headers
+      post "/api/v1/favorites", params: { favorite: { merchant_id: favorite.merchant_id } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json_response["errors"]).to have_key("merchant_id")
     end
 
-    it "returns 400 without an X-Actor-Id header" do
-      consumer = create_consumer
+    it "returns 401 without authentication" do
       merchant = create_merchant
 
-      post "/api/v1/favorites", params: { favorite: { consumer_id: consumer.id, merchant_id: merchant.id } }
+      post "/api/v1/favorites", params: { favorite: { merchant_id: merchant.id } }
 
-      expect(response).to have_http_status(:bad_request)
+      expect(response).to have_http_status(:unauthorized)
     end
 
     # Rails' own uniqueness validator queries via `klass.unscoped`
@@ -93,12 +121,11 @@ RSpec.describe "Api::V1::Favorites", type: :request do
     # validation, and confirm the base controller turns that into a 409
     # instead of an unhandled 500.
     it "returns 409 instead of a raw 500 if a duplicate reaches the DB unique index" do
-      existing = create_favorite
+      consumer = create_consumer
+      existing = create_favorite(consumer: consumer)
       allow_any_instance_of(Favorite).to receive(:valid?).and_return(true)
 
-      post "/api/v1/favorites",
-        params: { favorite: { consumer_id: existing.consumer_id, merchant_id: existing.merchant_id } },
-        headers: actor_headers
+      post "/api/v1/favorites", params: { favorite: { merchant_id: existing.merchant_id } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:conflict)
       expect(json_response["error"]).to eq("Resource already exists")
@@ -107,36 +134,65 @@ RSpec.describe "Api::V1::Favorites", type: :request do
 
   describe "PATCH /api/v1/favorites/:id" do
     it "updates the favorite" do
-      favorite = create_favorite
+      consumer = create_consumer
+      favorite = create_favorite(consumer: consumer)
       other_merchant = create_merchant
 
-      patch "/api/v1/favorites/#{favorite.id}", params: { favorite: { merchant_id: other_merchant.id } }
+      patch "/api/v1/favorites/#{favorite.id}", params: { favorite: { merchant_id: other_merchant.id } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
       expect(favorite.reload.merchant_id).to eq(other_merchant.id)
     end
 
     it "returns 404 for a non-existent favorite" do
-      patch "/api/v1/favorites/999999", params: { favorite: { merchant_id: create_merchant.id } }
+      consumer = create_consumer
+
+      patch "/api/v1/favorites/999999", params: { favorite: { merchant_id: create_merchant.id } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 (not the favorite) when updating another consumer's favorite" do
+      owner = create_consumer
+      intruder = create_consumer
+      favorite = create_favorite(consumer: owner)
+      other_merchant = create_merchant
+
+      patch "/api/v1/favorites/#{favorite.id}", params: { favorite: { merchant_id: other_merchant.id } }, headers: auth_headers_for(intruder)
+
+      expect(response).to have_http_status(:not_found)
+      expect(favorite.reload.merchant_id).not_to eq(other_merchant.id)
     end
   end
 
   describe "DELETE /api/v1/favorites/:id" do
     it "soft-deletes the favorite" do
-      favorite = create_favorite
+      consumer = create_consumer
+      favorite = create_favorite(consumer: consumer)
 
-      delete "/api/v1/favorites/#{favorite.id}", headers: actor_headers
+      delete "/api/v1/favorites/#{favorite.id}", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:no_content)
       expect(Favorite.unscoped.find(favorite.id).deleted_at).to be_present
     end
 
     it "returns 404 for a non-existent favorite" do
-      delete "/api/v1/favorites/999999", headers: actor_headers
+      consumer = create_consumer
+
+      delete "/api/v1/favorites/999999", headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:not_found)
+    end
+
+    it "returns 404 (not the favorite) when deleting another consumer's favorite" do
+      owner = create_consumer
+      intruder = create_consumer
+      favorite = create_favorite(consumer: owner)
+
+      delete "/api/v1/favorites/#{favorite.id}", headers: auth_headers_for(intruder)
+
+      expect(response).to have_http_status(:not_found)
+      expect(Favorite.unscoped.find(favorite.id).deleted_at).to be_nil
     end
   end
 end

@@ -1,6 +1,10 @@
 module Api
   module V1
+    # ACCEPTED LIMITATION: see the comment atop MerchantsController — any
+    # authenticated consumer can write tags regardless of merchant
+    # ownership, no staff/ownership model exists yet.
     class TagsController < BaseController
+      before_action :authenticate_consumer!, except: %i[index show]
       before_action :set_tag, only: %i[show update destroy]
 
       def index
@@ -17,29 +21,23 @@ module Api
       end
 
       def create
-        return unless (actor_id = require_actor_id!)
-
         tag = Tag.new(tag_params)
-        tag.created_by = actor_id
+        tag.created_by = current_consumer.id
         tag.save!
 
         render json: TagBlueprint.render_as_hash(tag, view: :extended), status: :created
       end
 
       def update
-        return unless (actor_id = require_actor_id!)
-
         @tag.assign_attributes(tag_params)
-        @tag.updated_by = actor_id
+        @tag.updated_by = current_consumer.id
         @tag.save!
 
         render json: TagBlueprint.render_as_hash(@tag, view: :extended)
       end
 
       def destroy
-        return unless (actor_id = require_actor_id!)
-
-        @tag.soft_delete!(actor_id)
+        @tag.soft_delete!(current_consumer.id)
         head :no_content
       end
 

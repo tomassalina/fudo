@@ -1,18 +1,13 @@
 module Api
   module V1
     class SearchController < BaseController
-      def create
-        return unless (actor_id = require_actor_id!)
+      before_action :authenticate_consumer!
 
+      def create
         query_text = params.require(:query)
-        # Look up the consumer BEFORE calling Gemini: the API call has a real
-        # dollar cost per request, so a request with a bad/missing
-        # consumer_id should fail fast instead of burning paid quota on a
-        # search that can never be persisted anyway.
-        consumer = Consumer.find(params[:consumer_id])
         structured_output = SearchQueryParser.call(query_text)
 
-        search_history = build_search_history(query_text, structured_output, consumer.id, actor_id)
+        search_history = build_search_history(query_text, structured_output)
         search_history.save!
 
         merchants = paginate(Merchant.search(
@@ -33,12 +28,11 @@ module Api
 
       private
 
-      def build_search_history(query_text, structured_output, consumer_id, actor_id)
-        SearchHistory.new(
-          consumer_id: consumer_id,
+      def build_search_history(query_text, structured_output)
+        current_consumer.search_histories.new(
           query_text: query_text,
           structured_output: structured_output,
-          created_by: actor_id
+          created_by: current_consumer.id
         )
       end
     end
