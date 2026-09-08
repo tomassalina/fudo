@@ -13,6 +13,7 @@ Ningún competidor puede ver lo que pasa adentro de un restaurante cuando no hay
 - Google Maps sabe que estuviste ahí, no sabe qué pediste ni cuánto pagaste
 - Rappi / PedidosYa / Uber Eats solo ven el pedido que pasó por su app. Si vas a comer al lugar, no existís para ellos
 - BigBox ni siquiera tiene contacto con la transacción — vende la caja y listo, el resto pasa afuera de su sistema
+- Morfy tiene la comunidad y cura las promociones a mano, pero no tiene el dato real de lo que compraste — depende de que el restaurante le avise. Fudo ya tiene el precio y el menú reales, en vivo, porque es el sistema que factura ahí adentro
 
 Fudo es el único parado en la caja registradora, en el momento exacto de cada venta, sin importar cómo se paga (efectivo, tarjeta, transferencia) ni qué tipo de local es (restaurante, bar, cafetería, dark kitchen). Esa presencia en el punto de venta, para todos los métodos de pago y todos los formatos, es algo que nadie de esta lista puede replicar, porque ninguno tiene una terminal ahí.
 
