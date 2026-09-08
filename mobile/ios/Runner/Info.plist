@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Fudo usa la cámara para escanear el código QR de fidelización del local.</string>
 </dict>
 </plist>
