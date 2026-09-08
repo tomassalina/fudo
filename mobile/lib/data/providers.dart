@@ -1,9 +1,13 @@
 // `Consumer` is hidden here because it collides with our own domain model
 // of the same name (`models/consumer.dart`); this file never needs the
 // widget-building `Consumer`.
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
 
 import '../core/analytics/analytics_service.dart';
+import '../core/config/dio_client.dart';
+import 'auth/auth_repository.dart';
+import 'connection_mode.dart';
 import 'data_source.dart';
 import 'local/local_data_source.dart';
 import 'models/business_hour.dart';
@@ -18,18 +22,42 @@ import 'models/search_history.dart';
 import 'models/tag.dart';
 import 'models/visit.dart';
 import 'models/visit_summary.dart';
+import 'remote/remote_data_source.dart';
 
 /// The single source of truth for which [DataSource] implementation the app
 /// talks to.
 ///
-/// Today it always builds a [LocalDataSource] (reads the bundled JSON
-/// fixtures). In Fase 4, when the app switches to the real backend API, this
-/// provider's body is the *only* place that needs to change — swap the
-/// returned instance for a `RemoteDataSource()` and every screen (which only
-/// ever depends on the [DataSource] interface via the providers below)
-/// keeps working unmodified.
+/// Picks [LocalDataSource] or [RemoteDataSource] based on [connectionMode]
+/// (`data/connection_mode.dart`), which **defaults to `local`** — every
+/// screen keeps reading the bundled JSON fixtures unless the app is
+/// explicitly built/run with `--dart-define=CONNECTION_MODE=remote`.
+///
+/// ⚠️ The `remote` branch is infrastructure written ahead of the API
+/// existing (see `data/remote/remote_data_source.dart`'s doc comment for the
+/// full caveat) — as of this writing nothing at `/api/v1/*` responds on any
+/// reachable backend, so it has never actually been exercised end-to-end.
+/// Screens never need to know which branch is active: they only ever depend
+/// on the [DataSource] interface via the providers below.
 final dataSourceProvider = Provider<DataSource>((ref) {
-  return LocalDataSource();
+  return switch (connectionMode) {
+    ConnectionMode.local => LocalDataSource(),
+    ConnectionMode.remote => RemoteDataSource(ref.watch(dioProvider)),
+  };
+});
+
+/// Shared [Dio] client for [RemoteDataSource] and [AuthRepository], built by
+/// `core/config/dio_client.dart`. Only ever touched when [connectionMode] is
+/// [ConnectionMode.remote], or by something that explicitly reads
+/// [authRepositoryProvider] (there's no login screen wired up to it yet).
+final dioProvider = Provider<Dio>((ref) => DioClient.create());
+
+/// Login/logout for the demo consumer — see `data/auth/auth_repository.dart`
+/// for the (unconfirmed) response-shape assumption this makes about
+/// `POST /sessions`. Not consumed by any screen yet; exposed so the
+/// mobile-side auth infra is wired into the provider graph ahead of the
+/// login screen that will use it.
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepository(ref.watch(dioProvider));
 });
 
 /// Wraps PostHog behind business-named tracking methods (see

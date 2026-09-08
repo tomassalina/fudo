@@ -45,6 +45,7 @@ dependencies:
   google_fonts: ^8.2.1
   material_symbols_icons: ^4.2960.0
   qr_flutter: ^4.1.0
+  flutter_secure_storage: ^11.0.0
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +57,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_secure_storage_platform_interface: ^2.0.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
