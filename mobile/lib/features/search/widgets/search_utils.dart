@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/formatting/currency_format.dart';
 import '../../../data/models/merchant.dart';
 
 /// Shared filtering/formatting helpers for the search results list and map
@@ -109,16 +110,9 @@ String? formatPriceRange(Merchant merchant) {
 
 /// Formats a raw amount as Argentine-style money (e.g. "$29.500"). Public so
 /// the filters sheet can label its price `RangeSlider` with the same format
-/// used on merchant cards.
-String formatMoney(double value) {
-  final intValue = value.round().toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < intValue.length; i++) {
-    if (i != 0 && (intValue.length - i) % 3 == 0) buffer.write('.');
-    buffer.write(intValue[i]);
-  }
-  return '\$$buffer';
-}
+/// used on merchant cards. Delegates to the shared
+/// `core/formatting/currency_format.dart` implementation.
+String formatMoney(double value) => formatCurrency(value);
 
 // ---------------------------------------------------------------------------
 // Advanced filters (design brief §2.9)

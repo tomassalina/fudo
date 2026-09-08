@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/formatting/currency_format.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/gift.dart';
 
@@ -66,8 +67,8 @@ class _GiftingScreenState extends State<GiftingScreen> {
     final value = double.tryParse(text);
     if (value == null) return 'Usá solo números';
     final (min, max) = _selectedType.customAmountRange!;
-    if (value < min) return 'El mínimo es ${_formatCurrency(min)}';
-    if (value > max) return 'El máximo es ${_formatCurrency(max)}';
+    if (value < min) return 'El mínimo es ${formatCurrency(min)}';
+    if (value > max) return 'El máximo es ${formatCurrency(max)}';
     return null;
   }
 
@@ -94,7 +95,7 @@ class _GiftingScreenState extends State<GiftingScreen> {
     }
     final amount = _resolvedAmount;
     if (amount == null) return 'Ingresá un monto';
-    return 'Comprar y enviar ${_formatCurrency(amount)}';
+    return 'Comprar y enviar ${formatCurrency(amount)}';
   }
 
   void _selectTier(int index) {
@@ -335,7 +336,7 @@ class _GiftTierCard extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            amount != null ? _formatCurrency(amount) : 'Monto libre',
+            amount != null ? formatCurrency(amount) : 'Monto libre',
             style: AppTheme.headline.copyWith(color: textColor, fontSize: 28),
           ),
           const SizedBox(height: 6),
@@ -386,8 +387,8 @@ class _CustomAmountField extends StatelessWidget {
             hintText: 'Ej: 150000',
             errorText: error,
             helperText: error == null
-                ? 'Entre ${_formatCurrency(range.$1)} y '
-                      '${_formatCurrency(range.$2)}'
+                ? 'Entre ${formatCurrency(range.$1)} y '
+                      '${formatCurrency(range.$2)}'
                 : null,
             helperStyle: AppTheme.body.copyWith(
               color: AppTheme.textTertiary,
@@ -641,7 +642,7 @@ class _GiftSuccessOverlayState extends State<_GiftSuccessOverlay>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _formatCurrency(widget.amount),
+                    formatCurrency(widget.amount),
                     style: AppTheme.headline.copyWith(
                       color: widget.type.textColor,
                       fontSize: 26,
@@ -692,16 +693,4 @@ class _ConfettiParticle {
   final double size;
   final Color color;
   final double delay;
-}
-
-/// Formats [amount] as ARS with dot thousands separators, e.g. `$121.000`.
-String _formatCurrency(num amount) {
-  final digits = amount.round().toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    final fromEnd = digits.length - i;
-    if (i != 0 && fromEnd % 3 == 0) buffer.write('.');
-    buffer.write(digits[i]);
-  }
-  return '\$$buffer';
 }

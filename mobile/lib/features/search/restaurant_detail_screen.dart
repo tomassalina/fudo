@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/formatting/currency_format.dart';
+import '../../core/loyalty/loyalty_tier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/business_hour.dart';
 import '../../data/models/loyalty_rule.dart';
@@ -774,93 +775,6 @@ class _DetailTabBar extends StatelessWidget {
 // "Mis visitas" tab (loyalty)
 // ---------------------------------------------------------------------
 
-class _LoyaltyTierInfo {
-  const _LoyaltyTierInfo({
-    required this.label,
-    required this.gradient,
-    required this.textColor,
-  });
-
-  final String label;
-  final Gradient gradient;
-  final Color textColor;
-}
-
-// Gradients replicate `TIERS_L` from `docs/design-reference/Fudo App.dc.html`
-// (also transcribed in `docs/design-brief.md` §1). Two of them are pixel
-// identical to `GiftTypePresentation` entries in `data/models/gift.dart`
-// (Cliente fijo == Platinum, Nivel Oro == Gold) — that's a coincidence in the
-// source design, not a reason to couple the two enums together, so they're
-// kept as independent constants here.
-const _clienteFijoGradient = LinearGradient(
-  begin: Alignment(-0.5, -1),
-  end: Alignment(0.5, 1),
-  colors: [Color(0xFF1B1533), Color(0xFF3A2A78), Color(0xFF6E5AC8)],
-  stops: [0, 0.48, 1],
-);
-const _nivelOroGradient = LinearGradient(
-  begin: Alignment(-0.5, -1),
-  end: Alignment(0.5, 1),
-  colors: [Color(0xFF3B2A14), Color(0xFF7A5A1F), Color(0xFFE0B95C)],
-  stops: [0, 0.45, 1],
-);
-const _nivelPlataGradient = LinearGradient(
-  begin: Alignment(-0.5, -1),
-  end: Alignment(0.5, 1),
-  colors: [Color(0xFF1B1C2A), Color(0xFF33364B), Color(0xFF5A5F7D)],
-  stops: [0, 0.55, 1],
-);
-const _nivelBronceGradient = LinearGradient(
-  begin: Alignment(-0.5, -1),
-  end: Alignment(0.5, 1),
-  colors: [Color(0xFF2A160E), Color(0xFF7A3A1C), Color(0xFFE8703A)],
-  stops: [0, 0.55, 1],
-);
-const _sinVisitasGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFF1A1B26), Color(0xFF24263A)],
-);
-
-/// Loyalty tier for [visits] to THIS merchant, replicating `TIERS_L` from
-/// the design brief §1 (capped at 10 visits, same as the progress bar).
-_LoyaltyTierInfo _tierForVisits(int visits) {
-  final capped = visits > 10 ? 10 : visits;
-  if (capped >= 10) {
-    return const _LoyaltyTierInfo(
-      label: 'CLIENTE FIJO',
-      gradient: _clienteFijoGradient,
-      textColor: Color(0xFFD6CBFF),
-    );
-  }
-  if (capped >= 8) {
-    return const _LoyaltyTierInfo(
-      label: 'NIVEL ORO',
-      gradient: _nivelOroGradient,
-      textColor: Color(0xFFFFE9AE),
-    );
-  }
-  if (capped >= 4) {
-    return const _LoyaltyTierInfo(
-      label: 'NIVEL PLATA',
-      gradient: _nivelPlataGradient,
-      textColor: Color(0xFFDCE2F0),
-    );
-  }
-  if (capped >= 1) {
-    return const _LoyaltyTierInfo(
-      label: 'NIVEL BRONCE',
-      gradient: _nivelBronceGradient,
-      textColor: Color(0xFFFFC7B0),
-    );
-  }
-  return const _LoyaltyTierInfo(
-    label: 'SIN VISITAS AÚN',
-    gradient: _sinVisitasGradient,
-    textColor: Color(0x99FFFFFF),
-  );
-}
-
 /// Headline copy, exact strings per `docs/design-brief.md` §2.5/§3.
 String _headlineFor({
   required int visits,
@@ -950,7 +864,7 @@ class _LoyaltyContent extends StatelessWidget {
     final nextIndex = rules.indexWhere((r) => r.visitsRequired > visits);
     final full = nextIndex == -1;
     final nextRule = full ? null : rules[nextIndex];
-    final tier = _tierForVisits(visits);
+    final tier = loyaltyTierForVisits(visits);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1013,7 +927,7 @@ class _LoyaltyHero extends StatelessWidget {
     required this.sub,
   });
 
-  final _LoyaltyTierInfo tier;
+  final LoyaltyTier tier;
   final int visits;
   final String headline;
   final String sub;

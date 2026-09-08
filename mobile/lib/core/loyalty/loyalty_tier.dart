@@ -4,16 +4,11 @@ import 'package:flutter/material.dart';
 /// visit count, replicating `TIERS_L` from the design brief §1 / the design
 /// prototype (`docs/design-reference/Fudo App.dc.html`).
 ///
-/// DUPLICATION NOTE: `features/search/restaurant_detail_screen.dart` (out of
-/// scope for the change that introduced this file — see that change's task
-/// instructions) already has its own private, pixel-identical copy of this
-/// exact gradient table and tier logic (`_LoyaltyTierInfo`,
-/// `_tierForVisits`, `_clienteFijoGradient`, etc). This file is the shared
-/// extraction used by new code (`features/my_places`); the detail screen was
-/// deliberately left untouched rather than refactored to import from here.
-/// If that constraint is lifted later, the detail screen's private copy
-/// should be deleted in favor of this one so the table lives in exactly one
-/// place.
+/// Used by both `features/my_places/my_places_screen.dart` and
+/// `features/search/restaurant_detail_screen.dart` — the latter used to have
+/// its own private, pixel-identical copy of this gradient table and tier
+/// logic (`_LoyaltyTierInfo`, `_tierForVisits`, `_clienteFijoGradient`,
+/// etc.), which was folded into this shared implementation.
 @immutable
 class LoyaltyTier {
   const LoyaltyTier({
