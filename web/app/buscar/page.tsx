@@ -4,8 +4,11 @@
 // the only client-side bit is the placeholder rotation in <SearchBar>.
 //
 // Search itself is a plain GET form (?q=...), so it works without JS and is
-// fully crawlable/linkable — no real backend yet, so it filters the real
-// fixture dataset (lib/mock) instead of calling an API.
+// fully crawlable/linkable. Data comes from lib/data/search, which filters
+// the local fixture dataset (lib/mock) by default and only calls the real
+// `POST /api/v1/search` when NEXT_PUBLIC_API_BASE_URL is set — see
+// lib/api/README.md. A real backend failure is caught by ./error.tsx, not
+// here.
 
 import Link from "next/link";
 import { SearchBar } from "@/components/buscar/SearchBar";
@@ -14,12 +17,8 @@ import { MerchantCard } from "@/components/buscar/MerchantCard";
 import { MapPanel } from "@/components/buscar/MapPanel";
 import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import type { MerchantType } from "@/lib/types";
-import {
-  MOCK_MERCHANTS,
-  MERCHANT_TYPES_IN_USE,
-  TAGS_IN_USE,
-} from "@/lib/mock/merchants";
-import { searchMerchants } from "@/lib/mock/search";
+import { MERCHANT_TYPES_IN_USE, TAGS_IN_USE } from "@/lib/mock/merchants";
+import { searchMerchants } from "@/lib/data/search";
 
 function parseType(raw: string | string[] | undefined): MerchantType | null {
   const value = typeof raw === "string" ? raw : undefined;
@@ -50,7 +49,7 @@ export default async function BuscarPage({
   const tags = parseTags(params.tags);
   const hasFilters = type !== null || tags.length > 0;
 
-  const results = searchMerchants(MOCK_MERCHANTS, {
+  const results = await searchMerchants({
     query,
     type: type ?? undefined,
     tags,

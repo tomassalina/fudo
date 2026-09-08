@@ -32,24 +32,27 @@ import {
   formatDayHours,
   getBusinessHoursForMerchant,
   groupBusinessHoursByDay,
-} from "@/lib/mock/business-hours";
-import type { DayHours } from "@/lib/mock/business-hours";
+} from "@/lib/data/business-hours";
+import type { DayHours } from "@/lib/data/business-hours";
 import {
   MERCHANT_COUNTRY_CODE,
   MERCHANT_TYPE_BADGE,
   MERCHANT_TYPE_LABELS,
-  MOCK_MERCHANTS,
 } from "@/lib/mock/merchants";
+import { getMerchants, getMerchantById } from "@/lib/data/merchants";
 import {
   getMenuItemsForMerchant,
   groupMenuItemsBySection,
-} from "@/lib/mock/menu-items";
+} from "@/lib/data/menu-items";
 import type { Merchant, MerchantType } from "@/lib/types";
 
-function findMerchant(id: string): Merchant | undefined {
+/** `null` for a malformed id (non-integer) or a merchant that truly doesn't
+ * exist — both should 404. A backend/network failure is not caught here;
+ * it propagates to ./error.tsx instead. */
+async function findMerchant(id: string): Promise<Merchant | null> {
   const numericId = Number(id);
-  if (!Number.isInteger(numericId)) return undefined;
-  return MOCK_MERCHANTS.find((merchant) => merchant.id === numericId);
+  if (!Number.isInteger(numericId)) return null;
+  return getMerchantById(numericId);
 }
 
 function formatPrice(value: number) {
@@ -138,14 +141,24 @@ function buildJsonLd(merchant: Merchant, weekHours: DayHours[]) {
 }
 
 export async function generateStaticParams() {
-  return MOCK_MERCHANTS.map((merchant) => ({ id: String(merchant.id) }));
+  try {
+    const merchants = await getMerchants();
+    return merchants.map((merchant) => ({ id: String(merchant.id) }));
+  } catch {
+    // Real backend unreachable at build time (NEXT_PUBLIC_API_BASE_URL set
+    // but pointing nowhere/nothing up yet). Skip static pre-generation
+    // instead of failing the whole build — pages still render on demand at
+    // request time (Next's default dynamicParams behavior). The mock
+    // branch above never throws, so this never triggers today.
+    return [];
+  }
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/restaurantes/[id]">): Promise<Metadata> {
   const { id } = await params;
-  const merchant = findMerchant(id);
+  const merchant = await findMerchant(id);
 
   if (!merchant) {
     return { title: "Restaurante no encontrado" };
@@ -182,7 +195,7 @@ export default async function MerchantPage({
   params,
 }: PageProps<"/restaurantes/[id]">) {
   const { id } = await params;
-  const merchant = findMerchant(id);
+  const merchant = await findMerchant(id);
 
   if (!merchant) {
     notFound();
@@ -191,9 +204,9 @@ export default async function MerchantPage({
   const typeBadge = MERCHANT_TYPE_BADGE[merchant.type];
   const priceRange = formatPriceRange(merchant);
   const menuGroups = groupMenuItemsBySection(
-    getMenuItemsForMerchant(merchant.id),
+    await getMenuItemsForMerchant(merchant.id),
   );
-  const businessHours = getBusinessHoursForMerchant(merchant.id);
+  const businessHours = await getBusinessHoursForMerchant(merchant.id);
   const weekHours = groupBusinessHoursByDay(businessHours);
   const jsonLd = buildJsonLd(merchant, weekHours);
 
