@@ -1,9 +1,9 @@
 // Basic smoke test: the app boots and lands on the Search tab's home view
 // (design-brief §2.1), with the bottom navigation bar visible.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'package:mobile/main.dart';
 
@@ -25,7 +25,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Buscar'), findsWidgets);
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    // The bottom nav is a custom floating pill (design-brief §2.10), not a
+    // Material BottomNavigationBar — assert on the QR quick-action icon
+    // that's part of it instead of the widget type.
+    expect(find.byIcon(Symbols.qr_code_scanner), findsOneWidget);
     // Confirms the new SearchScreen actually renders its home view (and not
     // just an empty shell) on first launch.
     expect(find.textContaining('Encontrá dónde comer.'), findsOneWidget);
