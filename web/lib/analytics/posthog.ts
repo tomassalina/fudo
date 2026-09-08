@@ -12,12 +12,101 @@
 // conservative. See PostHogProvider.tsx for the cookie note.
 
 import posthog from "posthog-js";
+import type { CaptureResult, Properties } from "posthog-js";
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 
 /** Both env vars must be set for analytics to do anything at all. */
 export const isPostHogEnabled = Boolean(POSTHOG_KEY && POSTHOG_HOST);
+
+// posthog-js attaches URL-bearing properties to EVERY event automatically —
+// $current_url + $host/$pathname on every capture, plus $referrer/
+// $referring_domain, and person/session-level derivatives like
+// $initial_current_url and $session_entry_url — regardless of what
+// properties app code passes to capture(). This is core SDK behavior, not
+// something this module controls per event: see
+// node_modules/.pnpm/@posthog+browser-common@0.8.2/node_modules/@posthog/
+// browser-common/dist/utils/event-utils.js (getEventProperties/
+// getPersonInfo/getPersonPropsFromInfo), bundled into posthog-js.
+//
+// That means on /buscar?q=<literal search text>, the literal query text
+// this app deliberately keeps OUT of search_performed's own properties (see
+// SearchAnalytics.tsx) would otherwise ride along anyway via $current_url on
+// the $pageview event — and via $referrer on whatever page a full navigation
+// away from /buscar?q=... lands on next, since search here is a plain GET
+// form (see app/buscar/page.tsx).
+//
+// `before_send` is the real, current config hook for stripping this before
+// events leave the browser — see the installed posthog-js v1.428.6's own
+// type package: node_modules/.pnpm/@posthog+types@1.409.2/node_modules/
+// @posthog/types/src/posthog-config.ts:2083
+// (`before_send?: BeforeSendFn | BeforeSendFn[]`), and its JSDoc at line
+// 1335 explicitly recommends it for removing "sensitive hash values before
+// events are sent" — the same pattern applies to sensitive query values.
+// The older `sanitize_properties` hook is explicitly superseded by it
+// (same file, line 2102: "@deprecated - use `before_send` instead").
+// `before_send` runs in posthog-core.js's capture() AFTER all SDK-computed
+// properties (including $current_url) are attached and right before the
+// event is queued/sent, so it sees — and can rewrite — everything that
+// would otherwise go out over the wire.
+//
+// Rather than allowlisting exact property names (which would silently miss
+// any new URL-bearing property a future posthog-js version adds), a
+// property is treated as URL-bearing when either its KEY looks like one
+// (contains "url" or "referrer", case-insensitively — covers $current_url,
+// $referrer, $referring_domain, $session_entry_url, $initial_current_url,
+// $initial_referrer, and anything shaped like them) OR, as a backstop for
+// an unexpected key name, its STRING VALUE looks like an absolute URL.
+//
+// The key-based check matters: this app's own PostHogPageview.tsx passes
+// `$current_url` as a root-relative "pathname?search" string (not an
+// absolute URL — see its `capture("$pageview", { $current_url: url })`
+// call), because posthog-js's own capture_pageview autocapture is disabled
+// here and doesn't hook Next.js App Router client-side navigations. A
+// value-shape-only check (e.g. requiring an "http(s)://" prefix) misses
+// that relative form entirely — confirmed live: before this key-based
+// check was added, `search_performed`'s SDK-computed (absolute)
+// `$current_url` was correctly redacted, but the manually-built
+// (relative) `$current_url` on `$pageview` still carried the literal
+// `q=` text straight through.
+//
+// Only the query string (where free-text search params like `?q=` live)
+// is stripped — path and host are left intact; closed-vocabulary params
+// like `type`/`tags` go with it too, but those are already sent
+// explicitly and safely via search_performed's own properties, so
+// nothing is lost.
+const URL_LIKE_PROPERTY_KEY = /url|referrer/i;
+
+function isUrlLikeProperty(key: string, value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  return URL_LIKE_PROPERTY_KEY.test(key) || /^https?:\/\//i.test(value);
+}
+
+/** Truncates at the first `?`, working for both absolute and root-relative URL strings. */
+function stripQueryString(url: string): string {
+  const queryIndex = url.indexOf("?");
+  return queryIndex === -1 ? url : url.slice(0, queryIndex);
+}
+
+function stripUrlQueryStrings(properties: Properties | undefined | null): void {
+  if (!properties) return;
+  for (const key of Object.keys(properties)) {
+    const value = properties[key];
+    if (isUrlLikeProperty(key, value)) {
+      properties[key] = stripQueryString(value);
+    }
+  }
+}
+
+/** `before_send` hook: redacts query strings from URL-bearing properties on every event. */
+function redactUrlQueryStrings(result: CaptureResult | null): CaptureResult | null {
+  if (!result) return result;
+  stripUrlQueryStrings(result.properties);
+  stripUrlQueryStrings(result.$set);
+  stripUrlQueryStrings(result.$set_once);
+  return result;
+}
 
 // Initialize at MODULE SCOPE, not inside a React effect/component.
 //
@@ -49,6 +138,11 @@ if (typeof window !== "undefined" && isPostHogEnabled) {
     // identification cookie/localStorage entry even with recording off; a
     // real consent banner is out of scope for this pass (see report).
     disable_session_recording: true,
+    // Strip free-text search queries (and any other sensitive query-string
+    // content) out of every SDK-attached URL property before events leave
+    // the browser. See the comment on redactUrlQueryStrings above for why
+    // this is needed and why before_send is the right hook for it.
+    before_send: redactUrlQueryStrings,
   });
 }
 
