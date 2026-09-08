@@ -23,18 +23,18 @@ Fudo Consumers es una app mobile de fidelización, descubrimiento con IA y regal
 | `backend/` | API Rails |
 | `mobile/` | App Flutter |
 | `web/` | Web Next.js |
-| `docs/` | Diagramas y diseño de referencia del esquema (`database-schema.drawio`, `database-schema.sql`) |
+| `docs/` | Diagramas y diseño de referencia visual del esquema (`database-schema.drawio`, `database-schema.png`) |
 | `openspec/` | Registro de decisiones y propuestas (SDD) |
 | `PRD.md` | Documento de producto |
 | `PLAN.md` | Plan de fases del proyecto |
 
-> **Nota sobre el esquema de base de datos:** `docs/database-schema.sql` es el diseño de referencia hecho a mano (va junto al diagrama visual `docs/database-schema.drawio`), no una fuente ejecutable. La fuente de verdad ejecutable real que usa Rails día a día (migraciones + `schema.rb`) vive en `backend/db/`.
+> **Nota sobre el esquema de base de datos:** la fuente de verdad ejecutable real que usa Rails día a día es `backend/db/structure.sql` (migraciones + `schema_format = :sql`, necesario por los enums nativos de Postgres). El diagrama visual `docs/database-schema.drawio` es diseño de referencia hecho a mano y se mantiene junto a `backend/db/structure.sql`.
 
 ## Documentos a leer primero, en este orden
 
 1. `PRD.md`
 2. `PLAN.md`
-3. `docs/database-schema.sql`
+3. `backend/db/structure.sql`
 4. `docs/database-schema.drawio`
 5. `openspec/changes/fudo-consumers-mvp/design.md`
 

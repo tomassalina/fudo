@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# Business rule (see db/schema.sql and app/models/business_hour.rb): a
+# Business rule (see db/structure.sql and app/models/business_hour.rb): a
 # merchant can run two separate shifts on the same day (e.g. lunch
 # 12:00-15:30 and dinner 20:00-00:30), so (merchant_id, day_of_week) is
 # intentionally NOT unique. This spec confirms the model does not carry an

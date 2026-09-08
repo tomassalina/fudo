@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Business rule: a consumer can only have ONE loyalty tally per merchant.
 # `visit_summaries` enforces this at the DB level with
-# UNIQUE (merchant_id, consumer_id) (see db/schema.sql). This spec confirms
+# UNIQUE (merchant_id, consumer_id) (see db/structure.sql). This spec confirms
 # the same rule is enforced at the application level via a uniqueness
 # validation, so a duplicate is rejected by `valid?`/`save` before it ever
 # reaches Postgres and raises ActiveRecord::RecordNotUnique.

@@ -42,7 +42,7 @@ module Backend
     config.api_only = true
 
     # Dump the schema as db/structure.sql instead of db/schema.rb. The schema
-    # relies on native Postgres enum types (see db/schema.sql), which schema.rb
+    # relies on native Postgres enum types (see db/structure.sql), which schema.rb
     # cannot represent faithfully.
     config.active_record.schema_format = :sql
   end

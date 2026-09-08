@@ -32,8 +32,7 @@ fudo/
 ├── mobile/     # App Flutter — lib/{core,features,shared}, 3 tabs
 ├── web/        # Web Next.js — App Router, SSR
 ├── docs/
-│   ├── database-schema.sql    # diseño de referencia hecho a mano (14 tablas + 7 enums)
-│   ├── database-schema.drawio
+│   ├── database-schema.drawio  # diseño de referencia hecho a mano (14 tablas + 7 enums)
 │   └── database-schema.png
 ├── openspec/
 │   └── changes/fudo-consumers-mvp/
@@ -84,8 +83,8 @@ El proyecto usa **pnpm** (ver `packageManager` en `web/package.json`), no npm ni
 
 1. [`PRD.md`](./PRD.md) — problema, ventaja injusta, alcance y fuera de alcance del producto.
 2. [`PLAN.md`](./PLAN.md) — plan técnico en 6 fases, cómo se trabajó en paralelo (worktrees de git).
-3. [`docs/database-schema.sql`](./docs/database-schema.sql) — diseño de referencia del esquema de base de datos, hecho a mano.
-4. [`docs/database-schema.drawio`](./docs/database-schema.drawio) — diagrama visual del esquema.
+3. [`backend/db/structure.sql`](./backend/db/structure.sql) — fuente de verdad ejecutable del esquema de base de datos, generada por Rails.
+4. [`docs/database-schema.drawio`](./docs/database-schema.drawio) — diagrama visual del esquema, hecho a mano.
 5. [`openspec/changes/fudo-consumers-mvp/design.md`](./openspec/changes/fudo-consumers-mvp/design.md) — decision log técnico (13 decisiones, con su "por qué").
 6. [`AGENTS.md`](./AGENTS.md) — contexto canónico para cualquier persona o agente que trabaje en el repo (`CLAUDE.md` es un alias que apunta acá).
 

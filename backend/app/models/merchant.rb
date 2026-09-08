@@ -16,7 +16,7 @@ class Merchant < ApplicationRecord
   }
 
   # menu_items, loyalty_rules, visits, and favorites carry their own
-  # deleted_at/deleted_by columns (see db/schema.sql: "no hard deletes").
+  # deleted_at/deleted_by columns (see db/structure.sql: "no hard deletes").
   # Cascading a real DELETE onto them via dependent: :destroy would bypass
   # that soft-delete convention, so a merchant with any of those still
   # attached must be handled explicitly (soft-deleted) instead of destroyed.

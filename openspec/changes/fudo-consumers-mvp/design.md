@@ -97,7 +97,7 @@ Registro de decisiones técnicas (decision log) para el proyecto Fudo Consumers.
 **Fecha:** 2026-09-08 (aproximada)
 **Estado:** Aceptada
 
-**Decisión:** El modelo de datos completo se compone de 14 tablas (`tags`, `merchants`, `consumers`, `menu_items`, `merchants_tags`, `menu_items_tags`, `visit_summaries`, `visits`, `loyalty_rules`, `business_hours`, `favorites`, `gifts`, `consumer_settings`, `search_history`) y 7 enums (`merchant_type_enum`, `gift_type_enum`, `gift_status_enum`, `theme_enum`, `currency_enum`, `reward_type_enum`, `day_of_week_enum`). El detalle del diseño de referencia vive en `docs/database-schema.sql` y el diagrama visual en `docs/database-schema.drawio` (ambos ya existen en el repo).
+**Decisión:** El modelo de datos completo se compone de 14 tablas (`tags`, `merchants`, `consumers`, `menu_items`, `merchants_tags`, `menu_items_tags`, `visit_summaries`, `visits`, `loyalty_rules`, `business_hours`, `favorites`, `gifts`, `consumer_settings`, `search_history`) y 7 enums (`merchant_type_enum`, `gift_type_enum`, `gift_status_enum`, `theme_enum`, `currency_enum`, `reward_type_enum`, `day_of_week_enum`). El detalle ejecutable vive en `backend/db/structure.sql` y el diagrama visual en `docs/database-schema.drawio` (ambos ya existen en el repo).
 
 **Por qué:** Durante la revisión del schema se aplicaron las siguientes correcciones respecto de un borrador anterior:
 
@@ -144,4 +144,4 @@ Registro de decisiones técnicas (decision log) para el proyecto Fudo Consumers.
 
 ## Decisiones pendientes / abiertas
 
-`docs/database-schema.sql`, `docs/database-schema.drawio` y `PLAN.md` ya existen en el repo y fueron revisados contra este documento (2026-09-08, integración de ramas paralelas): la Decisión 11 tenía un conteo desactualizado (decía "17 tablas + 6 enums") y fue corregida a "14 tablas + 7 enums", que es lo que `docs/database-schema.sql` implementa de verdad. El resto del detalle ejecutable coincide con lo documentado en este archivo.
+`backend/db/structure.sql`, `docs/database-schema.drawio` y `PLAN.md` ya existen en el repo y fueron revisados contra este documento (2026-09-08, integración de ramas paralelas): la Decisión 11 tenía un conteo desactualizado (decía "17 tablas + 6 enums") y fue corregida a "14 tablas + 7 enums", que es lo que `backend/db/structure.sql` implementa de verdad. El resto del detalle ejecutable coincide con lo documentado en este archivo.
