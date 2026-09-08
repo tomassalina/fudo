@@ -1,4 +1,6 @@
 class Merchant < ApplicationRecord
+  include SoftDeletable
+
   # The `type` column is a native Postgres enum (merchant_type_enum), not a
   # Rails STI discriminator. Disable STI so `type=` behaves like any other
   # attribute.

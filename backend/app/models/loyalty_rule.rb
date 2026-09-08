@@ -1,4 +1,6 @@
 class LoyaltyRule < ApplicationRecord
+  include SoftDeletable
+
   enum :reward_type, {
     discount_percent: "discount_percent",
     free_item: "free_item",

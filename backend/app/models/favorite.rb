@@ -1,4 +1,6 @@
 class Favorite < ApplicationRecord
+  include SoftDeletable
+
   belongs_to :consumer
   belongs_to :merchant
 

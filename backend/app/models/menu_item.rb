@@ -1,4 +1,6 @@
 class MenuItem < ApplicationRecord
+  include SoftDeletable
+
   enum :currency, { usd: "usd", ars: "ars" }
 
   belongs_to :merchant
