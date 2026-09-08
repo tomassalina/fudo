@@ -130,6 +130,28 @@ RSpec.describe "Api::V1::Favorites", type: :request do
       expect(response).to have_http_status(:conflict)
       expect(json_response["error"]).to eq("Resource already exists")
     end
+
+    # The DB's unique index on (consumer_id, merchant_id) is NOT partial —
+    # it applies to soft-deleted rows too (see db/structure.sql). Before the
+    # revive-on-recreate fix, unfavoriting and then re-favoriting the same
+    # merchant would hit that index directly on every attempt and 409
+    # forever, since the default_scope hides the soft-deleted row from the
+    # uniqueness *validation* but not from Postgres.
+    it "revives the same soft-deleted favorite instead of 409ing when re-favoriting after unfavorite" do
+      consumer = create_consumer
+      merchant = create_merchant
+      original = create_favorite(consumer: consumer, merchant: merchant)
+      original.soft_delete!(consumer.id)
+
+      post "/api/v1/favorites", params: { favorite: { merchant_id: merchant.id } }, headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:created)
+      expect(json_response["id"]).to eq(original.id)
+      revived = Favorite.find(original.id)
+      expect(revived.deleted_at).to be_nil
+      expect(revived.deleted_by).to be_nil
+      expect(revived.created_by).to eq(consumer.id)
+    end
   end
 
   describe "PATCH /api/v1/favorites/:id" do

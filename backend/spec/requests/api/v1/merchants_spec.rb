@@ -49,6 +49,21 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       expect(ids).to eq([ matching.id ])
     end
 
+    # Gemini (SearchQueryParser) is prompted to return lowercase tags but
+    # never guaranteed to — this filter must not silently drop matches just
+    # because casing differs from what's stored.
+    it "matches tags case-insensitively" do
+      matching = create_merchant
+      tag = Tag.create!(name: "vegano", created_by: SecureRandom.uuid)
+      MerchantsTag.create!(merchant: matching, tag: tag)
+
+      get "/api/v1/merchants", params: { tags: "VEGANO" }
+
+      expect(response).to have_http_status(:ok)
+      ids = json_response["data"].map { |m| m["id"] }
+      expect(ids).to eq([ matching.id ])
+    end
+
     it "requires no authentication — merchant discovery is public" do
       create_merchant
 

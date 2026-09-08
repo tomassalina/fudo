@@ -62,7 +62,11 @@ class Merchant < ApplicationRecord
     tag_names = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?)
     return scope if tag_names.empty?
 
-    scope.joins(:tags).where(tags: { name: tag_names }).distinct
+    # Case-insensitive on purpose: tags here can come straight from Gemini's
+    # parsed output (see SearchQueryParser), which is prompted to use
+    # lowercase tags but never guaranteed to — an exact `where(name: ...)`
+    # match would silently drop matches on any casing difference.
+    scope.joins(:tags).where("LOWER(tags.name) IN (?)", tag_names.map(&:downcase)).distinct
   end
   private_class_method :filter_by_tags
 

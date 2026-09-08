@@ -251,5 +251,35 @@ RSpec.describe "Api::V1::Gifts", type: :request do
       expect(response).to have_http_status(:not_found)
       expect(Gift.unscoped.find(gift.id).deleted_at).to be_nil
     end
+
+    # Gift's soft-delete scope is GLOBAL (see SoftDeletable's default_scope)
+    # — soft-deleting a gift hides it from BOTH the sender and the
+    # recipient, not just from whoever calls destroy. Without a sender-only
+    # guard here, the recipient could make a gift vanish from the sender's
+    # own history too.
+    it "returns 403 when the recipient (not the sender) tries to delete the gift" do
+      sender = create_consumer
+      recipient = create_consumer
+      gift = create_gift(sender: sender, recipient_consumer_id: recipient.id)
+
+      delete "/api/v1/gifts/#{gift.id}", headers: auth_headers_for(recipient)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(Gift.unscoped.find(gift.id).deleted_at).to be_nil
+    end
+
+    # Deliberately restricted to `pending`, same as the #update cancel path
+    # — this stops the sender from unilaterally erasing the recipient's
+    # redemption history for a gift that already happened (redeemed) or ran
+    # its course (expired/cancelled).
+    it "returns 422 when the sender tries to delete a gift that is no longer pending" do
+      consumer = create_consumer
+      gift = create_gift(sender: consumer, status: "redeemed", status_updated_at: Time.current)
+
+      delete "/api/v1/gifts/#{gift.id}", headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(Gift.unscoped.find(gift.id).deleted_at).to be_nil
+    end
   end
 end

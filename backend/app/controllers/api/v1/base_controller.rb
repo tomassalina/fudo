@@ -43,8 +43,14 @@ module Api
         render json: { errors: exception.record.errors.to_hash }, status: :unprocessable_entity
       end
 
-      def render_unprocessable_argument(exception)
-        render json: { errors: { base: [ exception.message ] } }, status: :unprocessable_entity
+      # Deliberately does NOT expose exception.message — an ArgumentError
+      # here typically comes from a Rails `enum` rejecting an out-of-range
+      # value, but ArgumentError is a generic Ruby exception that could in
+      # principle be raised from deeper in the stack with an internal
+      # message never meant for API clients (same reasoning as
+      # render_invalid_filter below for StatementInvalid).
+      def render_unprocessable_argument(_exception)
+        render json: { errors: { base: [ "Invalid request parameters" ] } }, status: :unprocessable_entity
       end
 
       def render_conflict

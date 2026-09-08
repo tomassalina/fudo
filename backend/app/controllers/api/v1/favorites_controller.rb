@@ -19,9 +19,31 @@ module Api
         render json: FavoriteBlueprint.render_as_hash(@favorite)
       end
 
+      # The DB's unique index on (consumer_id, merchant_id) is NOT partial
+      # (see db/structure.sql) — it applies to every row regardless of
+      # deleted_at. So unfavoriting (soft delete) and then re-favoriting the
+      # same merchant would otherwise always hit that index directly and
+      # 409 forever, even though the default_scope hides the soft-deleted
+      # row from view (and from the uniqueness *validation*, which only
+      # sees non-deleted rows and would happily let a plain INSERT through
+      # right into the index conflict). Revive the existing row instead of
+      # inserting a new one whenever this exact (consumer, merchant) pair
+      # was previously soft-deleted.
       def create
         favorite = current_consumer.favorites.new(favorite_params)
         favorite.created_by = current_consumer.id
+
+        existing = Favorite.unscoped.find_by(consumer_id: current_consumer.id, merchant_id: favorite.merchant_id)
+
+        if existing&.deleted_at
+          existing.deleted_at = nil
+          existing.deleted_by = nil
+          existing.created_by = current_consumer.id
+          existing.save!
+
+          return render json: FavoriteBlueprint.render_as_hash(existing), status: :created
+        end
+
         favorite.save!
 
         render json: FavoriteBlueprint.render_as_hash(favorite), status: :created

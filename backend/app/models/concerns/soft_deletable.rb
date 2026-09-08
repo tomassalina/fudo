@@ -25,6 +25,8 @@ module SoftDeletable
   # those dependents here too, in the same transaction as the save, so the
   # net effect matches what a real `destroy` would have done to them.
   def soft_delete!(actor_id)
+    raise ArgumentError, "actor_id is required" if actor_id.blank?
+
     self.deleted_at = Time.current
     self.deleted_by = actor_id
 
