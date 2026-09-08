@@ -1,9 +1,450 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
+# Fudo Consumers — Phase 1 demo data seed.
 #
-# Example:
+# Generates fully fictional, but realistic, demo data for the Palermo
+# (Ciudad Autónoma de Buenos Aires, Argentina) neighborhood: merchants, menu
+# items, tags, business hours (including double-shift days), loyalty rules,
+# one demo consumer with encrypted DNI, visit history and a couple of
+# favorites/gifts.
 #
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+# Idempotent-safe: deletes previously-seeded rows (children before parents,
+# to respect the FK constraints) before recreating them, so `rails db:seed`
+# can be re-run without crashing on unique constraint violations.
+#
+# --- Lockbox / blind_index master keys (read this if you're setting up env vars) ---
+# `Consumer#dni` is encrypted at rest via Lockbox (`dni_encrypted`) with a
+# blind index (`dni_bidx`) for uniqueness/lookups (see app/models/consumer.rb
+# and config/initializers/lockbox.rb). Neither gem had a master key configured
+# yet, so for this seed to actually exercise real encryption (instead of
+# hardcoding fake ciphertext), two DEV-ONLY keys were generated with
+# `SecureRandom.hex(32)` and written to `backend/.env` as `LOCKBOX_MASTER_KEY`
+# and `BLIND_INDEX_MASTER_KEY` (confirmed covered by backend/.gitignore's
+# `/.env*` pattern — never commit that file).
+#
+# IMPORTANT for whoever owns the project's real secrets/env var setup: these
+# are throwaway local dev keys, not a production secrets story. Replace them
+# (Rails credentials, Docker secrets, a vault, etc.) and reconcile
+# backend/.env with wherever the rest of the app's env vars end up living
+# before relying on this beyond local dev/demo.
+
+puts "Seeding Fudo Consumers demo data (Palermo, CABA, Argentina)..."
+
+SYSTEM_ACTOR_ID = SecureRandom.uuid
+TODAY = Time.zone.local(2026, 9, 8)
+
+# ----------------------------------------------------------------------------
+# Cleanup (children before parents, FKs are RESTRICT by default)
+# ----------------------------------------------------------------------------
+puts "Clearing previously seeded data..."
+[ Gift, Favorite, Visit, VisitSummary, LoyaltyRule, BusinessHour,
+ MenuItemsTag, MerchantsTag, MenuItem, ConsumerSetting, SearchHistory,
+ Consumer, Merchant, Tag ].each(&:delete_all)
+
+# ----------------------------------------------------------------------------
+# Tags
+# ----------------------------------------------------------------------------
+puts "Creating tags..."
+TAG_NAMES = %w[
+  sin_tacc vegano vegetariano apto_celiacos con_delivery pet_friendly con_terraza wifi_gratis
+].freeze
+
+tags = TAG_NAMES.index_with do |name|
+  Tag.create!(name: name, created_by: SYSTEM_ACTOR_ID)
+end
+
+# ----------------------------------------------------------------------------
+# Merchants
+# ----------------------------------------------------------------------------
+puts "Creating merchants..."
+
+# name, type, street address, price_per_person_min, price_per_person_max (ARS).
+# Price bands are a judgment call for "September 2026" pricing (no real
+# published data to anchor to) — scaled up from mid-2024 Palermo price
+# levels by an assumed further ~18 months of Argentine inflation.
+MERCHANTS_DATA = [
+  [ "La Cocina de Mateo", "restaurant", "Gorriti 4820", 22000, 38000 ],
+  [ "Almacén Malabia", "restaurant", "Malabia 1621", 24000, 40000 ],
+  [ "Che Bo Parrilla", "restaurant", "Nicaragua 5934", 28000, 46000 ],
+  [ "Rincón Costa Rica", "restaurant", "Costa Rica 4711", 21000, 35000 ],
+  [ "Sótano Armenia", "restaurant", "Armenia 1556", 26000, 42000 ],
+  [ "El Fogón de Julián", "restaurant", "Honduras 4890", 25000, 41000 ],
+  [ "Vacío y Vino", "restaurant", "Thames 1780", 30000, 48000 ],
+  [ "Cocina Serrana", "restaurant", "Cabrera 5322", 23000, 37000 ],
+  [ "La Parrilla de Borges", "restaurant", "Jorge Luis Borges 2145", 27000, 44000 ],
+  [ "Bodegón Guatemala", "restaurant", "Guatemala 4675", 20000, 34000 ],
+  [ "Café Niceto", "cafe", "Niceto Vega 5480", 9000, 15000 ],
+  [ "Tostado & Café Dorrego", "cafe", "Plaza Dorrego 234", 8500, 14000 ],
+  [ "Medialuna Club", "cafe", "El Salvador 4711", 9500, 16000 ],
+  [ "Café Dorado Fitz Roy", "cafe", "Fitz Roy 1890", 10000, 17000 ],
+  [ "La Tostadora Migueletes", "cafe", "Migueletes 1345", 9000, 15500 ],
+  [ "Cortado Arévalo", "cafe", "Arévalo 2015", 8800, 14500 ],
+  [ "Bar Soler", "bar", "Soler 5230", 15000, 26000 ],
+  [ "El Rincón de Gorriti", "bar", "Gorriti 5610", 14000, 24000 ],
+  [ "Cervecería Cabrera", "bar", "Cabrera 4980", 16000, 27000 ],
+  [ "Bar Santa Fe Alto", "bar", "Santa Fe 4210", 15500, 25000 ],
+  [ "Vermutería Guatemala", "bar", "Guatemala 5122", 17000, 28000 ],
+  [ "Bodega Cerviño", "bar", "Cerviño 3980", 16500, 26500 ],
+  [ "Pizzería Malabia Vieja", "pizzeria", "Malabia 2001", 17000, 29000 ],
+  [ "La Fugazzeta de Thames", "pizzeria", "Thames 1420", 16000, 27000 ],
+  [ "Horno a Leña Honduras", "pizzeria", "Honduras 3785", 18000, 30000 ],
+  [ "Poke & Go Palermo", "dark_kitchen", "Costa Rica 5680", 11000, 19000 ],
+  [ "Cocina Oculta Soho", "dark_kitchen", "Gurruchaga 1988", 12000, 20000 ],
+  [ "Fábrica Cervecera Nicaragua", "brewery", "Nicaragua 4550", 16000, 28000 ],
+  [ "Cervecería Palermo Hollywood", "brewery", "Humboldt 1690", 15500, 27500 ],
+  [ "Food Truck El Zaguán", "food_truck", "Plazoleta Serrano s/n", 7000, 12500 ]
+].freeze
+
+# Deterministic pseudo-random coordinates within Palermo's real bounding box
+# (~lat -34.595..-34.565, lng -58.452..-58.398), so points are real, distinct
+# and spread across the neighborhood rather than stacked on one point.
+geo_rng = Random.new(20_260_908)
+
+merchants = MERCHANTS_DATA.each_with_index.map do |(name, type, address, price_min, price_max), index|
+  lat = (-34.595 + geo_rng.rand * 0.030).round(6)
+  lng = (-58.452 + geo_rng.rand * 0.054).round(6)
+
+  Merchant.create!(
+    name: name,
+    type: type,
+    address: address,
+    country: "Argentina",
+    state: "Ciudad Autónoma de Buenos Aires",
+    city: "Ciudad Autónoma de Buenos Aires",
+    neighborhood: "Palermo",
+    zip_code: "C1414",
+    latitude: lat,
+    longitude: lng,
+    whatsapp_number: "+5491150001#{format('%03d', index)}",
+    price_per_person_min: price_min,
+    price_per_person_max: price_max,
+    created_by: SYSTEM_ACTOR_ID
+  )
+end
+
+# ----------------------------------------------------------------------------
+# Merchant tags
+# ----------------------------------------------------------------------------
+puts "Tagging merchants..."
+
+MERCHANT_TAGS_BY_TYPE = {
+  "restaurant" => %w[con_terraza],
+  "cafe" => %w[wifi_gratis pet_friendly],
+  "bar" => %w[con_terraza pet_friendly],
+  "pizzeria" => %w[con_delivery],
+  "dark_kitchen" => %w[con_delivery vegano],
+  "brewery" => %w[con_delivery con_terraza],
+  "food_truck" => %w[con_delivery]
+}.freeze
+
+# A handful of merchants (regardless of type) additionally cater to
+# dietary-restriction diners, to exercise sin_tacc / apto_celiacos / vegano.
+EXTRA_DIETARY_TAGS_MERCHANT_NAMES = {
+  "La Cocina de Mateo" => %w[sin_tacc apto_celiacos],
+  "Cocina Serrana" => %w[vegetariano],
+  "Café Niceto" => %w[sin_tacc],
+  "Medialuna Club" => %w[apto_celiacos],
+  "Poke & Go Palermo" => %w[vegetariano],
+  "Cocina Oculta Soho" => %w[sin_tacc vegano],
+  "Vermutería Guatemala" => %w[vegetariano]
+}.freeze
+
+merchants.each do |merchant|
+  tag_names = MERCHANT_TAGS_BY_TYPE.fetch(merchant.type, []) +
+              EXTRA_DIETARY_TAGS_MERCHANT_NAMES.fetch(merchant.name, [])
+
+  tag_names.uniq.each do |tag_name|
+    MerchantsTag.create!(merchant: merchant, tag: tags.fetch(tag_name))
+  end
+end
+
+# ----------------------------------------------------------------------------
+# Menu items (150 = 30 merchants x 5 items each)
+# ----------------------------------------------------------------------------
+puts "Creating menu items..."
+
+DISH_POOLS = {
+  "restaurant" => [
+    "Milanesa napolitana con papas fritas", "Bife de chorizo", "Empanadas de carne (docena)",
+    "Provoleta", "Ensalada César", "Papas fritas con cheddar y panceta",
+    "Tarta de acelga y queso", "Locro criollo", "Matambre a la pizza", "Vacío al asador"
+  ],
+  "cafe" => [
+    "Medialunas de manteca (x3)", "Tostado de jamón y queso", "Café con leche",
+    "Licuado de banana y frutilla", "Submarino", "Budín de limón",
+    "Avocado toast", "Chipá", "Cappuccino", "Jugo de naranja exprimido"
+  ],
+  "bar" => [
+    "Picada para dos", "Cerveza artesanal IPA (pinta)", "Papas bravas",
+    "Nachos con guacamole", "Rabas fritas", "Hamburguesa doble cheddar",
+    "Sandwich de bondiola", "Tabla de fiambres y quesos", "Copa de vino Malbec", "Alitas BBQ"
+  ],
+  "pizzeria" => [
+    "Pizza muzzarella", "Pizza fugazzeta rellena", "Pizza especial jamón y morrones",
+    "Calzone de jamón y queso", "Empanada árabe", "Faina",
+    "Pizza cuatro quesos", "Pizza napolitana", "Palmeritas de anchoa", "Fugazza con queso"
+  ],
+  "dark_kitchen" => [
+    "Bowl poke de salmón", "Wrap de pollo grillado", "Sushi roll California",
+    "Ramen picante para llevar", "Ensalada de quinoa y vegetales", "Curry de garbanzos",
+    "Hamburguesa vegana", "Tacos de carnitas (x3)", "Poke bowl vegetariano", "Noodles salteados con vegetales"
+  ],
+  "brewery" => [
+    "Cerveza IPA artesanal (pinta)", "Cerveza stout (pinta)", "Tabla de picada cervecera",
+    "Choripán artesanal", "Bondiola a la cerveza negra", "Pretzel con mostaza",
+    "Hamburguesa smash", "Papas rústicas", "Nachos con cheddar", "Alitas picantes"
+  ],
+  "food_truck" => [
+    "Choripán clásico", "Bondiola al pan con chimichurri", "Papas fritas artesanales",
+    "Hamburguesa smash simple", "Panchito especial", "Limonada casera",
+    "Cerveza en lata", "Sanguche de milanesa", "Vaso de papas con cheddar", "Brownie con helado"
+  ]
+}.freeze
+
+# Dish names that get an automatic dietary tag, matched by keyword.
+DISH_TAG_RULES = {
+  "vegano" => [ "vegana", "quinoa", "garbanzos", "vegetales" ],
+  "vegetariano" => [ "vegetariano", "acelga", "quinoa" ],
+  "sin_tacc" => [ "provoleta", "rabas", "milanesa" ],
+  "apto_celiacos" => [ "ensalada césar", "papas fritas artesanales" ]
+}.freeze
+
+def tags_for_dish(name, tags)
+  DISH_TAG_RULES.filter_map do |tag_name, keywords|
+    tags[tag_name] if keywords.any? { |kw| name.downcase.include?(kw) }
+  end
+end
+
+menu_items = []
+
+merchants.each_with_index do |merchant, merchant_index|
+  pool = DISH_POOLS.fetch(merchant.type)
+  # Rotate the 5-item slice through the 10-item pool so merchants sharing a
+  # type don't all get an identical menu.
+  offset = (merchant_index * 3) % pool.size
+  dish_names = pool.rotate(offset).first(5)
+
+  dish_names.each_with_index do |dish_name, item_index|
+    price_span = merchant.price_per_person_max - merchant.price_per_person_min
+    price = (merchant.price_per_person_min + price_span * ((item_index + 1) / 6.0)).round(-2)
+
+    item = MenuItem.create!(
+      merchant: merchant,
+      name: dish_name,
+      description: "#{dish_name} — especialidad de #{merchant.name}.",
+      price: price,
+      currency: "ars",
+      section: item_index < 2 ? "Entradas" : "Principales",
+      active: true,
+      created_by: SYSTEM_ACTOR_ID
+    )
+    menu_items << item
+
+    tags_for_dish(dish_name, tags).each do |tag|
+      MenuItemsTag.find_or_create_by!(menu_item: item, tag: tag)
+    end
+  end
+end
+
+# ----------------------------------------------------------------------------
+# Business hours (210 rows total)
+#   - 6 merchants: standard 7-day week + a double shift on one day (8 rows each = 48)
+#   - 6 merchants: closed one full day, no row for it (6 rows each = 36)
+#   - 18 merchants: standard 7-day week, one day explicitly marked closed (7 rows each = 126)
+#   48 + 36 + 126 = 210
+# ----------------------------------------------------------------------------
+puts "Creating business hours..."
+
+DAYS = BusinessHour.day_of_weeks.keys
+
+HOURS_BY_TYPE = {
+  "restaurant" => %w[12:00 00:00],
+  "cafe" => %w[08:00 20:00],
+  "bar" => %w[18:00 02:00],
+  "pizzeria" => %w[19:00 01:00],
+  "dark_kitchen" => %w[11:00 23:00],
+  "brewery" => %w[17:00 01:00],
+  "food_truck" => %w[11:00 22:00]
+}.freeze
+
+double_shift_merchants = merchants.first(6)
+day_off_merchants = merchants[6...12]
+standard_merchants = merchants[12...30]
+
+# One doubled day per double-shift merchant; the first one is Monday on
+# purpose, to reproduce the exact "Monday lunch + Monday dinner" example.
+doubled_days = %w[monday tuesday wednesday thursday friday saturday]
+
+double_shift_merchants.each_with_index do |merchant, index|
+  doubled_day = doubled_days[index]
+
+  DAYS.each do |day|
+    if day == doubled_day
+      BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: "12:00", closes_at: "15:30", closed: false)
+      BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: "20:00", closes_at: "00:30", closed: false)
+    else
+      open_time, close_time = HOURS_BY_TYPE.fetch(merchant.type)
+      BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: open_time, closes_at: close_time, closed: false)
+    end
+  end
+end
+
+day_off_merchants.each do |merchant|
+  open_time, close_time = HOURS_BY_TYPE.fetch(merchant.type)
+  (DAYS - [ "monday" ]).each do |day|
+    BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: open_time, closes_at: close_time, closed: false)
+  end
+end
+
+standard_merchants.each do |merchant|
+  open_time, close_time = HOURS_BY_TYPE.fetch(merchant.type)
+  DAYS.each do |day|
+    if day == "sunday"
+      BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: nil, closes_at: nil, closed: true)
+    else
+      BusinessHour.create!(merchant: merchant, day_of_week: day, opens_at: open_time, closes_at: close_time, closed: false)
+    end
+  end
+end
+
+# ----------------------------------------------------------------------------
+# Loyalty rules (150 = 30 merchants x 5 tiers each)
+# ----------------------------------------------------------------------------
+puts "Creating loyalty rules..."
+
+LOYALTY_TIERS = [
+  { visits_required: 2, reward_type: "discount_percent", reward_description: "10% de descuento en la cuenta total" },
+  { visits_required: 4, reward_type: "free_item", reward_description: "Postre o café de cortesía" },
+  { visits_required: 6, reward_type: "cashback", reward_description: "15% de cashback en tu próxima visita" },
+  { visits_required: 8, reward_type: "discount_percent", reward_description: "20% de descuento en la cuenta total" },
+  { visits_required: 10, reward_type: "other", reward_description: "Cliente frecuente: beneficio permanente en cada visita" }
+].freeze
+
+merchants.each do |merchant|
+  LOYALTY_TIERS.each do |tier|
+    LoyaltyRule.create!(
+      merchant: merchant,
+      visits_required: tier[:visits_required],
+      reward_type: tier[:reward_type],
+      reward_description: tier[:reward_description],
+      is_permanent: tier[:visits_required] == 10,
+      created_by: SYSTEM_ACTOR_ID
+    )
+  end
+end
+
+# ----------------------------------------------------------------------------
+# Demo consumer
+# ----------------------------------------------------------------------------
+puts "Creating demo consumer..."
+
+# first_name/last_name may be real; email, DNI, and password are
+# fictional/demo placeholders — this file is committed to git in
+# plaintext, unlike backend/.env, so no real credentials go here.
+consumer = Consumer.create!(
+  first_name: "Tomas",
+  last_name: "Salina",
+  email: "info@tomassalina.com",
+  password_hash: BCrypt::Password.create("Demo1234"),
+  dni: "12345678",
+  phone: "+5491122334455",
+  created_by: SYSTEM_ACTOR_ID
+)
+
+ConsumerSetting.create!(consumer: consumer, theme: "dark", notifications_enabled: true, updated_by: SYSTEM_ACTOR_ID)
+
+# ----------------------------------------------------------------------------
+# Visit summaries (27) and visits (116) for the demo consumer
+# ----------------------------------------------------------------------------
+puts "Creating visit summaries and visits..."
+
+visited_merchants = merchants.first(27)
+
+# 8 merchants get 5 visits, the remaining 19 get 4 visits -> 8*5 + 19*4 = 116.
+visit_counts = Array.new(8, 5) + Array.new(19, 4)
+
+visited_merchants.each_with_index do |merchant, index|
+  visit_count = visit_counts[index]
+  merchant_loyalty_rules = LoyaltyRule.where(merchant: merchant).order(:visits_required)
+
+  visited_dates = visit_count.times.map { |n| TODAY - (visit_count - n) * 12.days - index.days }
+
+  visits = visited_dates.each_with_index.map do |visited_at, visit_number|
+    visits_so_far = visit_number + 1
+    reached_rule = merchant_loyalty_rules.select { |rule| rule.visits_required <= visits_so_far }.last
+    reward_applied = reached_rule.present? && visits_so_far == reached_rule.visits_required
+
+    Visit.create!(
+      consumer: consumer,
+      merchant: merchant,
+      amount: (merchant.price_per_person_min + rand(0..(merchant.price_per_person_max - merchant.price_per_person_min))).round(-2),
+      reward_applied: reward_applied,
+      reward_description_snapshot: reward_applied ? reached_rule.reward_description : nil,
+      visited_at: visited_at,
+      created_by: SYSTEM_ACTOR_ID
+    )
+  end
+
+  highest_reached = merchant_loyalty_rules.select { |rule| rule.visits_required <= visit_count }.last
+  current_tier = highest_reached ? "Nivel #{highest_reached.visits_required} visitas" : "Nuevo"
+
+  VisitSummary.create!(
+    consumer: consumer,
+    merchant: merchant,
+    count: visit_count,
+    current_tier: current_tier,
+    last_visit_at: visits.map(&:visited_at).max
+  )
+end
+
+# ----------------------------------------------------------------------------
+# Favorites (3)
+# ----------------------------------------------------------------------------
+puts "Creating favorites..."
+
+visited_merchants.first(3).each do |merchant|
+  Favorite.create!(consumer: consumer, merchant: merchant, created_by: SYSTEM_ACTOR_ID)
+end
+
+# ----------------------------------------------------------------------------
+# Gifts (3)
+# ----------------------------------------------------------------------------
+puts "Creating gifts..."
+
+GIFTS_DATA = [
+  { type: "classic", amount: 5000, status: "pending", message: "¡Feliz cumple! Disfrutá una cena en Palermo." },
+  { type: "gold", amount: 12000, status: "redeemed", message: "Gracias por todo, un gustito de mi parte." },
+  { type: "black", amount: 20000, status: "pending", message: "Para celebrar tu ascenso." }
+].freeze
+
+GIFTS_DATA.each_with_index do |gift_data, index|
+  Gift.create!(
+    sender: consumer,
+    recipient: nil,
+    type: gift_data[:type],
+    amount: gift_data[:amount],
+    recipient_phone: "+549115500#{format('%04d', index + 1)}",
+    message: gift_data[:message],
+    expires_at: TODAY + 3.months,
+    status: gift_data[:status],
+    status_updated_at: gift_data[:status] == "redeemed" ? TODAY - 2.days : nil,
+    created_by: SYSTEM_ACTOR_ID
+  )
+end
+
+# ----------------------------------------------------------------------------
+# Summary
+# ----------------------------------------------------------------------------
+puts "\nSeed summary:"
+puts "  Tags: #{Tag.count}"
+puts "  Merchants: #{Merchant.count}"
+puts "  MenuItems: #{MenuItem.count}"
+puts "  MerchantsTags: #{MerchantsTag.count}"
+puts "  MenuItemsTags: #{MenuItemsTag.count}"
+puts "  BusinessHours: #{BusinessHour.count}"
+puts "  LoyaltyRules: #{LoyaltyRule.count}"
+puts "  Consumers: #{Consumer.count}"
+puts "  ConsumerSettings: #{ConsumerSetting.count}"
+puts "  VisitSummaries: #{VisitSummary.count}"
+puts "  Visits: #{Visit.count}"
+puts "  Favorites: #{Favorite.count}"
+puts "  Gifts: #{Gift.count}"
+puts "Done."

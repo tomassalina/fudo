@@ -40,5 +40,10 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Dump the schema as db/structure.sql instead of db/schema.rb. The schema
+    # relies on native Postgres enum types (see db/schema.sql), which schema.rb
+    # cannot represent faithfully.
+    config.active_record.schema_format = :sql
   end
 end
