@@ -1,38 +1,51 @@
 // Real fetch implementation for GET /api/v1/merchants and
-// GET /api/v1/merchants/:id (PLAN.md Fase 3). Unverified against a live
-// backend in this worktree — see ./README.md.
+// GET /api/v1/merchants/:id (PLAN.md Fase 3).
 //
-// Response shape for GET /api/v1/merchants confirmed by the backend track
-// (399 passing request specs): a paginated `{ data, meta }` envelope, and
-// decimal columns (price_per_person_min/max, latitude, longitude) come
-// back as JSON strings, not numbers — that's how Rails serializes
-// BigDecimal by default. Parsed back to numbers here, at the API boundary,
-// so nothing downstream (lib/data, page components) needs to care.
+// Verified against the live backend (localhost:3000, running but not yet
+// merged to main — see ./README.md's "Live verification" section for what
+// was actually checked and when). Contract confirmed via curl and the
+// live /api-docs/v1/swagger.yaml, not just PLAN.md's prose description.
 
 import { cache } from "react";
 import type { BusinessHours, Merchant } from "@/lib/types";
 import { apiFetch, ApiError } from "./client";
 
-/** Wire shape for a merchant: same as `Merchant`, except decimal columns
- * are strings, and the UI-only derived fields (`tags`, `distanceKm`, etc. —
- * see lib/types' doc comments) aren't confirmed to exist on the real
- * serializer yet, so they're optional here and defaulted in `parseMerchant`. */
-interface RawMerchant
-  extends Omit<
-    Merchant,
-    | "price_per_person_min"
-    | "price_per_person_max"
-    | "latitude"
-    | "longitude"
-    | "tags"
-    | "distanceKm"
-  > {
-  price_per_person_min: string | null;
-  price_per_person_max: string | null;
+/**
+ * Wire shape for a merchant. Confirmed against the live swagger spec that
+ * `GET /api/v1/merchants` (list) and `GET /api/v1/merchants/:id` (detail)
+ * return *different* subsets of these fields:
+ *
+ * - List: only `id, name, type, city, latitude, longitude` are guaranteed;
+ *   `neighborhood, price_per_person_min/max, cover_image_url` are present
+ *   but nullable. `address`, `state`, `country`, `whatsapp_number`,
+ *   `delivery_url`, `tags` are NOT returned by the list endpoint at all.
+ * - Detail: includes all of the above, confirmed by curl.
+ *
+ * Neither endpoint returns `topDish`, `rewardTeaser`, or `distanceKm` —
+ * those are UI-only derived fields with no backend column (see lib/types'
+ * doc comments on `Merchant`), so they're always defaulted below
+ * regardless of which endpoint answered.
+ *
+ * `parseMerchant` treats every field but the list's guaranteed five as
+ * optional and defaults what's missing, so it works for both shapes.
+ */
+interface RawMerchant {
+  id: number;
+  name: string;
+  type: Merchant["type"];
+  city: string;
   latitude: string;
   longitude: string;
+  neighborhood?: string | null;
+  price_per_person_min?: string | null;
+  price_per_person_max?: string | null;
+  cover_image_url?: string | null;
+  address?: string;
+  country?: string;
+  state?: string;
+  whatsapp_number?: string | null;
+  delivery_url?: string | null;
   tags?: string[];
-  distanceKm?: number;
 }
 
 interface MerchantsListResponse {
@@ -45,13 +58,24 @@ interface MerchantsListResponse {
   };
 }
 
-interface RawMerchantDetail extends RawMerchant {
-  business_hours?: BusinessHours[];
+/** `opens_at`/`closes_at` come back as full ISO 8601 timestamps on an
+ * arbitrary fixed date (e.g. `"2000-01-01T15:30:00.000Z"`), not the
+ * `"HH:MM:SS"` string lib/types documents and lib/mock's formatting
+ * helpers (`formatHm` et al.) assume — confirmed by curl. This is Rails
+ * serializing a `time`-only column as a full timestamp, not a timezone
+ * conversion — per PLAN.md ("ninguna columna/lógica de timezone"), the
+ * whole project has no timezone logic anywhere, so the fix is to read the
+ * HH:MM:SS off the string as literal wall-clock digits, not to convert
+ * between zones. */
+interface RawBusinessHours extends Omit<BusinessHours, "opens_at" | "closes_at"> {
+  opens_at: string | null;
+  closes_at: string | null;
 }
 
-/** Shape assumed for `GET /api/v1/merchants/:id` — see README.md's
- * "Assumption, not a confirmed contract" note on `business_hours` (only
- * the list endpoint's shape above is confirmed so far). */
+interface RawMerchantDetail extends RawMerchant {
+  business_hours?: RawBusinessHours[];
+}
+
 export interface MerchantDetailResponse extends Merchant {
   business_hours?: BusinessHours[];
 }
@@ -62,16 +86,45 @@ function parseDecimal(value: string | null | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function parseMerchant(raw: RawMerchant): Merchant {
+function parseTimeOfDay(value: string | null): string | null {
+  if (value == null) return null;
+  const match = /T(\d{2}:\d{2}:\d{2})/.exec(value);
+  return match ? match[1] : null;
+}
+
+function parseBusinessHours(raw: RawBusinessHours): BusinessHours {
   return {
     ...raw,
-    price_per_person_min: parseDecimal(raw.price_per_person_min),
-    price_per_person_max: parseDecimal(raw.price_per_person_max),
-    // latitude/longitude are NOT NULL in the schema, unlike the price pair.
+    opens_at: parseTimeOfDay(raw.opens_at),
+    closes_at: parseTimeOfDay(raw.closes_at),
+  };
+}
+
+function parseMerchant(raw: RawMerchant): Merchant {
+  return {
+    id: raw.id,
+    name: raw.name,
+    type: raw.type,
+    // Confirmed absent from the list endpoint — defaulted to "" rather
+    // than left undefined, since Merchant declares these non-optional.
+    // Real value is only available from the detail endpoint.
+    address: raw.address ?? "",
+    country: raw.country ?? "Argentina",
+    state: raw.state ?? "",
+    neighborhood: raw.neighborhood ?? undefined,
+    city: raw.city,
     latitude: parseDecimal(raw.latitude) ?? 0,
     longitude: parseDecimal(raw.longitude) ?? 0,
+    cover_image_url: raw.cover_image_url ?? undefined,
+    whatsapp_number: raw.whatsapp_number ?? undefined,
+    delivery_url: raw.delivery_url ?? undefined,
+    price_per_person_min: parseDecimal(raw.price_per_person_min),
+    price_per_person_max: parseDecimal(raw.price_per_person_max),
     tags: raw.tags ?? [],
-    distanceKm: raw.distanceKm ?? 0,
+    // No backend equivalent at all (UI-only derived) — see lib/types.
+    topDish: undefined,
+    rewardTeaser: undefined,
+    distanceKm: 0,
   };
 }
 
@@ -113,7 +166,10 @@ export const fetchMerchantDetail = cache(
   async (id: number): Promise<MerchantDetailResponse | null> => {
     try {
       const raw = await apiFetch<RawMerchantDetail>(`/merchants/${id}`);
-      return { ...parseMerchant(raw), business_hours: raw.business_hours };
+      return {
+        ...parseMerchant(raw),
+        business_hours: raw.business_hours?.map(parseBusinessHours),
+      };
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         return null;
@@ -122,9 +178,3 @@ export const fetchMerchantDetail = cache(
     }
   },
 );
-
-// Re-exported so lib/api/search.ts can normalize search results (also
-// merchants, presumably subject to the same BigDecimal-as-string
-// serialization) without duplicating this parsing logic.
-export { parseMerchant };
-export type { RawMerchant };
