@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "sender_consumer_id": "00000000-0000-0000-0000-000000000001",
+    "recipient_consumer_id": null,
+    "type": "classic",
+    "amount": 12000.0,
+    "recipient_phone": "+5491133344455",
+    "message": "¡Feliz cumple! Disfrutá donde quieras.",
+    "expires_at": "2026-12-31T23:59:59Z",
+    "status": "pending",
+    "status_updated_at": null
+  },
+  {
+    "id": 2,
+    "sender_consumer_id": "00000000-0000-0000-0000-000000000001",
+    "recipient_consumer_id": null,
+    "type": "gold",
+    "amount": 40000.0,
+    "recipient_phone": "+5491166677788",
+    "message": null,
+    "expires_at": "2026-11-15T23:59:59Z",
+    "status": "redeemed",
+    "status_updated_at": "2026-08-20T18:45:00Z"
+  }
+]

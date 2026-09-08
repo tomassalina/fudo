@@ -1,0 +1,1202 @@
+[
+  {
+    "id": 1,
+    "merchant_id": 1,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 2,
+    "merchant_id": 1,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 3,
+    "merchant_id": 1,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 4,
+    "merchant_id": 1,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 5,
+    "merchant_id": 1,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 6,
+    "merchant_id": 2,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 7,
+    "merchant_id": 2,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 8,
+    "merchant_id": 2,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 9,
+    "merchant_id": 2,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 10,
+    "merchant_id": 2,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 11,
+    "merchant_id": 3,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 12,
+    "merchant_id": 3,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 13,
+    "merchant_id": 3,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 14,
+    "merchant_id": 3,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 15,
+    "merchant_id": 3,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 16,
+    "merchant_id": 4,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 17,
+    "merchant_id": 4,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 18,
+    "merchant_id": 4,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 19,
+    "merchant_id": 4,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 20,
+    "merchant_id": 4,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 21,
+    "merchant_id": 5,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Envío gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 22,
+    "merchant_id": 5,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Postre de regalo",
+    "is_permanent": false
+  },
+  {
+    "id": 23,
+    "merchant_id": 5,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "20% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 24,
+    "merchant_id": 5,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 25,
+    "merchant_id": 5,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 26,
+    "merchant_id": 6,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 27,
+    "merchant_id": 6,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 28,
+    "merchant_id": 6,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 29,
+    "merchant_id": 6,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 30,
+    "merchant_id": 6,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 31,
+    "merchant_id": 7,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 32,
+    "merchant_id": 7,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 33,
+    "merchant_id": 7,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 34,
+    "merchant_id": 7,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 35,
+    "merchant_id": 7,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 36,
+    "merchant_id": 8,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 37,
+    "merchant_id": 8,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 38,
+    "merchant_id": 8,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 39,
+    "merchant_id": 8,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 40,
+    "merchant_id": 8,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 41,
+    "merchant_id": 9,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 42,
+    "merchant_id": 9,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 43,
+    "merchant_id": 9,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 44,
+    "merchant_id": 9,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 45,
+    "merchant_id": 9,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 46,
+    "merchant_id": 10,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 47,
+    "merchant_id": 10,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 48,
+    "merchant_id": 10,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 49,
+    "merchant_id": 10,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 50,
+    "merchant_id": 10,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 51,
+    "merchant_id": 11,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 52,
+    "merchant_id": 11,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 53,
+    "merchant_id": 11,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 54,
+    "merchant_id": 11,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 55,
+    "merchant_id": 11,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 56,
+    "merchant_id": 12,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 57,
+    "merchant_id": 12,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 58,
+    "merchant_id": 12,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 59,
+    "merchant_id": 12,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 60,
+    "merchant_id": 12,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 61,
+    "merchant_id": 13,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 62,
+    "merchant_id": 13,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 63,
+    "merchant_id": 13,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 64,
+    "merchant_id": 13,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 65,
+    "merchant_id": 13,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 66,
+    "merchant_id": 14,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 67,
+    "merchant_id": 14,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 68,
+    "merchant_id": 14,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 69,
+    "merchant_id": 14,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 70,
+    "merchant_id": 14,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 71,
+    "merchant_id": 15,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 72,
+    "merchant_id": 15,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 73,
+    "merchant_id": 15,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 74,
+    "merchant_id": 15,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 75,
+    "merchant_id": 15,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 76,
+    "merchant_id": 16,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 77,
+    "merchant_id": 16,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 78,
+    "merchant_id": 16,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 79,
+    "merchant_id": 16,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 80,
+    "merchant_id": 16,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 81,
+    "merchant_id": 17,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 82,
+    "merchant_id": 17,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 83,
+    "merchant_id": 17,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 84,
+    "merchant_id": 17,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 85,
+    "merchant_id": 17,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 86,
+    "merchant_id": 18,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Envío gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 87,
+    "merchant_id": 18,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Postre de regalo",
+    "is_permanent": false
+  },
+  {
+    "id": 88,
+    "merchant_id": 18,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "20% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 89,
+    "merchant_id": 18,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 90,
+    "merchant_id": 18,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 91,
+    "merchant_id": 19,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 92,
+    "merchant_id": 19,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 93,
+    "merchant_id": 19,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 94,
+    "merchant_id": 19,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 95,
+    "merchant_id": 19,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 96,
+    "merchant_id": 20,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 97,
+    "merchant_id": 20,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 98,
+    "merchant_id": 20,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 99,
+    "merchant_id": 20,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 100,
+    "merchant_id": 20,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 101,
+    "merchant_id": 21,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 102,
+    "merchant_id": 21,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 103,
+    "merchant_id": 21,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 104,
+    "merchant_id": 21,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 105,
+    "merchant_id": 21,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 106,
+    "merchant_id": 22,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 107,
+    "merchant_id": 22,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 108,
+    "merchant_id": 22,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 109,
+    "merchant_id": 22,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 110,
+    "merchant_id": 22,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 111,
+    "merchant_id": 23,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 112,
+    "merchant_id": 23,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 113,
+    "merchant_id": 23,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 114,
+    "merchant_id": 23,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 115,
+    "merchant_id": 23,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 116,
+    "merchant_id": 24,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 117,
+    "merchant_id": 24,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 118,
+    "merchant_id": 24,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 119,
+    "merchant_id": 24,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 120,
+    "merchant_id": 24,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 121,
+    "merchant_id": 25,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 122,
+    "merchant_id": 25,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 123,
+    "merchant_id": 25,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 124,
+    "merchant_id": 25,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 125,
+    "merchant_id": 25,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 126,
+    "merchant_id": 26,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Envío gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 127,
+    "merchant_id": 26,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Postre de regalo",
+    "is_permanent": false
+  },
+  {
+    "id": 128,
+    "merchant_id": 26,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "20% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 129,
+    "merchant_id": 26,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 130,
+    "merchant_id": 26,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 131,
+    "merchant_id": 27,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Trago de bienvenida",
+    "is_permanent": false
+  },
+  {
+    "id": 132,
+    "merchant_id": 27,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "2x1 en cerveza tirada",
+    "is_permanent": false
+  },
+  {
+    "id": 133,
+    "merchant_id": 27,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Tabla para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 134,
+    "merchant_id": 27,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 135,
+    "merchant_id": 27,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 136,
+    "merchant_id": 28,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 137,
+    "merchant_id": 28,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 138,
+    "merchant_id": 28,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 139,
+    "merchant_id": 28,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 140,
+    "merchant_id": 28,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 141,
+    "merchant_id": 29,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Café o postre de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 142,
+    "merchant_id": 29,
+    "visits_required": 4,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu cuenta",
+    "is_permanent": false
+  },
+  {
+    "id": 143,
+    "merchant_id": 29,
+    "visits_required": 6,
+    "reward_type": "free_item",
+    "reward_description": "Entrada para compartir",
+    "is_permanent": false
+  },
+  {
+    "id": 144,
+    "merchant_id": 29,
+    "visits_required": 8,
+    "reward_type": "cashback",
+    "reward_description": "10% de cashback en Fudo",
+    "is_permanent": false
+  },
+  {
+    "id": 145,
+    "merchant_id": 29,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  },
+  {
+    "id": 146,
+    "merchant_id": 30,
+    "visits_required": 2,
+    "reward_type": "free_item",
+    "reward_description": "Medialuna de cortesía",
+    "is_permanent": false
+  },
+  {
+    "id": 147,
+    "merchant_id": 30,
+    "visits_required": 4,
+    "reward_type": "free_item",
+    "reward_description": "Café de especialidad gratis",
+    "is_permanent": false
+  },
+  {
+    "id": 148,
+    "merchant_id": 30,
+    "visits_required": 6,
+    "reward_type": "discount_percent",
+    "reward_description": "15% en tu pedido",
+    "is_permanent": false
+  },
+  {
+    "id": 149,
+    "merchant_id": 30,
+    "visits_required": 8,
+    "reward_type": "free_item",
+    "reward_description": "Bolsa de café 250 g",
+    "is_permanent": false
+  },
+  {
+    "id": 150,
+    "merchant_id": 30,
+    "visits_required": 10,
+    "reward_type": "discount_percent",
+    "reward_description": "Cliente fijo: 5% siempre",
+    "is_permanent": true
+  }
+]
