@@ -163,13 +163,32 @@ function parseMerchant(raw: RawMerchant): Merchant {
 // ~30 merchants, so this is generous headroom, not a real limit.
 const MAX_PAGES = 20;
 
-export async function fetchMerchants(): Promise<Merchant[]> {
+export interface MerchantsListFilters {
+  /**
+   * Forwarded as the confirmed `tags` query param (comma-separated tag
+   * names, e.g. `?tags=vegano,sin_tacc` — confirmed via the live
+   * `/api-docs/v1/swagger.yaml`). Must be filtered server-side: the list
+   * response never echoes `tags` back (see `RawMerchant`/`parseMerchant`
+   * above), so a client-side `tags.some(...)` check is always false against
+   * real merchants.
+   */
+  tags?: string[];
+}
+
+export async function fetchMerchants(
+  filters?: MerchantsListFilters,
+): Promise<Merchant[]> {
   const merchants: Merchant[] = [];
   let page = 1;
+  const tags = filters?.tags ?? [];
+  const tagsParam =
+    tags.length > 0
+      ? `&tags=${tags.map(encodeURIComponent).join(",")}`
+      : "";
 
   for (;;) {
     const response = await apiFetch<MerchantsListResponse>(
-      `/merchants?page=${page}&per_page=100`,
+      `/merchants?page=${page}&per_page=100${tagsParam}`,
     );
     merchants.push(...response.data.map(parseMerchant));
 

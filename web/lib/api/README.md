@@ -119,12 +119,17 @@ paths and shapes, confirmed live (see above), not PLAN.md's prose:
 | `GET /api/v1/menu_items?merchant_id=X`   | `lib/api/menu-items.ts`           |
 
 `POST /api/v1/search` is **not called** — see point 4 above. Confirmed
-filter query params on `GET /api/v1/merchants` (`neighborhood`, `type`,
-`tags` CSV, `price_per_person`, `page`, `per_page`) aren't wired into
-`fetchMerchants()` either — nothing calls it with filters, since
-`lib/data/search.ts` fetches the unfiltered list and filters client-side
-(same as the mock layer always did, ~30 rows, no real need for server-side
-filtering yet). Documented here for whoever wants to add it later.
+filter query params on `GET /api/v1/merchants` are `neighborhood`, `type`,
+`tags` (CSV, e.g. `?tags=vegano,sin_tacc`), `price_per_person`, `page`, and
+`per_page`. Of these, only `tags` is wired into `fetchMerchants()` (forwarded
+by `lib/data/search.ts` in real-API mode) — it has to be: the list response
+never echoes `tags` back, so a client-side `tags.some(...)` filter is always
+false against real merchants (every one parses to `tags: []`). `type` stays
+client-side — the list response always includes the real `type`, so
+filtering it client-side just works, same as the mock layer always did.
+`neighborhood` and `price_per_person` aren't wired in either; nothing needs
+them yet (~30 rows, no real need for that server-side filtering). Documented
+here for whoever wants to add them later.
 
 ## Out of scope: auth
 

@@ -6,13 +6,25 @@
 import type { Merchant } from "@/lib/types";
 import { MOCK_MERCHANTS } from "@/lib/mock/merchants";
 import { isApiConfigured } from "@/lib/api/client";
-import { fetchMerchantDetail, fetchMerchants } from "@/lib/api/merchants";
+import {
+  fetchMerchantDetail,
+  fetchMerchants,
+  type MerchantsListFilters,
+} from "@/lib/api/merchants";
 
-export async function getMerchants(): Promise<Merchant[]> {
+/**
+ * `filters` only has an effect in real-API mode — `fetchMerchants` forwards
+ * it to the backend's confirmed query params. Ignored for mock mode, since
+ * `MOCK_MERCHANTS` carries real tags and callers (lib/data/search.ts)
+ * filter it client-side instead.
+ */
+export async function getMerchants(
+  filters?: MerchantsListFilters,
+): Promise<Merchant[]> {
   if (!isApiConfigured()) {
     return MOCK_MERCHANTS;
   }
-  return fetchMerchants();
+  return fetchMerchants(filters);
 }
 
 /** `null` when the merchant doesn't exist — callers should treat that as a
