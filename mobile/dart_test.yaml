@@ -1,0 +1,8 @@
+# Declares custom test tags so `flutter test`/`dart test` doesn't warn about
+# an unrecognized tag. See `test/integration/remote_data_source_live_test.dart`.
+tags:
+  integration:
+    description: >-
+      Hits the real backend at http://localhost:3000 over HTTP — skipped at
+      runtime (not excluded here) when that backend isn't reachable. Run
+      explicitly, or exclude with `flutter test --exclude-tags=integration`.

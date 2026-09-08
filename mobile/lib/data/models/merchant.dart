@@ -78,6 +78,18 @@ extension MerchantTypePresentation on MerchantType {
 /// audit/soft-delete bookkeeping columns (`created_at`, `created_by`,
 /// `updated_at`, `updated_by`, `deleted_at`, `deleted_by`) are intentionally
 /// left out of the mobile domain layer.
+///
+/// [address]/[country]/[state] are kept required/non-nullable here because
+/// every local fixture and `GET /api/v1/merchants/:id` (the single-merchant
+/// route) always include them. **`GET /api/v1/merchants` (the paginated
+/// list)**, however, does NOT — confirmed live: a list row only ever has
+/// `id, name, type, city, neighborhood, price_per_person_min/max,
+/// cover_image_url, latitude, longitude`. [Merchant.fromJson] defaults
+/// those three to `''` rather than crashing the whole list parse when
+/// they're absent — real data for them is only ever a [String] once it's
+/// actually present, so this can't collide with a legitimate value. Callers
+/// that need the real address should fetch it via `getMerchant(id)`
+/// (`GET /merchants/:id`), not trust it off a list result.
 @immutable
 class Merchant {
   const Merchant({
@@ -121,19 +133,19 @@ class Merchant {
       id: json['id'] as int,
       name: json['name'] as String,
       type: MerchantTypeJson.fromJson(json['type'] as String),
-      address: json['address'] as String,
-      country: json['country'] as String,
-      state: json['state'] as String,
+      address: json['address'] as String? ?? '',
+      country: json['country'] as String? ?? '',
+      state: json['state'] as String? ?? '',
       city: json['city'] as String,
       neighborhood: json['neighborhood'] as String?,
       zipCode: json['zip_code'] as String?,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      latitude: _parseDouble(json['latitude'])!,
+      longitude: _parseDouble(json['longitude'])!,
       coverImageUrl: json['cover_image_url'] as String?,
       whatsappNumber: json['whatsapp_number'] as String?,
       deliveryUrl: json['delivery_url'] as String?,
-      pricePerPersonMin: (json['price_per_person_min'] as num?)?.toDouble(),
-      pricePerPersonMax: (json['price_per_person_max'] as num?)?.toDouble(),
+      pricePerPersonMin: _parseDouble(json['price_per_person_min']),
+      pricePerPersonMax: _parseDouble(json['price_per_person_max']),
     );
   }
 
@@ -158,3 +170,15 @@ class Merchant {
     };
   }
 }
+
+/// Parses a JSON-edge numeric field that may arrive as a [num] (local JSON
+/// fixtures, which encode plain numeric literals) or as a [String] (the real
+/// backend API, which serializes `numeric`/decimal Postgres columns —
+/// `latitude`, `longitude`, `price_per_person_min/max` — as strings to avoid
+/// floating-point precision loss). Returns `null` for a `null` input.
+double? _parseDouble(Object? value) => switch (value) {
+  null => null,
+  num n => n.toDouble(),
+  String s => double.parse(s),
+  _ => throw ArgumentError('Expected num, String or null, got: $value'),
+};

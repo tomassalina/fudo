@@ -10,12 +10,10 @@ import '../auth/token_storage.dart';
 /// Defaults to the local Rails dev server URL documented in `PLAN.md` Fase 3
 /// / `mobile/.env.example`.
 ///
-/// ⚠️ As of this writing, nothing at this URL implements `/api/v1/*` yet —
-/// only Rails' default `/up` health check responds; `GET /api/v1/merchants`
-/// and `POST /api/v1/sessions` both 404. See the doc on `RemoteDataSource`
-/// for the full caveat. This constant, and everything built from it, is
-/// infrastructure written ahead of the API existing, not something that has
-/// been exercised against a real server.
+/// This URL is live and confirmed working end-to-end against a real Rails
+/// backend (30 seeded merchants) — see `RemoteDataSource`'s doc comment and
+/// `test/integration/remote_data_source_live_test.dart` for the verified
+/// contract and a real end-to-end test run against it.
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://localhost:3000/api/v1',

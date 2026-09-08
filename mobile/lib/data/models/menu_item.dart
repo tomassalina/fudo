@@ -52,7 +52,7 @@ class MenuItem {
       merchantId: json['merchant_id'] as int,
       name: json['name'] as String,
       description: json['description'] as String?,
-      price: (json['price'] as num).toDouble(),
+      price: _parsePrice(json['price']),
       currency: CurrencyJson.fromJson(json['currency'] as String),
       section: json['section'] as String?,
       imageUrl: json['image_url'] as String?,
@@ -74,3 +74,13 @@ class MenuItem {
     };
   }
 }
+
+/// Parses `price`, which arrives as a [num] from local JSON fixtures but as
+/// a [String] from the real backend API (Postgres `numeric` columns are
+/// serialized as strings to avoid floating-point precision loss — confirmed
+/// against `GET /api/v1/menu_items`, e.g. `"price": "24700.0"`).
+double _parsePrice(Object? value) => switch (value) {
+  num n => n.toDouble(),
+  String s => double.parse(s),
+  _ => throw ArgumentError('Expected num or String for price, got: $value'),
+};

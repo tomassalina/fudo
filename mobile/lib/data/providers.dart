@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
 import '../core/analytics/analytics_service.dart';
 import '../core/config/dio_client.dart';
 import 'auth/auth_repository.dart';
+import 'auth/current_consumer_session.dart';
 import 'connection_mode.dart';
 import 'data_source.dart';
 import 'local/local_data_source.dart';
@@ -41,7 +42,10 @@ import 'remote/remote_data_source.dart';
 final dataSourceProvider = Provider<DataSource>((ref) {
   return switch (connectionMode) {
     ConnectionMode.local => LocalDataSource(),
-    ConnectionMode.remote => RemoteDataSource(ref.watch(dioProvider)),
+    ConnectionMode.remote => RemoteDataSource(
+      ref.watch(dioProvider),
+      consumerSession: ref.watch(currentConsumerSessionProvider),
+    ),
   };
 });
 
@@ -51,13 +55,25 @@ final dataSourceProvider = Provider<DataSource>((ref) {
 /// [authRepositoryProvider] (there's no login screen wired up to it yet).
 final dioProvider = Provider<Dio>((ref) => DioClient.create());
 
+/// Single [CurrentConsumerSession] instance shared between
+/// [authRepositoryProvider] (which writes to it after a successful login)
+/// and [dataSourceProvider]'s [RemoteDataSource] (which reads it back in
+/// `getCurrentConsumer()`) — see that class's doc for why this exists at all
+/// (there is no "get my own profile" endpoint in the real API).
+final currentConsumerSessionProvider = Provider<CurrentConsumerSession>(
+  (ref) => CurrentConsumerSession(),
+);
+
 /// Login/logout for the demo consumer — see `data/auth/auth_repository.dart`
-/// for the (unconfirmed) response-shape assumption this makes about
-/// `POST /sessions`. Not consumed by any screen yet; exposed so the
-/// mobile-side auth infra is wired into the provider graph ahead of the
-/// login screen that will use it.
+/// for the confirmed `POST /sessions`/`POST /registrations` contract this
+/// makes. Not consumed by any screen yet; exposed so the mobile-side auth
+/// infra is wired into the provider graph ahead of the login screen that
+/// will use it.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(dioProvider));
+  return AuthRepository(
+    ref.watch(dioProvider),
+    consumerSession: ref.watch(currentConsumerSessionProvider),
+  );
 });
 
 /// Wraps PostHog behind business-named tracking methods (see
@@ -144,6 +160,18 @@ final tagsForMenuItemProvider = FutureProvider.family<List<Tag>, int>((
 });
 
 /// The demo-logged-in consumer's own profile.
+///
+/// ⚠️ TODO(fase-4, found by review): this `FutureProvider` computes once and
+/// caches. In `ConnectionMode.remote`, the underlying value comes from
+/// `CurrentConsumerSession` (a plain mutable field `AuthRepository.login()`/
+/// `.logout()` write to directly) — mutating that field does NOT trigger a
+/// Riverpod rebuild. Once a real login screen is wired to `AuthRepository`,
+/// it MUST call `ref.invalidate(currentConsumerProvider)` right after a
+/// successful login/logout, or the profile screen will keep showing the
+/// previous consumer (or `null`/a stale error) until something else happens
+/// to invalidate it. No screen calls `AuthRepository` yet, so this doesn't
+/// bite today — `local` mode is unaffected (LocalDataSource's consumer never
+/// changes at runtime).
 final currentConsumerProvider = FutureProvider<Consumer>((ref) {
   final dataSource = ref.watch(dataSourceProvider);
   return dataSource.getCurrentConsumer();

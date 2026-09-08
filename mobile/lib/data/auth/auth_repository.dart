@@ -1,8 +1,12 @@
 import 'package:dio/dio.dart';
 
 import '../../core/auth/token_storage.dart';
+import '../models/consumer.dart';
+import 'current_consumer_session.dart';
 
-/// Login/logout for the demo consumer.
+/// Login/registration for the demo consumer, backed by the real backend at
+/// `http://localhost:3000/api/v1` (verified live — see the class-level
+/// caveats below for what's confirmed vs. inferred).
 ///
 /// Kept separate from [DataSource] on purpose: authentication isn't part of
 /// the merchants/menu_items/visits/etc data model — every [DataSource]
@@ -10,15 +14,8 @@ import '../../core/auth/token_storage.dart';
 /// `Authorization` header by `core/config/dio_client.dart`), it doesn't
 /// manage that token's lifecycle.
 ///
-/// ⚠️ Same caveat as `data/remote/remote_data_source.dart`: `POST /sessions`
-/// does not exist on any backend reachable today
-/// (`http://localhost:3000/api/v1/sessions` 404s — that's an old container
-/// built from `main`, which doesn't have Fase 3 merged yet). Fase 3 itself
-/// IS done and committed on the `backend-rails` branch, just not merged or
-/// reachable from here yet.
-///
-/// **Confirmed contract** (from backend-rails-37, sourced from their
-/// generated OpenAPI doc — not a guess):
+/// **Confirmed contract** (verified live against the running backend and its
+/// generated OpenAPI doc at `GET /api-docs/v1/swagger.yaml`):
 /// ```
 /// POST /api/v1/sessions
 /// request:  { "email": "string", "password": "string" }
@@ -30,50 +27,138 @@ import '../../core/auth/token_storage.dart';
 ///                                                      // generic, doesn't
 ///                                                      // leak whether the
 ///                                                      // email exists
-/// ```
-/// `token` is read directly (still top-level, as this code already assumed
-/// before the contract was confirmed). The `consumer` object in the
-/// response is deliberately NOT parsed into a [Consumer] here — it's
-/// missing `has_dni_on_file` (a required, non-nullable field on that
-/// model), so forcing it through `Consumer.fromJson` would throw. Once
-/// logged in, callers should re-fetch the authoritative profile via
-/// `currentConsumerProvider` (`GET /me`) instead of trusting this partial
-/// snapshot.
 ///
-/// Callers should catch [DioException] and, on a 401, read
-/// `e.response?.data['error']` for the user-facing message above — this
-/// method doesn't wrap/translate that error itself, it's still pure
+/// POST /api/v1/registrations
+/// request:  { "registration": { "email", "password",
+///                                "password_confirmation", "first_name",
+///                                "last_name", "dni", "phone"? } }
+/// 201:      same shape as POST /sessions's 200
+/// 422:      { "errors": {...} }  // duplicate email/dni, password mismatch,
+///                                // missing fields
+/// ```
+/// `dni` is a *required* field to register — there is no way to create a
+/// consumer through this API without one. That makes `hasDniOnFile: true`
+/// a guaranteed fact (not a guess) for every consumer this app ever
+/// authenticates as; see [CurrentConsumerSession]'s doc for where that's
+/// used.
+///
+/// Neither response includes `has_dni_on_file` (a required, non-nullable
+/// field on [Consumer]), so the raw `consumer` object here is never parsed
+/// through [Consumer.fromJson] directly — [_storeConsumerSnapshot] builds the
+/// [Consumer] by hand, filling in `hasDniOnFile: true` per the inference
+/// above.
+///
+/// Callers should catch [DioException] and, on a 401/422, read
+/// `e.response?.data['error']`/`['errors']` for the user-facing message —
+/// this class doesn't wrap/translate that error itself, it's still pure
 /// plumbing with no UI wired to it yet.
 class AuthRepository {
-  AuthRepository(this._dio, {TokenStorage? tokenStorage})
-    : _tokenStorage = tokenStorage ?? const TokenStorage();
+  AuthRepository(
+    this._dio, {
+    TokenStorage? tokenStorage,
+    this._consumerSession,
+  }) : _tokenStorage = tokenStorage ?? const TokenStorage();
 
   final Dio _dio;
   final TokenStorage _tokenStorage;
 
-  /// Logs in with [email]/[password] and persists the returned token via
-  /// [TokenStorage.saveToken] on success. Throws [DioException] on a
-  /// network/HTTP failure (401 included — see this class's doc comment for
-  /// the error body shape), or [StateError] if a 2xx response is missing
-  /// the confirmed top-level `token` field.
+  /// Shared with `RemoteDataSource.getCurrentConsumer()` (see
+  /// `data/providers.dart`, where both are built from the same
+  /// `currentConsumerSessionProvider` instance) so a successful login here
+  /// makes the profile available there. `null` when this repository is used
+  /// without that wiring (e.g. in isolation in a unit test) — snapshotting
+  /// is then simply skipped.
+  final CurrentConsumerSession? _consumerSession;
+
+  /// Logs in with [email]/[password], persists the returned token via
+  /// [TokenStorage.saveToken], and snapshots the returned `consumer` object
+  /// into [CurrentConsumerSession] (if one was provided). Throws
+  /// [DioException] on a network/HTTP failure (401 included — see this
+  /// class's doc comment for the error body shape), or [StateError] if a 2xx
+  /// response is missing the confirmed top-level `token` field.
   Future<void> login({required String email, required String password}) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/sessions',
       data: {'email': email, 'password': password},
     );
-    final token = response.data?['token'] as String?;
+    await _persistSession(response.data, endpoint: '/sessions');
+  }
+
+  /// Registers a new consumer and, on success, logs them in immediately —
+  /// same response shape and token/session handling as [login]. `dni` and
+  /// `phone` follow the confirmed `POST /registrations` contract above.
+  /// Throws [DioException] on a network/HTTP failure (422 validation
+  /// failures included), or [StateError] if a 2xx response is missing the
+  /// confirmed top-level `token` field.
+  Future<void> register({
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+    required String firstName,
+    required String lastName,
+    required String dni,
+    String? phone,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/registrations',
+      data: {
+        'registration': {
+          'email': email,
+          'password': password,
+          'password_confirmation': passwordConfirmation,
+          'first_name': firstName,
+          'last_name': lastName,
+          'dni': dni,
+          'phone': ?phone,
+        },
+      },
+    );
+    await _persistSession(response.data, endpoint: '/registrations');
+  }
+
+  Future<void> _persistSession(
+    Map<String, dynamic>? data, {
+    required String endpoint,
+  }) async {
+    final token = data?['token'] as String?;
     if (token == null) {
       throw StateError(
-        'POST /sessions succeeded but the response had no "token" field. '
+        'POST $endpoint succeeded but the response had no "token" field. '
         'This contradicts the confirmed contract documented on this class '
         '— either the backend changed, or something else is wrong.',
       );
     }
     await _tokenStorage.saveToken(token);
+    _storeConsumerSnapshot(data?['consumer'] as Map<String, dynamic>?);
   }
 
-  /// Clears the locally stored token. Does not call any backend endpoint —
-  /// `PLAN.md` doesn't define a server-side session-invalidation endpoint
-  /// (e.g. `DELETE /sessions`), so this is local-only for now.
-  Future<void> logout() => _tokenStorage.clearToken();
+  /// Builds a [Consumer] from the partial `consumer` object embedded in a
+  /// login/register response (missing `has_dni_on_file`, see class doc) and
+  /// stores it on [_consumerSession]. A no-op if [_consumerSession] wasn't
+  /// provided, or if [consumerJson] is somehow missing despite a 2xx
+  /// response (defensive — not expected per the confirmed contract).
+  void _storeConsumerSnapshot(Map<String, dynamic>? consumerJson) {
+    final session = _consumerSession;
+    if (session == null || consumerJson == null) return;
+    session.consumer = Consumer(
+      id: consumerJson['id'] as String,
+      firstName: consumerJson['first_name'] as String,
+      lastName: consumerJson['last_name'] as String,
+      email: consumerJson['email'] as String,
+      phone: consumerJson['phone'] as String?,
+      // See this class's doc: POST /registrations requires `dni`, so every
+      // consumer reachable through this API is guaranteed to have one on
+      // file. Not a guess.
+      hasDniOnFile: true,
+    );
+  }
+
+  /// Clears the locally stored token and the in-memory consumer snapshot.
+  /// Does not call any backend endpoint — there is no server-side
+  /// session-invalidation endpoint (e.g. `DELETE /sessions`) in the
+  /// confirmed API, so this is local-only for now.
+  Future<void> logout() async {
+    await _tokenStorage.clearToken();
+    _consumerSession?.consumer = null;
+  }
 }
