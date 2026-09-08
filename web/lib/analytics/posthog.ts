@@ -19,16 +19,26 @@ const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 /** Both env vars must be set for analytics to do anything at all. */
 export const isPostHogEnabled = Boolean(POSTHOG_KEY && POSTHOG_HOST);
 
-let initialized = false;
-
-/**
- * Initializes the posthog-js singleton. Safe to call multiple times (guarded
- * by `initialized`) and safe to call when analytics is disabled (no-ops).
- * Client-only — must run in a "use client" component.
- */
-export function initPostHogClient() {
-  if (!isPostHogEnabled || initialized) return;
-
+// Initialize at MODULE SCOPE, not inside a React effect/component.
+//
+// posthog-js's capture() is gated by an internal `__loaded` flag that only
+// flips to true once init() has run; until then capture() is a pure no-op
+// (there is no pre-init queue in the npm client, unlike the <script>-tag
+// snippet install). If init() instead ran inside PostHogProvider's own
+// useEffect, it would lose the race on every fresh page load: React fires
+// child effects before a parent's own effect on mount, so a child tracker
+// mounted inside PostHogProvider (PostHogPageview/SearchAnalytics/
+// MerchantViewedTracker) would call capture() from ITS effect before
+// PostHogProvider's effect had called init() — silently dropping the
+// first event of every session, which is the common SEO/organic-traffic
+// landing case (e.g. landing directly on /restaurantes/42).
+//
+// Module-level code runs once, during import/evaluation, which always
+// completes before React's render/effect phases start — so there is no
+// ordering race here. Guarded by `typeof window` because this module is
+// also evaluated on the server (Next.js still executes "use client"
+// component code during SSR); posthog.init() must never run there.
+if (typeof window !== "undefined" && isPostHogEnabled) {
   posthog.init(POSTHOG_KEY as string, {
     api_host: POSTHOG_HOST,
     // We fire $pageview manually (see PostHogPageview.tsx) — posthog-js's
@@ -40,8 +50,6 @@ export function initPostHogClient() {
     // real consent banner is out of scope for this pass (see report).
     disable_session_recording: true,
   });
-
-  initialized = true;
 }
 
 /** Fire-and-forget capture — no-ops when analytics is disabled. */

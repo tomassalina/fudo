@@ -5,6 +5,15 @@ import { capture, isPostHogEnabled } from "@/lib/analytics/posthog";
 
 interface SearchAnalyticsProps {
   hasQuery: boolean;
+  /**
+   * The raw query text, e.g. from `?q=...`. Used ONLY as an effect-retrigger
+   * key below, so two distinct searches (e.g. two different zero-result
+   * typo queries in a row) that happen to share the same has_query/filters/
+   * result_count don't get coalesced into a single fired event. Must NEVER
+   * be read inside the effect body or added to the capture() payload — see
+   * the file-level comment on why the literal query text can't be logged.
+   */
+  queryText: string;
   /** Selected merchant type(s), e.g. ["restaurant"] — a small, closed vocab (not free text). */
   filterTypes: string[];
   /** Selected tags, e.g. ["vegano"] — also a small, closed vocab (not free text). */
@@ -23,6 +32,7 @@ interface SearchAnalyticsProps {
  */
 export function SearchAnalytics({
   hasQuery,
+  queryText,
   filterTypes,
   filterTags,
   resultCount,
@@ -44,9 +54,11 @@ export function SearchAnalytics({
     });
     // filterTypes/filterTags are re-created every render by the server
     // component above us, so we key the effect off their stable string
-    // form instead of the array identity.
+    // form instead of the array identity. queryText is included purely as
+    // a retrigger key (per-search uniqueness) — it's intentionally never
+    // read inside this effect body or passed to capture() above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasQuery, filterTypesKey, filterTagsKey, resultCount]);
+  }, [hasQuery, queryText, filterTypesKey, filterTagsKey, resultCount]);
 
   return null;
 }
