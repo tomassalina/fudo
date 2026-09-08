@@ -54,10 +54,12 @@ export const isPostHogEnabled = Boolean(POSTHOG_KEY && POSTHOG_HOST);
 // Rather than allowlisting exact property names (which would silently miss
 // any new URL-bearing property a future posthog-js version adds), a
 // property is treated as URL-bearing when either its KEY looks like one
-// (contains "url" or "referrer", case-insensitively — covers $current_url,
+// (contains "url" or "referr", case-insensitively — covers $current_url,
 // $referrer, $referring_domain, $session_entry_url, $initial_current_url,
-// $initial_referrer, and anything shaped like them) OR, as a backstop for
-// an unexpected key name, its STRING VALUE looks like an absolute URL.
+// $initial_referrer, and anything shaped like them; "referr" rather than
+// "referrer" so it also matches "referring", which "referrer" alone does
+// not) OR, as a backstop for an unexpected key name, its STRING VALUE looks
+// like an absolute URL.
 //
 // The key-based check matters: this app's own PostHogPageview.tsx passes
 // `$current_url` as a root-relative "pathname?search" string (not an
@@ -76,7 +78,7 @@ export const isPostHogEnabled = Boolean(POSTHOG_KEY && POSTHOG_HOST);
 // like `type`/`tags` go with it too, but those are already sent
 // explicitly and safely via search_performed's own properties, so
 // nothing is lost.
-const URL_LIKE_PROPERTY_KEY = /url|referrer/i;
+const URL_LIKE_PROPERTY_KEY = /url|referr/i;
 
 function isUrlLikeProperty(key: string, value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -133,6 +135,35 @@ if (typeof window !== "undefined" && isPostHogEnabled) {
     // We fire $pageview manually (see PostHogPageview.tsx) — posthog-js's
     // default autocapture doesn't hook App Router client-side navigations.
     capture_pageview: false,
+    // Every event this app cares about ($pageview, search_performed,
+    // merchant_viewed) is already manually instrumented — this app has zero
+    // use for PostHog's default click/form/pointer autocapture ($autocapture
+    // is `true` by default). Turning it off closes an entire class of leak,
+    // not just one instance: FilterChips.tsx renders <Link>s whose `href` is
+    // literally `/buscar?q=<search text>&type=...`, and clicking one would
+    // otherwise fire a default $autocapture click event whose
+    // `properties.$elements[*].attr__href` carries that same literal query
+    // string — nested inside an array, so before_send's stripUrlQueryStrings
+    // above (which only walks top-level properties) would never touch it.
+    // Verified against the installed posthog-js v1.428.6 source (types
+    // don't show implementation, so read the actual bundled JS): in
+    // node_modules/.pnpm/posthog-js@1.428.6.../node_modules/posthog-js/
+    // dist/module.full.js, the autocapture class's config refresh does
+    // `t.enabled = !!e.autocapture` (Kb.refresh), and its dispatcher `ho()`
+    // — which handles click/submit/change/pointer events and fires BOTH
+    // `$autocapture` and the rageclick variant `$rageclick` (dispatched via
+    // a recursive `this.ho(t, "$rageclick", i)` call from inside the same
+    // method) — starts with `if (this.isEnabled)` and returns immediately
+    // otherwise. So `autocapture: false` doesn't just suppress one autocapture
+    // event type while leaving others on: it disables the listener setup
+    // entirely (`startIfEnabled()` never calls `lo()`, which is what
+    // attaches the click/submit/change/pointer DOM listeners in the first
+    // place), so neither $autocapture nor $rageclick can fire. Separately,
+    // `capture_dead_clicks` and `capture_heatmaps` are independent opt-in
+    // features (default `undefined`/off, per @posthog/types'
+    // posthog-config.ts) that this app's config never enables, so they're
+    // not a live leak vector here either.
+    autocapture: false,
     // No cookie-consent UI in this app yet — keep the scaffold conservative
     // until that ships. Follow-up: PostHog's default init still sets its own
     // identification cookie/localStorage entry even with recording off; a
