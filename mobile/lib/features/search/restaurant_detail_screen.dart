@@ -13,6 +13,7 @@ import '../../data/models/menu_item.dart';
 import '../../data/models/merchant.dart';
 import '../../data/models/visit_summary.dart';
 import '../../data/providers.dart';
+import '../../shared/widgets/network_error_view.dart';
 import '../loyalty/qr_sheet.dart';
 import 'widgets/search_utils.dart' show merchantTypeLabel;
 
@@ -66,8 +67,10 @@ class _RestaurantDetailScreenState extends ConsumerState<RestaurantDetailScreen>
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppTheme.accent),
         ),
-        error: (error, stackTrace) =>
-            const _MessageBody(text: 'No pudimos cargar este lugar.'),
+        error: (error, stackTrace) => _NetworkErrorMessageBody(
+          onRetry: () =>
+              ref.invalidate(merchantProvider(widget.merchantId)),
+        ),
       ),
     );
   }
@@ -102,6 +105,38 @@ class _MessageBody extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Same back-button shell as [_MessageBody], but for the failed-to-load
+/// (network) case specifically — shows [NetworkErrorView] with a
+/// "Reintentar" action instead of a static, dead-end message.
+class _NetworkErrorMessageBody extends StatelessWidget {
+  const _NetworkErrorMessageBody({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.topLeft,
+            child: IconButton(
+              icon: const Icon(Symbols.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: NetworkErrorView(
+              message: 'No pudimos cargar este lugar.',
+              onRetry: onRetry,
             ),
           ),
         ],
@@ -455,8 +490,11 @@ class _HoursAccordion extends ConsumerWidget {
           ],
         ),
       ),
-      error: (error, stackTrace) => const _HoursStatusCard(
-        child: _HoursStatusText('No pudimos cargar los horarios.'),
+      error: (error, stackTrace) => _HoursStatusCard(
+        child: NetworkErrorView(
+          message: 'No pudimos cargar los horarios.',
+          onRetry: () => ref.invalidate(businessHoursProvider(merchantId)),
+        ),
       ),
     );
   }
@@ -828,14 +866,12 @@ class _LoyaltyTab extends ConsumerWidget {
       );
     }
     if (rulesAsync.hasError || summariesAsync.hasError) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            'No pudimos cargar tu fidelización.',
-            style: AppTheme.bodySecondary,
-          ),
-        ),
+      return NetworkErrorView(
+        message: 'No pudimos cargar tu fidelización.',
+        onRetry: () {
+          ref.invalidate(loyaltyRulesProvider(merchantId));
+          ref.invalidate(visitSummariesProvider(merchantId));
+        },
       );
     }
 
@@ -1302,14 +1338,9 @@ class _MenuTab extends ConsumerWidget {
         padding: EdgeInsets.symmetric(vertical: 40),
         child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
       ),
-      error: (error, stackTrace) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Text(
-            'No pudimos cargar el menú.',
-            style: AppTheme.bodySecondary,
-          ),
-        ),
+      error: (error, stackTrace) => NetworkErrorView(
+        message: 'No pudimos cargar el menú.',
+        onRetry: () => ref.invalidate(menuItemsProvider(merchantId)),
       ),
     );
   }

@@ -33,14 +33,17 @@ import 'remote/remote_data_source.dart';
 /// screen keeps reading the bundled JSON fixtures unless the app is
 /// explicitly built/run with `--dart-define=CONNECTION_MODE=remote`.
 ///
-/// ⚠️ The `remote` branch is infrastructure written ahead of the API
-/// existing (see `data/remote/remote_data_source.dart`'s doc comment for the
-/// full caveat) — as of this writing nothing at `/api/v1/*` responds on any
-/// reachable backend, so it has never actually been exercised end-to-end.
-/// Screens never need to know which branch is active: they only ever depend
-/// on the [DataSource] interface via the providers below.
+/// The `remote` branch is real and live-verified: `RemoteDataSource` has been
+/// exercised end-to-end against a running backend (login, merchants,
+/// favorites, the logged-in consumer — see
+/// `test/integration/remote_data_source_live_test.dart` and
+/// `test/features/my_places_screen_remote_login_test.dart`), and
+/// `features/my_places/my_places_screen.dart` is a real caller of
+/// [authRepositoryProvider] when this mode is active. Screens never need to
+/// know which branch is active: they only ever depend on the [DataSource]
+/// interface via the providers below.
 final dataSourceProvider = Provider<DataSource>((ref) {
-  return switch (connectionMode) {
+  return switch (ref.watch(connectionModeProvider)) {
     ConnectionMode.local => LocalDataSource(),
     ConnectionMode.remote => RemoteDataSource(
       ref.watch(dioProvider),
@@ -48,6 +51,16 @@ final dataSourceProvider = Provider<DataSource>((ref) {
     ),
   };
 });
+
+/// Riverpod-visible wrapper around the compile-time [connectionMode] constant
+/// (`data/connection_mode.dart`). Screens read/override this provider instead
+/// of the raw global so widget tests can force [ConnectionMode.remote] via
+/// `ProviderScope(overrides: [connectionModeProvider.overrideWithValue(...)])`
+/// without needing a `--dart-define=CONNECTION_MODE=remote` relaunch —
+/// `connection_mode.dart` itself stays a plain, dependency-free file.
+/// Defaults to the real compile-time [connectionMode] everywhere this isn't
+/// overridden.
+final connectionModeProvider = Provider<ConnectionMode>((ref) => connectionMode);
 
 /// Shared [Dio] client for [RemoteDataSource] and [AuthRepository], built by
 /// `core/config/dio_client.dart`. Only ever touched when [connectionMode] is
@@ -66,9 +79,8 @@ final currentConsumerSessionProvider = Provider<CurrentConsumerSession>(
 
 /// Login/logout for the demo consumer — see `data/auth/auth_repository.dart`
 /// for the confirmed `POST /sessions`/`POST /registrations` contract this
-/// makes. Not consumed by any screen yet; exposed so the mobile-side auth
-/// infra is wired into the provider graph ahead of the login screen that
-/// will use it.
+/// makes. Consumed by `features/my_places/my_places_screen.dart` when
+/// [connectionMode]/[connectionModeProvider] is [ConnectionMode.remote].
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     ref.watch(dioProvider),
@@ -159,19 +171,18 @@ final tagsForMenuItemProvider = FutureProvider.family<List<Tag>, int>((
   return dataSource.getTagsForMenuItem(menuItemId);
 });
 
-/// The demo-logged-in consumer's own profile.
+/// The logged-in consumer's own profile.
 ///
-/// ⚠️ TODO(fase-4, found by review): this `FutureProvider` computes once and
-/// caches. In `ConnectionMode.remote`, the underlying value comes from
-/// `CurrentConsumerSession` (a plain mutable field `AuthRepository.login()`/
-/// `.logout()` write to directly) — mutating that field does NOT trigger a
-/// Riverpod rebuild. Once a real login screen is wired to `AuthRepository`,
-/// it MUST call `ref.invalidate(currentConsumerProvider)` right after a
-/// successful login/logout, or the profile screen will keep showing the
-/// previous consumer (or `null`/a stale error) until something else happens
-/// to invalidate it. No screen calls `AuthRepository` yet, so this doesn't
-/// bite today — `local` mode is unaffected (LocalDataSource's consumer never
-/// changes at runtime).
+/// This `FutureProvider` computes once and caches. In `ConnectionMode.remote`,
+/// the underlying value comes from `CurrentConsumerSession` (a plain mutable
+/// field `AuthRepository.login()`/`.logout()` write to directly) — mutating
+/// that field does NOT trigger a Riverpod rebuild on its own. Resolved (fase
+/// 4, real login wiring): `features/my_places/my_places_screen.dart` is the
+/// real caller now, and it calls `ref.invalidate(currentConsumerProvider)`
+/// right after a successful login so this re-fetches from the fresh session
+/// snapshot instead of showing a stale/`null` consumer. `local` mode is
+/// unaffected either way — `LocalDataSource`'s consumer never changes at
+/// runtime.
 final currentConsumerProvider = FutureProvider<Consumer>((ref) {
   final dataSource = ref.watch(dataSourceProvider);
   return dataSource.getCurrentConsumer();

@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/merchant.dart';
 import '../../../data/models/visit_summary.dart';
 import '../../../data/providers.dart';
+import '../../../shared/widgets/network_error_view.dart';
 import 'search_utils.dart';
 
 /// Merchant id → visit count, built from `visitSummariesProvider(null)`.
@@ -105,11 +106,9 @@ class SearchResultsList extends ConsumerWidget {
       },
       loading: () =>
           const Center(child: CircularProgressIndicator(color: AppTheme.accent)),
-      error: (error, stackTrace) => Center(
-        child: Text(
-          'No pudimos cargar los lugares.',
-          style: AppTheme.bodySecondary,
-        ),
+      error: (error, stackTrace) => NetworkErrorView(
+        message: 'No pudimos cargar los lugares.',
+        onRetry: () => ref.invalidate(merchantsProvider),
       ),
     );
   }

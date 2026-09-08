@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 // `flutter_riverpod` exports its own `Consumer` widget, which clashes with
 // our domain `Consumer` model (`data/models/consumer.dart`) — hide the
@@ -12,11 +13,13 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../core/loyalty/loyalty_tier.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/connection_mode.dart';
 import '../../data/models/consumer.dart';
 import '../../data/models/consumer_settings.dart';
 import '../../data/models/merchant.dart';
 import '../../data/models/visit_summary.dart';
 import '../../data/providers.dart';
+import '../../shared/widgets/network_error_view.dart';
 import '../loyalty/qr_sheet.dart';
 import '../search/widgets/search_utils.dart' show merchantTypeLabel;
 
@@ -31,10 +34,17 @@ import '../search/widgets/search_utils.dart' show merchantTypeLabel;
 // `data/providers.dart`.
 // ---------------------------------------------------------------------
 
-/// Whether the demo user is "logged in". Starts `false`; tapping "Iniciar
-/// sesión" flips it to `true` regardless of what (if anything) was typed
-/// into the email/password fields — there is no backend to validate
-/// against, matching the original prototype's `login()` handler exactly.
+/// Whether the user is "logged in" — the UI flag that switches between the
+/// login form and the profile view.
+///
+/// In [ConnectionMode.local] (the default), tapping "Iniciar sesión" flips
+/// this to `true` instantly regardless of what (if anything) was typed into
+/// the email/password fields — there is no backend to validate against,
+/// matching the original prototype's `login()` handler exactly.
+///
+/// In [ConnectionMode.remote], [_LoggedOutViewState] only calls [logIn] after
+/// `AuthRepository.login()` actually succeeds against the real backend — see
+/// that class for the real request/loading/error handling.
 class _IsLoggedInNotifier extends Notifier<bool> {
   @override
   bool build() => false;
@@ -185,6 +195,16 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  /// `true` while a real [ConnectionMode.remote] login request is in flight.
+  /// Always `false` in [ConnectionMode.local] — that path never awaits
+  /// anything.
+  bool _isSubmitting = false;
+
+  /// Set when a real remote login attempt fails (invalid credentials, or a
+  /// network/server error) — shown under the form, and cleared on the next
+  /// submit attempt. Always `null` in [ConnectionMode.local].
+  String? _errorMessage;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -196,6 +216,66 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _onLoginPressed() async {
+    final connectionMode = ref.read(connectionModeProvider);
+    if (connectionMode == ConnectionMode.local) {
+      // 100% fake login (design brief §3): any value — or none — logs in.
+      // No credential is ever checked against anything, and there is
+      // nothing to await.
+      ref.read(_isLoggedInProvider.notifier).logIn();
+      return;
+    }
+
+    // ConnectionMode.remote: a real request against AuthRepository, with a
+    // real loading state and a real error message on failure — the
+    // typed-in email/password are left untouched either way (the
+    // TextEditingControllers aren't cleared), so the user doesn't lose
+    // what they typed if the request fails.
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+      // Resolves the TODO documented on `data/providers.dart`'s
+      // `currentConsumerProvider`: without this, the profile screen would
+      // keep showing a stale/null consumer after a successful login.
+      ref.invalidate(currentConsumerProvider);
+      if (!mounted) return;
+      // Only flips the UI to the profile view once the login actually
+      // succeeded — unlike the local/fake path, this is not instantaneous.
+      ref.read(_isLoggedInProvider.notifier).logIn();
+    } on DioException catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _remoteLoginErrorMessage(error));
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _errorMessage = 'No pudimos conectarnos. Revisá tu conexión.',
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  /// Reads the backend's `{"error": "..."}` body on a 401 (see
+  /// `AuthRepository`'s doc comment for the confirmed contract); falls back
+  /// to a generic connectivity message for anything else (timeouts, DNS
+  /// failures, 5xx, an unexpected body shape).
+  String _remoteLoginErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['error'];
+      if (message is String && message.isNotEmpty) return message;
+    }
+    return 'No pudimos conectarnos. Revisá tu conexión.';
   }
 
   @override
@@ -267,12 +347,27 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              // 100% fake login (design brief §3): any value — or none —
-              // logs in. No credential is ever checked against anything.
-              onPressed: () => ref.read(_isLoggedInProvider.notifier).logIn(),
-              child: const Text('Iniciar sesión'),
+              onPressed: _isSubmitting ? null : _onLoginPressed,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Iniciar sesión'),
             ),
           ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
+          ],
           const SizedBox(height: 16),
           TextButton(
             onPressed: () =>
@@ -344,9 +439,9 @@ class _LoggedInViewState extends ConsumerState<_LoggedInView>
                 child: CircularProgressIndicator(color: AppTheme.accent),
               ),
             ),
-            error: (error, stackTrace) => Text(
-              'No pudimos cargar tu perfil.',
-              style: AppTheme.bodySecondary,
+            error: (error, stackTrace) => NetworkErrorView(
+              message: 'No pudimos cargar tu perfil.',
+              onRetry: () => ref.invalidate(currentConsumerProvider),
             ),
           ),
         ),
@@ -1286,6 +1381,18 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     });
   }
 
+  /// Clears the local session ([_isLoggedInProvider]) and, in
+  /// [ConnectionMode.remote], also calls the real
+  /// `AuthRepository.logout()` (clears the saved JWT and the cached
+  /// consumer snapshot) — a no-op call in [ConnectionMode.local], where
+  /// there's no token/session to clear.
+  void _logOut() {
+    if (ref.read(connectionModeProvider) == ConnectionMode.remote) {
+      ref.read(authRepositoryProvider).logout();
+    }
+    ref.read(_isLoggedInProvider.notifier).logOut();
+  }
+
   void _onDeleteTap() {
     if (!_deleteArmed) {
       _armDelete();
@@ -1302,7 +1409,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     ref.invalidate(_personalDataOverrideProvider);
     ref.invalidate(_isDarkThemeOverrideProvider);
     ref.invalidate(_notificationsOverrideProvider);
-    ref.read(_isLoggedInProvider.notifier).logOut();
+    _logOut();
   }
 
   @override
@@ -1331,7 +1438,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
           _AccountActionRow(
             icon: Symbols.logout,
             label: 'Cerrar sesión',
-            onTap: () => ref.read(_isLoggedInProvider.notifier).logOut(),
+            onTap: _logOut,
           ),
           const Divider(color: AppTheme.border, height: 1),
           _AccountActionRow(
