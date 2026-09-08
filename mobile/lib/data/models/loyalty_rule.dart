@@ -21,6 +21,20 @@ extension RewardTypeJson on RewardType {
   };
 }
 
+/// Presentation data for [RewardType] (short label shown next to a reward
+/// description in the loyalty timeline), taken from the prototype's `RTYPE`
+/// map in `docs/design-reference/Fudo App.dc.html` — not part of the schema.
+/// `other` has no prototype equivalent (the design's `reward_type_enum` only
+/// modeled 3 of the 4 real values); "Premio" is a reasonable generic default.
+extension RewardTypePresentation on RewardType {
+  String get label => switch (this) {
+    RewardType.freeItem => 'Producto de regalo',
+    RewardType.discountPercent => 'Descuento',
+    RewardType.cashback => 'Cashback',
+    RewardType.other => 'Premio',
+  };
+}
+
 /// Domain model for `public.loyalty_rules`.
 ///
 /// Rails audit/soft-delete bookkeeping columns (`created_at`, `created_by`,
