@@ -1,0 +1,3704 @@
+---
+openapi: 3.0.1
+info:
+  title: Fudo Consumers API
+  version: v1
+  description: 'Consumer-facing API for the Fudo restaurant/bar/cafe discovery app:
+    catalog browsing, loyalty, visits, favorites, gifts, and natural-language search.'
+paths:
+  "/api/v1/business_hours":
+    get:
+      summary: Lists business hours
+      tags:
+      - BusinessHours
+      description: Public — no authentication required.
+      parameters:
+      - name: merchant_id
+        in: query
+        schema:
+          type: integer
+        required: false
+        description: Filter by merchant
+      - name: page
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+        required: false
+      responses:
+        '200':
+          description: business hours found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        day_of_week:
+                          type: string
+                          enum:
+                          - monday
+                          - tuesday
+                          - wednesday
+                          - thursday
+                          - friday
+                          - saturday
+                          - sunday
+                        opens_at:
+                          type: string
+                          nullable: true
+                        closes_at:
+                          type: string
+                          nullable: true
+                        closed:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - day_of_week
+                      - closed
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+    post:
+      summary: Creates a business hour
+      tags:
+      - BusinessHours
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: business hour created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  day_of_week:
+                    type: string
+                    enum:
+                    - monday
+                    - tuesday
+                    - wednesday
+                    - thursday
+                    - friday
+                    - saturday
+                    - sunday
+                  opens_at:
+                    type: string
+                    nullable: true
+                  closes_at:
+                    type: string
+                    nullable: true
+                  closed:
+                    type: boolean
+                required:
+                - id
+                - merchant_id
+                - day_of_week
+                - closed
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                business_hour:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                    day_of_week:
+                      type: string
+                      enum:
+                      - monday
+                      - tuesday
+                      - wednesday
+                      - thursday
+                      - friday
+                      - saturday
+                      - sunday
+                    opens_at:
+                      type: string
+                    closes_at:
+                      type: string
+                    closed:
+                      type: boolean
+                  required:
+                  - merchant_id
+                  - day_of_week
+              required:
+              - business_hour
+  "/api/v1/business_hours/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a business hour
+      tags:
+      - BusinessHours
+      description: Public — no authentication required.
+      responses:
+        '200':
+          description: business hour found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  day_of_week:
+                    type: string
+                    enum:
+                    - monday
+                    - tuesday
+                    - wednesday
+                    - thursday
+                    - friday
+                    - saturday
+                    - sunday
+                  opens_at:
+                    type: string
+                    nullable: true
+                  closes_at:
+                    type: string
+                    nullable: true
+                  closed:
+                    type: boolean
+                required:
+                - id
+                - merchant_id
+                - day_of_week
+                - closed
+        '404':
+          description: business hour not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a business hour
+      tags:
+      - BusinessHours
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: business hour updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  day_of_week:
+                    type: string
+                    enum:
+                    - monday
+                    - tuesday
+                    - wednesday
+                    - thursday
+                    - friday
+                    - saturday
+                    - sunday
+                  opens_at:
+                    type: string
+                    nullable: true
+                  closes_at:
+                    type: string
+                    nullable: true
+                  closed:
+                    type: boolean
+                required:
+                - id
+                - merchant_id
+                - day_of_week
+                - closed
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: business hour not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                business_hour:
+                  type: object
+                  properties:
+                    opens_at:
+                      type: string
+                    closes_at:
+                      type: string
+                    closed:
+                      type: boolean
+    delete:
+      summary: Deletes a business hour
+      tags:
+      - BusinessHours
+      security:
+      - bearer_auth: []
+      description: Hard delete — BusinessHour has no soft-delete column.
+      responses:
+        '204':
+          description: business hour deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: business hour not found
+  "/api/v1/consumer_settings":
+    get:
+      summary: Lists the authenticated consumer's own setting
+      tags:
+      - ConsumerSettings
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: consumer settings found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        consumer_id:
+                          type: string
+                        theme:
+                          type: string
+                          enum:
+                          - light
+                          - dark
+                          - system
+                        notifications_enabled:
+                          type: boolean
+                        updated_at:
+                          type: string
+                      required:
+                      - id
+                      - consumer_id
+                      - theme
+                      - notifications_enabled
+                      - updated_at
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates the authenticated consumer's setting
+      tags:
+      - ConsumerSettings
+      security:
+      - bearer_auth: []
+      description: consumer_id always comes from the authenticated consumer. Each
+        consumer may have at most one setting (consumer_id is unique).
+      parameters: []
+      responses:
+        '201':
+          description: consumer setting created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  theme:
+                    type: string
+                    enum:
+                    - light
+                    - dark
+                    - system
+                  notifications_enabled:
+                    type: boolean
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - theme
+                - notifications_enabled
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consumer_setting:
+                  type: object
+                  properties:
+                    theme:
+                      type: string
+                      enum:
+                      - light
+                      - dark
+                      - system
+                    notifications_enabled:
+                      type: boolean
+              required:
+              - consumer_setting
+  "/api/v1/consumer_settings/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a consumer setting
+      tags:
+      - ConsumerSettings
+      security:
+      - bearer_auth: []
+      description: Scoped to the authenticated consumer's own setting — another consumer's
+        setting 404s.
+      responses:
+        '200':
+          description: consumer setting found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  theme:
+                    type: string
+                    enum:
+                    - light
+                    - dark
+                    - system
+                  notifications_enabled:
+                    type: boolean
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - theme
+                - notifications_enabled
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: consumer setting not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a consumer setting
+      tags:
+      - ConsumerSettings
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: consumer setting updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  theme:
+                    type: string
+                    enum:
+                    - light
+                    - dark
+                    - system
+                  notifications_enabled:
+                    type: boolean
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - theme
+                - notifications_enabled
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: consumer setting not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                consumer_setting:
+                  type: object
+                  properties:
+                    theme:
+                      type: string
+                      enum:
+                      - light
+                      - dark
+                      - system
+                    notifications_enabled:
+                      type: boolean
+    delete:
+      summary: Deletes a consumer setting
+      tags:
+      - ConsumerSettings
+      security:
+      - bearer_auth: []
+      description: Hard delete — ConsumerSetting has no soft-delete column.
+      responses:
+        '204':
+          description: consumer setting deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: consumer setting not found
+  "/api/v1/favorites":
+    get:
+      summary: Lists the authenticated consumer's favorites
+      tags:
+      - Favorites
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: favorites found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        consumer_id:
+                          type: string
+                        merchant_id:
+                          type: integer
+                        created_at:
+                          type: string
+                      required:
+                      - id
+                      - consumer_id
+                      - merchant_id
+                      - created_at
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a favorite
+      tags:
+      - Favorites
+      security:
+      - bearer_auth: []
+      description: consumer_id always comes from the authenticated consumer, never
+        from client input.
+      parameters: []
+      responses:
+        '201':
+          description: favorite created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  created_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - created_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: duplicate consumer/merchant pair
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+        '409':
+          description: duplicate reached the DB unique index directly (race condition)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                favorite:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                  required:
+                  - merchant_id
+              required:
+              - favorite
+  "/api/v1/favorites/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a favorite
+      tags:
+      - Favorites
+      security:
+      - bearer_auth: []
+      description: Scoped to the authenticated consumer's own favorites — another
+        consumer's favorite 404s.
+      responses:
+        '200':
+          description: favorite found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  created_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - created_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: favorite not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a favorite
+      tags:
+      - Favorites
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: favorite updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  created_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - created_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: favorite not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                favorite:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+    delete:
+      summary: Soft-deletes a favorite
+      tags:
+      - Favorites
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: favorite deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: favorite not found
+  "/api/v1/gifts":
+    get:
+      summary: Lists gifts where the authenticated consumer is sender or recipient
+      tags:
+      - Gifts
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: gifts found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        sender_consumer_id:
+                          type: string
+                        recipient_consumer_id:
+                          type: string
+                          nullable: true
+                        type:
+                          type: string
+                          enum:
+                          - classic
+                          - gold
+                          - black
+                          - platinum
+                        amount:
+                          type: string
+                        status:
+                          type: string
+                          enum:
+                          - pending
+                          - redeemed
+                          - expired
+                          - cancelled
+                        expires_at:
+                          type: string
+                      required:
+                      - id
+                      - sender_consumer_id
+                      - type
+                      - amount
+                      - status
+                      - expires_at
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a gift
+      tags:
+      - Gifts
+      security:
+      - bearer_auth: []
+      description: The authenticated consumer is always the sender. status is never
+        client-settable — every new gift starts pending.
+      parameters: []
+      responses:
+        '201':
+          description: gift created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  sender_consumer_id:
+                    type: string
+                  recipient_consumer_id:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    enum:
+                    - classic
+                    - gold
+                    - black
+                    - platinum
+                  amount:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - redeemed
+                    - expired
+                    - cancelled
+                  expires_at:
+                    type: string
+                  recipient_phone:
+                    type: string
+                  message:
+                    type: string
+                    nullable: true
+                  status_updated_at:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - sender_consumer_id
+                - type
+                - amount
+                - status
+                - expires_at
+                - recipient_phone
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gift:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - classic
+                      - gold
+                      - black
+                      - platinum
+                    amount:
+                      type: number
+                    recipient_phone:
+                      type: string
+                    recipient_consumer_id:
+                      type: string
+                    message:
+                      type: string
+                    expires_at:
+                      type: string
+                  required:
+                  - type
+                  - amount
+                  - recipient_phone
+                  - expires_at
+              required:
+              - gift
+  "/api/v1/gifts/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a gift
+      tags:
+      - Gifts
+      security:
+      - bearer_auth: []
+      description: Scoped to gifts where the authenticated consumer is sender or recipient
+        — otherwise 404.
+      responses:
+        '200':
+          description: gift found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  sender_consumer_id:
+                    type: string
+                  recipient_consumer_id:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    enum:
+                    - classic
+                    - gold
+                    - black
+                    - platinum
+                  amount:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - redeemed
+                    - expired
+                    - cancelled
+                  expires_at:
+                    type: string
+                  recipient_phone:
+                    type: string
+                  message:
+                    type: string
+                    nullable: true
+                  status_updated_at:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - sender_consumer_id
+                - type
+                - amount
+                - status
+                - expires_at
+                - recipient_phone
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: gift not found (or the consumer has no part in it)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a gift
+      tags:
+      - Gifts
+      security:
+      - bearer_auth: []
+      description: 'Gifts are immutable except for one case: the sender cancelling
+        their own still-pending gift by setting status to "cancelled". Marking a gift
+        redeemed is NOT a consumer-facing action.'
+      parameters: []
+      responses:
+        '200':
+          description: gift cancelled by its sender
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  sender_consumer_id:
+                    type: string
+                  recipient_consumer_id:
+                    type: string
+                    nullable: true
+                  type:
+                    type: string
+                    enum:
+                    - classic
+                    - gold
+                    - black
+                    - platinum
+                  amount:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                    - pending
+                    - redeemed
+                    - expired
+                    - cancelled
+                  expires_at:
+                    type: string
+                  recipient_phone:
+                    type: string
+                  message:
+                    type: string
+                    nullable: true
+                  status_updated_at:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - sender_consumer_id
+                - type
+                - amount
+                - status
+                - expires_at
+                - recipient_phone
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '403':
+          description: the recipient (not the sender) tried to update the gift
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: gift not found (or the consumer has no part in it)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: gift can no longer be cancelled (already redeemed/expired/cancelled)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gift:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      enum:
+                      - cancelled
+                  required:
+                  - status
+              required:
+              - gift
+    delete:
+      summary: Soft-deletes a gift
+      tags:
+      - Gifts
+      security:
+      - bearer_auth: []
+      description: 'Only the sender may delete their own gift, and only while it is
+        still pending — deleting hides the gift from BOTH sender and recipient (Gift''s
+        soft-delete scope is global), so this is deliberately as restricted as #update''s
+        cancel path.'
+      responses:
+        '204':
+          description: gift deleted
+        '401':
+          description: not authenticated
+        '403':
+          description: the recipient (not the sender) tried to delete the gift
+        '404':
+          description: gift not found (or the consumer has no part in it)
+        '422':
+          description: gift is no longer pending and can no longer be deleted
+  "/api/v1/loyalty_rules":
+    get:
+      summary: Lists loyalty rules
+      tags:
+      - LoyaltyRules
+      description: Public — no authentication required.
+      parameters:
+      - name: merchant_id
+        in: query
+        schema:
+          type: integer
+        required: false
+        description: Filter by merchant
+      - name: page
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+        required: false
+      responses:
+        '200':
+          description: loyalty rules found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        visits_required:
+                          type: integer
+                        reward_type:
+                          type: string
+                          enum:
+                          - discount_percent
+                          - free_item
+                          - cashback
+                          - other
+                        reward_description:
+                          type: string
+                        is_permanent:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - visits_required
+                      - reward_type
+                      - reward_description
+                      - is_permanent
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+    post:
+      summary: Creates a loyalty rule
+      tags:
+      - LoyaltyRules
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: loyalty rule created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  visits_required:
+                    type: integer
+                  reward_type:
+                    type: string
+                    enum:
+                    - discount_percent
+                    - free_item
+                    - cashback
+                    - other
+                  reward_description:
+                    type: string
+                  is_permanent:
+                    type: boolean
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - merchant_id
+                - visits_required
+                - reward_type
+                - reward_description
+                - is_permanent
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loyalty_rule:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                    visits_required:
+                      type: integer
+                    reward_type:
+                      type: string
+                      enum:
+                      - discount_percent
+                      - free_item
+                      - cashback
+                      - other
+                    reward_description:
+                      type: string
+                    is_permanent:
+                      type: boolean
+                  required:
+                  - merchant_id
+                  - visits_required
+                  - reward_type
+                  - reward_description
+              required:
+              - loyalty_rule
+  "/api/v1/loyalty_rules/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a loyalty rule
+      tags:
+      - LoyaltyRules
+      description: Public — no authentication required.
+      responses:
+        '200':
+          description: loyalty rule found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  visits_required:
+                    type: integer
+                  reward_type:
+                    type: string
+                    enum:
+                    - discount_percent
+                    - free_item
+                    - cashback
+                    - other
+                  reward_description:
+                    type: string
+                  is_permanent:
+                    type: boolean
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - merchant_id
+                - visits_required
+                - reward_type
+                - reward_description
+                - is_permanent
+                - created_at
+                - updated_at
+        '404':
+          description: loyalty rule not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a loyalty rule
+      tags:
+      - LoyaltyRules
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: loyalty rule updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  visits_required:
+                    type: integer
+                  reward_type:
+                    type: string
+                    enum:
+                    - discount_percent
+                    - free_item
+                    - cashback
+                    - other
+                  reward_description:
+                    type: string
+                  is_permanent:
+                    type: boolean
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - merchant_id
+                - visits_required
+                - reward_type
+                - reward_description
+                - is_permanent
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: loyalty rule not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loyalty_rule:
+                  type: object
+                  properties:
+                    visits_required:
+                      type: integer
+                    reward_type:
+                      type: string
+                      enum:
+                      - discount_percent
+                      - free_item
+                      - cashback
+                      - other
+                    reward_description:
+                      type: string
+                    is_permanent:
+                      type: boolean
+    delete:
+      summary: Soft-deletes a loyalty rule
+      tags:
+      - LoyaltyRules
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: loyalty rule deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: loyalty rule not found
+  "/api/v1/menu_items":
+    get:
+      summary: Lists menu items
+      tags:
+      - MenuItems
+      description: Public — no authentication required.
+      parameters:
+      - name: merchant_id
+        in: query
+        schema:
+          type: integer
+        required: false
+        description: Filter by merchant
+      - name: page
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+        required: false
+      responses:
+        '200':
+          description: menu items found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        name:
+                          type: string
+                        price:
+                          type: string
+                        currency:
+                          type: string
+                          enum:
+                          - usd
+                          - ars
+                        section:
+                          type: string
+                          nullable: true
+                        image_url:
+                          type: string
+                          nullable: true
+                        active:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - name
+                      - price
+                      - currency
+                      - active
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+    post:
+      summary: Creates a menu item
+      tags:
+      - MenuItems
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: menu item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: string
+                  currency:
+                    type: string
+                    enum:
+                    - usd
+                    - ars
+                  section:
+                    type: string
+                    nullable: true
+                  image_url:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  description:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - id
+                - merchant_id
+                - name
+                - price
+                - currency
+                - active
+                - created_at
+                - updated_at
+                - tags
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                menu_item:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    price:
+                      type: number
+                    currency:
+                      type: string
+                      enum:
+                      - usd
+                      - ars
+                    section:
+                      type: string
+                    image_url:
+                      type: string
+                    active:
+                      type: boolean
+                  required:
+                  - merchant_id
+                  - name
+                  - price
+                  - currency
+              required:
+              - menu_item
+  "/api/v1/menu_items/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a menu item
+      tags:
+      - MenuItems
+      description: Public — no authentication required.
+      responses:
+        '200':
+          description: menu item found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: string
+                  currency:
+                    type: string
+                    enum:
+                    - usd
+                    - ars
+                  section:
+                    type: string
+                    nullable: true
+                  image_url:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  description:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - id
+                - merchant_id
+                - name
+                - price
+                - currency
+                - active
+                - created_at
+                - updated_at
+                - tags
+        '404':
+          description: menu item not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a menu item
+      tags:
+      - MenuItems
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: menu item updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  merchant_id:
+                    type: integer
+                  name:
+                    type: string
+                  price:
+                    type: string
+                  currency:
+                    type: string
+                    enum:
+                    - usd
+                    - ars
+                  section:
+                    type: string
+                    nullable: true
+                  image_url:
+                    type: string
+                    nullable: true
+                  active:
+                    type: boolean
+                  description:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - id
+                - merchant_id
+                - name
+                - price
+                - currency
+                - active
+                - created_at
+                - updated_at
+                - tags
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: menu item not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                menu_item:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    price:
+                      type: number
+                    currency:
+                      type: string
+                      enum:
+                      - usd
+                      - ars
+                    active:
+                      type: boolean
+    delete:
+      summary: Soft-deletes a menu item
+      tags:
+      - MenuItems
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: menu item deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: menu item not found
+  "/api/v1/merchants":
+    get:
+      summary: Lists merchants
+      tags:
+      - Merchants
+      description: Public catalog listing — no authentication required.
+      parameters:
+      - name: neighborhood
+        in: query
+        schema:
+          type: string
+        required: false
+        description: Exact neighborhood match
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum:
+          - restaurant
+          - cafe
+          - bar
+          - dark_kitchen
+          - pizzeria
+          - brewery
+          - food_truck
+          - other
+        required: false
+        description: Merchant type filter
+      - name: tags
+        in: query
+        schema:
+          type: string
+        required: false
+        description: Comma-separated tag names, e.g. "vegano,con_delivery"
+      - name: price_per_person
+        in: query
+        schema:
+          type: number
+        required: false
+        description: Matches merchants whose price_per_person_min/max range includes
+          this value
+      - name: page
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+        required: false
+      responses:
+        '200':
+          description: merchants found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                          - restaurant
+                          - cafe
+                          - bar
+                          - dark_kitchen
+                          - pizzeria
+                          - brewery
+                          - food_truck
+                          - other
+                        neighborhood:
+                          type: string
+                          nullable: true
+                        city:
+                          type: string
+                        price_per_person_min:
+                          type: string
+                          nullable: true
+                        price_per_person_max:
+                          type: string
+                          nullable: true
+                        cover_image_url:
+                          type: string
+                          nullable: true
+                        latitude:
+                          type: string
+                        longitude:
+                          type: string
+                      required:
+                      - id
+                      - name
+                      - type
+                      - city
+                      - latitude
+                      - longitude
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '400':
+          description: invalid price_per_person filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a merchant
+      tags:
+      - Merchants
+      security:
+      - bearer_auth: []
+      description: Any authenticated consumer may create a merchant — there is no
+        staff/ownership model yet (accepted MVP limitation).
+      parameters: []
+      responses:
+        '201':
+          description: merchant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  type:
+                    type: string
+                    enum:
+                    - restaurant
+                    - cafe
+                    - bar
+                    - dark_kitchen
+                    - pizzeria
+                    - brewery
+                    - food_truck
+                    - other
+                  neighborhood:
+                    type: string
+                    nullable: true
+                  city:
+                    type: string
+                  price_per_person_min:
+                    type: string
+                    nullable: true
+                  price_per_person_max:
+                    type: string
+                    nullable: true
+                  cover_image_url:
+                    type: string
+                    nullable: true
+                  latitude:
+                    type: string
+                  longitude:
+                    type: string
+                  address:
+                    type: string
+                  country:
+                    type: string
+                  state:
+                    type: string
+                  zip_code:
+                    type: string
+                    nullable: true
+                  whatsapp_number:
+                    type: string
+                    nullable: true
+                  delivery_url:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  business_hours:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        day_of_week:
+                          type: string
+                          enum:
+                          - monday
+                          - tuesday
+                          - wednesday
+                          - thursday
+                          - friday
+                          - saturday
+                          - sunday
+                        opens_at:
+                          type: string
+                          nullable: true
+                        closes_at:
+                          type: string
+                          nullable: true
+                        closed:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - day_of_week
+                      - closed
+                required:
+                - id
+                - name
+                - type
+                - city
+                - latitude
+                - longitude
+                - address
+                - country
+                - state
+                - created_at
+                - updated_at
+                - tags
+                - business_hours
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum:
+                      - restaurant
+                      - cafe
+                      - bar
+                      - dark_kitchen
+                      - pizzeria
+                      - brewery
+                      - food_truck
+                      - other
+                    address:
+                      type: string
+                    country:
+                      type: string
+                    state:
+                      type: string
+                    city:
+                      type: string
+                    neighborhood:
+                      type: string
+                    zip_code:
+                      type: string
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    cover_image_url:
+                      type: string
+                    whatsapp_number:
+                      type: string
+                    delivery_url:
+                      type: string
+                    price_per_person_min:
+                      type: number
+                    price_per_person_max:
+                      type: number
+                  required:
+                  - name
+                  - type
+                  - address
+                  - country
+                  - state
+                  - city
+                  - latitude
+                  - longitude
+              required:
+              - merchant
+  "/api/v1/merchants/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a merchant
+      tags:
+      - Merchants
+      description: Public — no authentication required. Includes tags and business
+        hours.
+      responses:
+        '200':
+          description: merchant found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  type:
+                    type: string
+                    enum:
+                    - restaurant
+                    - cafe
+                    - bar
+                    - dark_kitchen
+                    - pizzeria
+                    - brewery
+                    - food_truck
+                    - other
+                  neighborhood:
+                    type: string
+                    nullable: true
+                  city:
+                    type: string
+                  price_per_person_min:
+                    type: string
+                    nullable: true
+                  price_per_person_max:
+                    type: string
+                    nullable: true
+                  cover_image_url:
+                    type: string
+                    nullable: true
+                  latitude:
+                    type: string
+                  longitude:
+                    type: string
+                  address:
+                    type: string
+                  country:
+                    type: string
+                  state:
+                    type: string
+                  zip_code:
+                    type: string
+                    nullable: true
+                  whatsapp_number:
+                    type: string
+                    nullable: true
+                  delivery_url:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  business_hours:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        day_of_week:
+                          type: string
+                          enum:
+                          - monday
+                          - tuesday
+                          - wednesday
+                          - thursday
+                          - friday
+                          - saturday
+                          - sunday
+                        opens_at:
+                          type: string
+                          nullable: true
+                        closes_at:
+                          type: string
+                          nullable: true
+                        closed:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - day_of_week
+                      - closed
+                required:
+                - id
+                - name
+                - type
+                - city
+                - latitude
+                - longitude
+                - address
+                - country
+                - state
+                - created_at
+                - updated_at
+                - tags
+                - business_hours
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a merchant
+      tags:
+      - Merchants
+      security:
+      - bearer_auth: []
+      description: 'Any authenticated consumer may update any merchant — accepted
+        MVP limitation (see #create).'
+      parameters: []
+      responses:
+        '200':
+          description: merchant updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  type:
+                    type: string
+                    enum:
+                    - restaurant
+                    - cafe
+                    - bar
+                    - dark_kitchen
+                    - pizzeria
+                    - brewery
+                    - food_truck
+                    - other
+                  neighborhood:
+                    type: string
+                    nullable: true
+                  city:
+                    type: string
+                  price_per_person_min:
+                    type: string
+                    nullable: true
+                  price_per_person_max:
+                    type: string
+                    nullable: true
+                  cover_image_url:
+                    type: string
+                    nullable: true
+                  latitude:
+                    type: string
+                  longitude:
+                    type: string
+                  address:
+                    type: string
+                  country:
+                    type: string
+                  state:
+                    type: string
+                  zip_code:
+                    type: string
+                    nullable: true
+                  whatsapp_number:
+                    type: string
+                    nullable: true
+                  delivery_url:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                  business_hours:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        merchant_id:
+                          type: integer
+                        day_of_week:
+                          type: string
+                          enum:
+                          - monday
+                          - tuesday
+                          - wednesday
+                          - thursday
+                          - friday
+                          - saturday
+                          - sunday
+                        opens_at:
+                          type: string
+                          nullable: true
+                        closes_at:
+                          type: string
+                          nullable: true
+                        closed:
+                          type: boolean
+                      required:
+                      - id
+                      - merchant_id
+                      - day_of_week
+                      - closed
+                required:
+                - id
+                - name
+                - type
+                - city
+                - latitude
+                - longitude
+                - address
+                - country
+                - state
+                - created_at
+                - updated_at
+                - tags
+                - business_hours
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: merchant not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                merchant:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                      enum:
+                      - restaurant
+                      - cafe
+                      - bar
+                      - dark_kitchen
+                      - pizzeria
+                      - brewery
+                      - food_truck
+                      - other
+                    address:
+                      type: string
+                    country:
+                      type: string
+                    state:
+                      type: string
+                    city:
+                      type: string
+                    neighborhood:
+                      type: string
+                    zip_code:
+                      type: string
+                    latitude:
+                      type: number
+                    longitude:
+                      type: number
+                    cover_image_url:
+                      type: string
+                    whatsapp_number:
+                      type: string
+                    delivery_url:
+                      type: string
+                    price_per_person_min:
+                      type: number
+                    price_per_person_max:
+                      type: number
+    delete:
+      summary: Soft-deletes a merchant
+      tags:
+      - Merchants
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: merchant deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: merchant not found
+  "/api/v1/registrations":
+    post:
+      summary: Registers a new consumer
+      tags:
+      - Registrations
+      description: Self-registration — there is no authenticated actor yet. Returns
+        the created consumer plus a bearer token that can be used immediately on protected
+        endpoints.
+      parameters: []
+      responses:
+        '201':
+          description: consumer registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consumer:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      phone:
+                        type: string
+                        nullable: true
+                    required:
+                    - id
+                    - email
+                    - first_name
+                    - last_name
+                  token:
+                    type: string
+                required:
+                - consumer
+                - token
+        '422':
+          description: validation failed (duplicate email/dni, password mismatch,
+            or missing fields)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                registration:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    password:
+                      type: string
+                    password_confirmation:
+                      type: string
+                    first_name:
+                      type: string
+                    last_name:
+                      type: string
+                    dni:
+                      type: string
+                    phone:
+                      type: string
+                  required:
+                  - email
+                  - password
+                  - password_confirmation
+                  - first_name
+                  - last_name
+                  - dni
+              required:
+              - registration
+  "/api/v1/search_histories":
+    get:
+      summary: Lists the authenticated consumer's search history
+      tags:
+      - SearchHistories
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: search history found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        consumer_id:
+                          type: string
+                        query_text:
+                          type: string
+                        created_at:
+                          type: string
+                      required:
+                      - id
+                      - consumer_id
+                      - query_text
+                      - created_at
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a search history entry
+      tags:
+      - SearchHistories
+      security:
+      - bearer_auth: []
+      description: 'consumer_id always comes from the authenticated consumer. Note:
+        the natural-language search endpoint (POST /api/v1/search) already creates
+        these automatically — this endpoint lets a client record an entry directly.'
+      parameters: []
+      responses:
+        '201':
+          description: search history entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  query_text:
+                    type: string
+                  created_at:
+                    type: string
+                  structured_output:
+                    type: object
+                    nullable: true
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - query_text
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                search_history:
+                  type: object
+                  properties:
+                    query_text:
+                      type: string
+                    structured_output:
+                      type: object
+                  required:
+                  - query_text
+              required:
+              - search_history
+  "/api/v1/search_histories/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a search history entry
+      tags:
+      - SearchHistories
+      security:
+      - bearer_auth: []
+      description: Scoped to the authenticated consumer's own entries — another consumer's
+        entry 404s.
+      responses:
+        '200':
+          description: search history entry found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  query_text:
+                    type: string
+                  created_at:
+                    type: string
+                  structured_output:
+                    type: object
+                    nullable: true
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - query_text
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: search history entry not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a search history entry
+      tags:
+      - SearchHistories
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: search history entry updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  query_text:
+                    type: string
+                  created_at:
+                    type: string
+                  structured_output:
+                    type: object
+                    nullable: true
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - query_text
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: search history entry not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                search_history:
+                  type: object
+                  properties:
+                    query_text:
+                      type: string
+    delete:
+      summary: Soft-deletes a search history entry
+      tags:
+      - SearchHistories
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: search history entry deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: search history entry not found
+  "/api/v1/search":
+    post:
+      summary: Parses a free-text query into merchant filters and returns matching
+        merchants
+      tags:
+      - Search
+      security:
+      - bearer_auth: []
+      description: Persists the query and its parsed filters to the authenticated
+        consumer's search history (SearchHistory), then filters merchants the same
+        way GET /api/v1/merchants does.
+      parameters: []
+      responses:
+        '200':
+          description: query parsed and matching merchants returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                          - restaurant
+                          - cafe
+                          - bar
+                          - dark_kitchen
+                          - pizzeria
+                          - brewery
+                          - food_truck
+                          - other
+                        neighborhood:
+                          type: string
+                          nullable: true
+                        city:
+                          type: string
+                        price_per_person_min:
+                          type: string
+                          nullable: true
+                        price_per_person_max:
+                          type: string
+                          nullable: true
+                        cover_image_url:
+                          type: string
+                          nullable: true
+                        latitude:
+                          type: string
+                        longitude:
+                          type: string
+                      required:
+                      - id
+                      - name
+                      - type
+                      - city
+                      - latitude
+                      - longitude
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '400':
+          description: query is missing
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '502':
+          description: the search parsing service (Gemini) is unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+              required:
+              - query
+  "/api/v1/sessions":
+    post:
+      summary: Logs in a consumer
+      tags:
+      - Sessions
+      description: Deliberately generic message — never reveals whether the email
+        exists.
+      parameters: []
+      responses:
+        '200':
+          description: session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consumer:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      phone:
+                        type: string
+                        nullable: true
+                    required:
+                    - id
+                    - email
+                    - first_name
+                    - last_name
+                  token:
+                    type: string
+                required:
+                - consumer
+                - token
+        '401':
+          description: invalid email or password
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+              - email
+              - password
+  "/api/v1/tags":
+    get:
+      summary: Lists tags
+      tags:
+      - Tags
+      description: Public — no authentication required.
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+        required: false
+      responses:
+        '200':
+          description: tags found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                      required:
+                      - id
+                      - name
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+    post:
+      summary: Creates a tag
+      tags:
+      - Tags
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '201':
+          description: tag created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - name
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                  required:
+                  - name
+              required:
+              - tag
+  "/api/v1/tags/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a tag
+      tags:
+      - Tags
+      description: Public — no authentication required.
+      responses:
+        '200':
+          description: tag found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - name
+                - created_at
+                - updated_at
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a tag
+      tags:
+      - Tags
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: tag updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - name
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: tag not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+    delete:
+      summary: Soft-deletes a tag
+      tags:
+      - Tags
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: tag deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: tag not found
+  "/api/v1/visit_summaries":
+    get:
+      summary: Lists the authenticated consumer's visit summaries
+      tags:
+      - VisitSummaries
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: visit summaries found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        consumer_id:
+                          type: string
+                        merchant_id:
+                          type: integer
+                        count:
+                          type: integer
+                        current_tier:
+                          type: string
+                          nullable: true
+                        last_visit_at:
+                          type: string
+                          nullable: true
+                      required:
+                      - id
+                      - consumer_id
+                      - merchant_id
+                      - count
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a visit summary
+      tags:
+      - VisitSummaries
+      security:
+      - bearer_auth: []
+      description: consumer_id always comes from the authenticated consumer, never
+        from client input.
+      parameters: []
+      responses:
+        '201':
+          description: visit summary created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  count:
+                    type: integer
+                  current_tier:
+                    type: string
+                    nullable: true
+                  last_visit_at:
+                    type: string
+                    nullable: true
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - count
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visit_summary:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                    count:
+                      type: integer
+                    current_tier:
+                      type: string
+                    last_visit_at:
+                      type: string
+                  required:
+                  - merchant_id
+              required:
+              - visit_summary
+  "/api/v1/visit_summaries/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a visit summary
+      tags:
+      - VisitSummaries
+      security:
+      - bearer_auth: []
+      description: Scoped to the authenticated consumer's own visit summaries — another
+        consumer's summary 404s.
+      responses:
+        '200':
+          description: visit summary found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  count:
+                    type: integer
+                  current_tier:
+                    type: string
+                    nullable: true
+                  last_visit_at:
+                    type: string
+                    nullable: true
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - count
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: visit summary not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a visit summary
+      tags:
+      - VisitSummaries
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: visit summary updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  count:
+                    type: integer
+                  current_tier:
+                    type: string
+                    nullable: true
+                  last_visit_at:
+                    type: string
+                    nullable: true
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - count
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: visit summary not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visit_summary:
+                  type: object
+                  properties:
+                    count:
+                      type: integer
+                    current_tier:
+                      type: string
+                    last_visit_at:
+                      type: string
+    delete:
+      summary: Deletes a visit summary
+      tags:
+      - VisitSummaries
+      security:
+      - bearer_auth: []
+      description: Hard delete — VisitSummary has no soft-delete column.
+      responses:
+        '204':
+          description: visit summary deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: visit summary not found
+  "/api/v1/visits":
+    get:
+      summary: Lists the authenticated consumer's visits
+      tags:
+      - Visits
+      security:
+      - bearer_auth: []
+      responses:
+        '200':
+          description: visits found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        consumer_id:
+                          type: string
+                        merchant_id:
+                          type: integer
+                        amount:
+                          type: string
+                        visited_at:
+                          type: string
+                        reward_applied:
+                          type: boolean
+                      required:
+                      - id
+                      - consumer_id
+                      - merchant_id
+                      - amount
+                      - visited_at
+                      - reward_applied
+                  meta:
+                    "$ref": "#/components/schemas/pagination_meta"
+                required:
+                - data
+                - meta
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    post:
+      summary: Creates a visit
+      tags:
+      - Visits
+      security:
+      - bearer_auth: []
+      description: consumer_id always comes from the authenticated consumer. reward_applied
+        always starts false and reward fields are never client-settable — there is
+        no staff flow to apply loyalty rewards yet (accepted MVP limitation).
+      parameters: []
+      responses:
+        '201':
+          description: visit created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  amount:
+                    type: string
+                  visited_at:
+                    type: string
+                  reward_applied:
+                    type: boolean
+                  reward_description_snapshot:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - amount
+                - visited_at
+                - reward_applied
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visit:
+                  type: object
+                  properties:
+                    merchant_id:
+                      type: integer
+                    amount:
+                      type: number
+                    visited_at:
+                      type: string
+                  required:
+                  - merchant_id
+                  - amount
+                  - visited_at
+              required:
+              - visit
+  "/api/v1/visits/{id}":
+    parameters:
+    - name: id
+      in: path
+      schema:
+        type: integer
+      required: true
+    get:
+      summary: Retrieves a visit
+      tags:
+      - Visits
+      security:
+      - bearer_auth: []
+      description: Scoped to the authenticated consumer's own visits — another consumer's
+        visit 404s.
+      responses:
+        '200':
+          description: visit found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  amount:
+                    type: string
+                  visited_at:
+                    type: string
+                  reward_applied:
+                    type: boolean
+                  reward_description_snapshot:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - amount
+                - visited_at
+                - reward_applied
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: visit not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+    patch:
+      summary: Updates a visit
+      tags:
+      - Visits
+      security:
+      - bearer_auth: []
+      parameters: []
+      responses:
+        '200':
+          description: visit updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  consumer_id:
+                    type: string
+                  merchant_id:
+                    type: integer
+                  amount:
+                    type: string
+                  visited_at:
+                    type: string
+                  reward_applied:
+                    type: boolean
+                  reward_description_snapshot:
+                    type: string
+                    nullable: true
+                  created_at:
+                    type: string
+                  updated_at:
+                    type: string
+                required:
+                - id
+                - consumer_id
+                - merchant_id
+                - amount
+                - visited_at
+                - reward_applied
+                - created_at
+                - updated_at
+        '401':
+          description: not authenticated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '404':
+          description: visit not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/error"
+        '422':
+          description: validation failed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/validation_errors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visit:
+                  type: object
+                  properties:
+                    amount:
+                      type: number
+                    visited_at:
+                      type: string
+    delete:
+      summary: Soft-deletes a visit
+      tags:
+      - Visits
+      security:
+      - bearer_auth: []
+      responses:
+        '204':
+          description: visit deleted
+        '401':
+          description: not authenticated
+        '404':
+          description: visit not found
+servers:
+- url: http://localhost:3000
+  description: Local development
+components:
+  securitySchemes:
+    bearer_auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Consumer session token issued by POST /api/v1/registrations or
+        POST /api/v1/sessions. Sent as `Authorization: Bearer <token>`.'
+  schemas:
+    error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+      - error
+    validation_errors:
+      type: object
+      properties:
+        errors:
+          type: object
+      required:
+      - errors
+    pagination_meta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_count:
+          type: integer
+        per_page:
+          type: integer
+      required:
+      - current_page
+      - total_pages
+      - total_count
+      - per_page

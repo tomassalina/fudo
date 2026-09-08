@@ -5,6 +5,12 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Rswag::Api serves the generated swagger/v1/swagger.yaml (see
+  # spec/swagger_helper.rb) and Rswag::Ui mounts Swagger UI on top of it —
+  # both under /api-docs.
+  mount Rswag::Api::Engine => "/api-docs"
+  mount Rswag::Ui::Engine => "/api-docs"
+
   namespace :api do
     namespace :v1 do
       resources :merchants, except: %i[new edit]

@@ -58,6 +58,11 @@ gem "jwt"
 # generic abuse against the public API
 gem "rack-attack"
 
+# Serves the generated OpenAPI (swagger.yaml) file and mounts the
+# Swagger UI at /api-docs — both used at runtime, not just in tests.
+gem "rswag-api"
+gem "rswag-ui"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
@@ -70,6 +75,10 @@ group :development, :test do
 
   # Behaviour-driven testing framework
   gem "rspec-rails"
+
+  # DSL for writing rspec-based request specs that also generate the
+  # OpenAPI (swagger.yaml) document via `rswag:specs:swaggerize`.
+  gem "rswag-specs"
 end
 
 

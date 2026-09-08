@@ -1,0 +1,89 @@
+require "swagger_helper"
+
+# The natural-language search endpoint calls the Gemini API through
+# SearchQueryParser (see app/services/search_query_parser.rb). To keep this
+# documentation spec deterministic and independent of Gemini's live
+# availability/billing status, SearchQueryParser.call is stubbed here rather
+# than exercised end to end — the real integration is already covered by
+# spec/requests/api/v1/search_spec.rb, which makes genuine Gemini calls.
+RSpec.describe "Search", type: :request do
+  merchant_list_item = {
+    type: :object,
+    properties: {
+      id: { type: :integer },
+      name: { type: :string },
+      type: { type: :string, enum: Merchant.types.keys },
+      neighborhood: { type: :string, nullable: true },
+      city: { type: :string },
+      price_per_person_min: { type: :string, nullable: true },
+      price_per_person_max: { type: :string, nullable: true },
+      cover_image_url: { type: :string, nullable: true },
+      latitude: { type: :string },
+      longitude: { type: :string }
+    },
+    required: %w[id name type city latitude longitude]
+  }.freeze
+
+  path "/api/v1/search" do
+    post "Parses a free-text query into merchant filters and returns matching merchants" do
+      tags "Search"
+      security [ bearer_auth: [] ]
+      consumes "application/json"
+      produces "application/json"
+      description "Persists the query and its parsed filters to the authenticated consumer's search " \
+        "history (SearchHistory), then filters merchants the same way GET /api/v1/merchants does."
+      parameter name: :body, in: :body, schema: {
+        type: :object,
+        properties: { query: { type: :string } },
+        required: %w[query]
+      }
+
+      response "200", "query parsed and matching merchants returned" do
+        schema type: :object,
+          properties: {
+            data: { type: :array, items: merchant_list_item },
+            meta: { "$ref" => "#/components/schemas/pagination_meta" }
+          },
+          required: %w[data meta]
+
+        let(:consumer) { create_consumer }
+        let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
+        let(:body) { { query: "algo picante y barato en Palermo" } }
+        before do
+          create_merchant(neighborhood: "Palermo")
+          allow(SearchQueryParser).to receive(:call).and_return(
+            { "neighborhood" => "Palermo", "type" => nil, "tags" => [], "price_per_person" => nil }
+          )
+        end
+        run_test!
+      end
+
+      response "401", "not authenticated" do
+        schema "$ref" => "#/components/schemas/error"
+
+        let(:Authorization) { nil }
+        let(:body) { { query: "pizza" } }
+        run_test!
+      end
+
+      response "400", "query is missing" do
+        schema "$ref" => "#/components/schemas/error"
+
+        let(:consumer) { create_consumer }
+        let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
+        let(:body) { {} }
+        run_test!
+      end
+
+      response "502", "the search parsing service (Gemini) is unavailable" do
+        schema "$ref" => "#/components/schemas/error"
+
+        let(:consumer) { create_consumer }
+        let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
+        let(:body) { { query: "pizza" } }
+        before { allow(SearchQueryParser).to receive(:call).and_raise(SearchQueryParser::GeminiError, "boom") }
+        run_test!
+      end
+    end
+  end
+end
