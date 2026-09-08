@@ -67,7 +67,15 @@ flutter pub get
 flutter run
 ```
 
-Requiere Flutter 3.47.2 / Dart 3.13.2 o superior (ver `environment.sdk` en `mobile/pubspec.yaml`).
+Por default esto corre 100% contra fixtures locales (`mobile/assets/fixtures/*.json`), sin pegarle a ningún backend — sirve para ver el diseño andando sin tener Docker corriendo. Para conectar de verdad contra el backend real (necesario para seguir la sección **Cómo probar la app** de abajo, con el login del consumer de demo):
+
+```bash
+flutter run \
+  --dart-define=CONNECTION_MODE=remote \
+  --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+```
+
+En **emulador Android** usá `http://10.0.2.2:3000/api/v1` en vez de `localhost` (`localhost` ahí resuelve al propio emulador, no a tu Mac/PC). En simulador iOS y en Flutter web, `localhost:3000` anda directo. Requiere Flutter 3.47.2 / Dart 3.13.2 o superior (ver `environment.sdk` en `mobile/pubspec.yaml`).
 
 ### Web
 
