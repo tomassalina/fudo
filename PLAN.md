@@ -1,6 +1,6 @@
 # PLAN.md — Fudo Consumers
 
-Plan técnico de construcción para la demo, en 6 fases. Contexto de negocio y decisiones de producto: `PRD.md`. Fuente de verdad del modelo de datos: `db/schema.sql` (14 tablas + 7 enums) y su diagrama en `docs/database-schema.drawio` / `docs/database-schema.png`.
+Plan técnico de construcción para la demo, en 6 fases. Contexto de negocio y decisiones de producto: `PRD.md`. Diseño de referencia del modelo de datos: `docs/database-schema.sql` (14 tablas + 7 enums) y su diagrama en `docs/database-schema.drawio` / `docs/database-schema.png`.
 
 ## Cómo correr esto en paralelo (worktrees de git)
 
@@ -72,7 +72,7 @@ Web es la prioridad más baja de las tres apps: si el tiempo se acorta, se sacri
 
 **Worktree:** `fudo-backend`. Depende de Fase 0 backend.
 
-- **Entrega:** migraciones de Rails que reproducen exactamente `db/schema.sql` (mismos tipos, mismos enums nativos de Postgres, mismos índices), más `db/seeds.rb` con datos ficticios completos.
+- **Entrega:** migraciones de Rails que reproducen exactamente `docs/database-schema.sql` (mismos tipos, mismos enums nativos de Postgres, mismos índices), más `db/seeds.rb` con datos ficticios completos.
 - **Archivos clave:** `db/migrate/*_create_*.rb` (una por tabla + una por cada `CREATE TYPE`), `db/structure.sql` (usar `config.active_record.schema_format = :sql` porque hay enums nativos — `schema.rb` no los representa bien), `db/seeds.rb`, `db/seeds/` (helpers separados por entidad si el seed crece mucho).
 - **Datos a generar en el seeder:**
   - 30 `merchants` ficticios en Palermo, CABA — lat/long variados y realistas (jitter dentro del bounding box aprox. de Palermo, no todos en el mismo punto).
@@ -93,7 +93,7 @@ Web es la prioridad más baja de las tres apps: si el tiempo se acorta, se sacri
 **Worktrees:** `fudo-mobile` y `fudo-web`, en paralelo entre sí. Depende de Fase 1 (necesita la forma real de los datos) y de Fase 0 de cada app. **No depende de Fase 3** — corre en paralelo con el backend completo.
 
 - **Entrega:** ambos frontends renderizando las 3 pantallas (mobile) / la búsqueda (web) con datos de ejemplo, sin pegarle a ningún backend real todavía.
-- **Cómo se generan los fixtures:** un rake task en `fudo-backend` (`rake export:fixtures`) vuelca los datos ya sembrados en Fase 1 a JSON, respetando **exactamente** los nombres y tipos de columnas de `db/schema.sql` (mismo shape que después va a devolver la API real). Esos JSON se copian a mano a cada frontend.
+- **Cómo se generan los fixtures:** un rake task en `fudo-backend` (`rake export:fixtures`) vuelca los datos ya sembrados en Fase 1 a JSON, respetando **exactamente** los nombres y tipos de columnas de `docs/database-schema.sql` (mismo shape que después va a devolver la API real). Esos JSON se copian a mano a cada frontend.
 - **Archivos clave (mobile):** `assets/fixtures/*.json`, `lib/data/local/local_data_source.dart` implementando la misma interfaz abstracta que después va a implementar `remote_data_source.dart` (Fase 4) — el swap tiene que ser un cambio de una línea en el provider/DI, no un rewrite.
 - **Archivos clave (web):** `lib/fixtures/*.json` o `app/_fixtures/`, un mock de la capa de datos (`lib/data/merchants.ts`) con la misma firma que el futuro `fetch` real.
 - **Diseño visual (mobile):** el diseño ya está prototipado aparte en Claude Design, estilo Roomix — fondo oscuro, glow violeta, buscador como protagonista de la pantalla principal. **Queda pendiente de integrar** cuando el usuario comparta ese prototipo; mientras tanto Fase 2 entrega la funcionalidad con estilos base/placeholder, no el diseño final.
@@ -117,7 +117,7 @@ Web es la prioridad más baja de las tres apps: si el tiempo se acorta, se sacri
   - **Favorites:** `POST/DELETE /api/v1/favorites`, `GET /api/v1/me/favorites`.
   - **Search history:** `GET /api/v1/me/search_history`.
 - **Archivos clave:** `app/controllers/api/v1/*`, `app/services/search/*`, `app/models/*`, `spec/requests/api/v1/*_spec.rb`, `spec/models/*_spec.rb`, `spec/swagger_helper.rb` + `swagger/v1/swagger.yaml` (generado por rswag).
-- **Seguridad — DNI cifrado:** `dni_encrypted` (texto cifrado) + `dni_bidx` (blind index para poder buscar por igualdad sin desencriptar), tal como está en `db/schema.sql`, implementado con las gemas `lockbox` + `blind_index`. Alternativa nativa considerada: `ActiveRecord::Encryption` de Rails 7+ con cifrado determinístico — se descarta como default porque el schema ya está dibujado con dos columnas separadas (`_encrypted` / `_bidx`), que es exactamente el patrón de Lockbox, no el de `ActiveRecord::Encryption` (que no necesita una columna de índice aparte).
+- **Seguridad — DNI cifrado:** `dni_encrypted` (texto cifrado) + `dni_bidx` (blind index para poder buscar por igualdad sin desencriptar), tal como está en `docs/database-schema.sql`, implementado con las gemas `lockbox` + `blind_index`. Alternativa nativa considerada: `ActiveRecord::Encryption` de Rails 7+ con cifrado determinístico — se descarta como default porque el schema ya está dibujado con dos columnas separadas (`_encrypted` / `_bidx`), que es exactamente el patrón de Lockbox, no el de `ActiveRecord::Encryption` (que no necesita una columna de índice aparte).
 - **Testing:**
   - RSpec unitario de modelos, con foco en la lógica de `loyalty_rules` (cálculo de tier según `visits_required`, distinción entre premio de una vez vs. `is_permanent`).
   - RSpec de integración (request specs) por endpoint, cubriendo casos felices y de error (401 sin token, 404, validaciones).
