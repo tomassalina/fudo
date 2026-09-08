@@ -79,6 +79,40 @@ pnpm dev
 
 El proyecto usa **pnpm** (ver `packageManager` en `web/package.json`), no npm ni yarn. Requiere Node 24 LTS o superior (`engines.node` en `web/package.json`).
 
+## Cómo probar la app
+
+### 1. Levantar el backend con datos ya sembrados
+
+```bash
+cd backend
+docker compose up
+```
+
+En un clon nuevo (sin el volumen de Postgres creado todavía), el propio entrypoint corre `bin/rails db:prepare` al bootear el server: crea la base, aplica las 22 migraciones y — como la base se crea por primera vez — corre `db:seed` automáticamente. No hace falta ejecutar nada más a mano.
+
+Si ya tenías el contenedor corriendo de una sesión anterior (el volumen de Postgres ya existe), `db:prepare` solo migra, no vuelve a sembrar. Para forzar el seed en ese caso:
+
+```bash
+docker compose exec web bin/rails db:seed
+```
+
+Confirmá que quedó arriba con `curl -i http://localhost:3000/up` → `200 OK`.
+
+Las variables de entorno necesarias (incluida la clave de cifrado del DNI) están explicadas paso a paso en [`ENV_SETUP.md`](./ENV_SETUP.md) — empezá por ahí si es la primera vez que clonás el repo.
+
+### 2. Loguearte con el consumer de demo
+
+Datos 100% ficticios pensados solo para probar la app, no son de una persona real:
+
+- **Email:** `info@tomassalina.com`
+- **Contraseña:** `Demo1234`
+
+### 3. Qué vas a encontrar sembrado
+
+- 30 restaurantes en Palermo (CABA), con 150 platos de menú en total.
+- El consumer de demo tiene 116 visitas registradas, repartidas en 27 locales distintos, con fidelización (`loyalty_rules`) ya activa en los 30 merchants.
+- 3 favoritos y 3 regalos enviados de ejemplo para ese mismo consumer (todavía no hay regalos recibidos sembrados).
+
 ## Documentación
 
 1. [`PRD.md`](./PRD.md) — problema, ventaja injusta, alcance y fuera de alcance del producto.
