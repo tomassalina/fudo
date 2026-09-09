@@ -47,7 +47,10 @@ RSpec.describe "VisitSummaries", type: :request do
       security [ bearer_auth: [] ]
       consumes "application/json"
       produces "application/json"
-      description "consumer_id always comes from the authenticated consumer, never from client input."
+      description "consumer_id always comes from the authenticated consumer, never from client input. " \
+        "count/current_tier are NOT accepted either — both are computed server-side from the " \
+        "consumer's real visits and the merchant's real loyalty_rules, so a consumer can't forge " \
+        "their own loyalty tier/count."
       parameter name: :visit_summary, in: :body, schema: {
         type: :object,
         properties: {
@@ -55,8 +58,6 @@ RSpec.describe "VisitSummaries", type: :request do
             type: :object,
             properties: {
               merchant_id: { type: :integer },
-              count: { type: :integer },
-              current_tier: { type: :string },
               last_visit_at: { type: :string }
             },
             required: %w[merchant_id]
@@ -71,7 +72,7 @@ RSpec.describe "VisitSummaries", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:merchant) { create_merchant }
-        let(:visit_summary) { { visit_summary: { merchant_id: merchant.id, count: 1 } } }
+        let(:visit_summary) { { visit_summary: { merchant_id: merchant.id } } }
         run_test!
       end
 
@@ -89,8 +90,8 @@ RSpec.describe "VisitSummaries", type: :request do
 
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
-        let(:merchant) { create_merchant }
-        let(:visit_summary) { { visit_summary: { merchant_id: merchant.id, count: -1 } } }
+        # merchant_id omitted on purpose — required, so this fails validation.
+        let(:visit_summary) { { visit_summary: { last_visit_at: Time.current.iso8601 } } }
         run_test!
       end
     end
@@ -143,8 +144,7 @@ RSpec.describe "VisitSummaries", type: :request do
           visit_summary: {
             type: :object,
             properties: {
-              count: { type: :integer },
-              current_tier: { type: :string },
+              merchant_id: { type: :integer },
               last_visit_at: { type: :string }
             }
           }
@@ -157,7 +157,7 @@ RSpec.describe "VisitSummaries", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { VisitSummary.create!(consumer: consumer, merchant: create_merchant, count: 1).id }
-        let(:visit_summary) { { visit_summary: { count: 5 } } }
+        let(:visit_summary) { { visit_summary: { last_visit_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -166,7 +166,7 @@ RSpec.describe "VisitSummaries", type: :request do
 
         let(:Authorization) { nil }
         let(:id) { VisitSummary.create!(consumer: create_consumer, merchant: create_merchant, count: 1).id }
-        let(:visit_summary) { { visit_summary: { count: 5 } } }
+        let(:visit_summary) { { visit_summary: { last_visit_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -176,7 +176,7 @@ RSpec.describe "VisitSummaries", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { 999_999 }
-        let(:visit_summary) { { visit_summary: { count: 5 } } }
+        let(:visit_summary) { { visit_summary: { last_visit_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -186,7 +186,7 @@ RSpec.describe "VisitSummaries", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { VisitSummary.create!(consumer: consumer, merchant: create_merchant, count: 1).id }
-        let(:visit_summary) { { visit_summary: { count: -1 } } }
+        let(:visit_summary) { { visit_summary: { merchant_id: 999_999 } } }
         run_test!
       end
     end

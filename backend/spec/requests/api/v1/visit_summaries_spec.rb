@@ -7,7 +7,24 @@ RSpec.describe "Api::V1::VisitSummaries", type: :request do
   def create_visit_summary(attrs = {})
     consumer = attrs.delete(:consumer) || create_consumer
     merchant = attrs.delete(:merchant) || create_merchant
-    VisitSummary.create!({ consumer: consumer, merchant: merchant, count: 3, current_tier: "bronze" }.merge(attrs))
+    VisitSummary.create!({ consumer: consumer, merchant: merchant, count: 3, current_tier: VisitSummary::NEW_TIER }.merge(attrs))
+  end
+
+  def create_loyalty_rule(attrs = {})
+    merchant = attrs.delete(:merchant) || create_merchant
+    LoyaltyRule.create!({
+      merchant: merchant, visits_required: 1, reward_type: "discount_percent",
+      reward_description: "10% off", created_by: SecureRandom.uuid
+    }.merge(attrs))
+  end
+
+  def create_visit(attrs = {})
+    consumer = attrs.delete(:consumer) || create_consumer
+    merchant = attrs.delete(:merchant) || create_merchant
+    Visit.create!({
+      consumer: consumer, merchant: merchant, amount: 1000, visited_at: Time.current,
+      created_by: SecureRandom.uuid
+    }.merge(attrs))
   end
 
   describe "GET /api/v1/visit_summaries" do
@@ -95,14 +112,33 @@ RSpec.describe "Api::V1::VisitSummaries", type: :request do
       expect(VisitSummary.find(json_response["id"]).consumer_id).to eq(consumer.id)
     end
 
-    it "returns 422 when count is invalid" do
+    it "ignores a client-supplied count/current_tier and computes real progress instead — a consumer can't forge their own loyalty tier" do
       consumer = create_consumer
       merchant = create_merchant
 
-      post "/api/v1/visit_summaries", params: { visit_summary: { merchant_id: merchant.id, count: -1 } }, headers: auth_headers_for(consumer)
+      post "/api/v1/visit_summaries",
+        params: { visit_summary: { merchant_id: merchant.id, count: 9999, current_tier: "platinum" } },
+        headers: auth_headers_for(consumer)
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(json_response["errors"]).to have_key("count")
+      expect(response).to have_http_status(:created)
+      created = VisitSummary.find(json_response["id"])
+      expect(created.count).to eq(0)
+      expect(created.current_tier).to eq(VisitSummary::NEW_TIER)
+    end
+
+    it "computes count/current_tier from the consumer's real visits and the merchant's real loyalty_rules" do
+      consumer = create_consumer
+      merchant = create_merchant
+      create_loyalty_rule(merchant: merchant, visits_required: 3)
+      create_loyalty_rule(merchant: merchant, visits_required: 6)
+      3.times { create_visit(consumer: consumer, merchant: merchant) }
+
+      post "/api/v1/visit_summaries", params: { visit_summary: { merchant_id: merchant.id } }, headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:created)
+      created = VisitSummary.find(json_response["id"])
+      expect(created.count).to eq(3)
+      expect(created.current_tier).to eq("Nivel 3 visitas")
     end
 
     it "returns 401 without authentication" do
@@ -115,14 +151,31 @@ RSpec.describe "Api::V1::VisitSummaries", type: :request do
   end
 
   describe "PATCH /api/v1/visit_summaries/:id" do
-    it "updates the visit summary" do
+    it "updates the visit summary's last_visit_at" do
+      consumer = create_consumer
+      visit_summary = create_visit_summary(consumer: consumer)
+      new_last_visit_at = 1.day.ago.change(usec: 0)
+
+      patch "/api/v1/visit_summaries/#{visit_summary.id}",
+        params: { visit_summary: { last_visit_at: new_last_visit_at } },
+        headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:ok)
+      expect(visit_summary.reload.last_visit_at).to eq(new_last_visit_at)
+    end
+
+    it "ignores a client-supplied count/current_tier on update and recomputes real progress instead — a consumer can't forge their own loyalty tier" do
       consumer = create_consumer
       visit_summary = create_visit_summary(consumer: consumer)
 
-      patch "/api/v1/visit_summaries/#{visit_summary.id}", params: { visit_summary: { count: 9 } }, headers: auth_headers_for(consumer)
+      patch "/api/v1/visit_summaries/#{visit_summary.id}",
+        params: { visit_summary: { current_tier: "platinum", count: 9999 } },
+        headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
-      expect(visit_summary.reload.count).to eq(9)
+      visit_summary.reload
+      expect(visit_summary.count).to eq(0)
+      expect(visit_summary.current_tier).to eq(VisitSummary::NEW_TIER)
     end
 
     it "returns 404 for a non-existent visit summary" do

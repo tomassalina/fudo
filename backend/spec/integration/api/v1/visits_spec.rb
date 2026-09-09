@@ -151,13 +151,14 @@ RSpec.describe "Visits", type: :request do
       security [ bearer_auth: [] ]
       consumes "application/json"
       produces "application/json"
+      description "merchant_id/amount are NOT accepted here — a visit's merchant and charged amount " \
+        "are immutable once recorded, only visited_at can still be corrected after creation."
       parameter name: :visit, in: :body, schema: {
         type: :object,
         properties: {
           visit: {
             type: :object,
             properties: {
-              amount: { type: :number },
               visited_at: { type: :string }
             }
           }
@@ -170,7 +171,7 @@ RSpec.describe "Visits", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { Visit.create!(consumer: consumer, merchant: create_merchant, amount: 5000, visited_at: Time.current, created_by: consumer.id).id }
-        let(:visit) { { visit: { amount: 6000 } } }
+        let(:visit) { { visit: { visited_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -182,7 +183,7 @@ RSpec.describe "Visits", type: :request do
           consumer = create_consumer
           Visit.create!(consumer: consumer, merchant: create_merchant, amount: 5000, visited_at: Time.current, created_by: consumer.id).id
         end
-        let(:visit) { { visit: { amount: 6000 } } }
+        let(:visit) { { visit: { visited_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -192,7 +193,7 @@ RSpec.describe "Visits", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { 999_999 }
-        let(:visit) { { visit: { amount: 6000 } } }
+        let(:visit) { { visit: { visited_at: 1.day.ago.iso8601 } } }
         run_test!
       end
 
@@ -202,7 +203,7 @@ RSpec.describe "Visits", type: :request do
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
         let(:id) { Visit.create!(consumer: consumer, merchant: create_merchant, amount: 5000, visited_at: Time.current, created_by: consumer.id).id }
-        let(:visit) { { visit: { amount: -1 } } }
+        let(:visit) { { visit: { visited_at: nil } } }
         run_test!
       end
     end

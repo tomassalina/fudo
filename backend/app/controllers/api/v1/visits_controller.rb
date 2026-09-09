@@ -32,7 +32,7 @@ module Api
       end
 
       def update
-        @visit.assign_attributes(visit_params)
+        @visit.assign_attributes(update_visit_params)
         @visit.updated_by = current_consumer.id
         @visit.save!
 
@@ -68,6 +68,19 @@ module Api
       # no better source for it yet. Also an accepted MVP limitation.
       def visit_params
         params.require(:visit).permit(:merchant_id, :amount, :visited_at)
+      end
+
+      # merchant_id/amount are deliberately NOT permitted here, unlike
+      # visit_params above. Trusting the client for `amount` at CREATE time
+      # is an accepted MVP limitation (see visit_params) because there's no
+      # better source yet — but allowing UPDATE to touch merchant_id/amount
+      # is strictly worse: it would let a consumer silently rewrite which
+      # merchant a past visit belongs to, or the amount charged, after the
+      # fact. A visit's merchant and charged amount are immutable once
+      # recorded; visited_at is the only field a consumer can still correct
+      # post-creation.
+      def update_visit_params
+        params.require(:visit).permit(:visited_at)
       end
     end
   end

@@ -57,4 +57,38 @@ RSpec.describe VisitSummary, type: :model do
 
     expect(other_summary).to be_valid
   end
+
+  # Guards against a free-text current_tier ever landing in this column
+  # (defense-in-depth — VisitSummariesController never accepts current_tier
+  # from the client to begin with, see its #assign_computed_progress).
+  describe "current_tier validation" do
+    it "allows NEW_TIER regardless of the merchant's loyalty_rules" do
+      summary = VisitSummary.new(merchant: merchant, consumer: consumer, count: 0, current_tier: VisitSummary::NEW_TIER)
+
+      expect(summary).to be_valid
+    end
+
+    it "allows nil" do
+      summary = VisitSummary.new(merchant: merchant, consumer: consumer, count: 0, current_tier: nil)
+
+      expect(summary).to be_valid
+    end
+
+    it "allows a tier label matching one of the merchant's real loyalty_rules" do
+      LoyaltyRule.create!(
+        merchant: merchant, visits_required: 5, reward_type: "discount_percent",
+        reward_description: "10% off", created_by: SecureRandom.uuid
+      )
+      summary = VisitSummary.new(merchant: merchant, consumer: consumer, count: 5, current_tier: "Nivel 5 visitas")
+
+      expect(summary).to be_valid
+    end
+
+    it "rejects an arbitrary tier label the merchant's loyalty_rules never produced" do
+      summary = VisitSummary.new(merchant: merchant, consumer: consumer, count: 0, current_tier: "platinum")
+
+      expect(summary).not_to be_valid
+      expect(summary.errors[:current_tier]).to be_present
+    end
+  end
 end

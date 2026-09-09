@@ -152,14 +152,31 @@ RSpec.describe "Api::V1::Visits", type: :request do
   end
 
   describe "PATCH /api/v1/visits/:id" do
-    it "updates the visit" do
+    it "updates the visit's visited_at" do
       consumer = create_consumer
       visit = create_visit(consumer: consumer)
+      new_visited_at = 1.day.ago.change(usec: 0)
 
-      patch "/api/v1/visits/#{visit.id}", params: { visit: { amount: 3000 } }, headers: auth_headers_for(consumer)
+      patch "/api/v1/visits/#{visit.id}", params: { visit: { visited_at: new_visited_at } }, headers: auth_headers_for(consumer)
 
       expect(response).to have_http_status(:ok)
-      expect(visit.reload.amount.to_f).to eq(3000.0)
+      expect(visit.reload.visited_at).to eq(new_visited_at)
+    end
+
+    it "ignores a client-supplied merchant_id/amount on update — a visit's merchant and charged amount are immutable once recorded" do
+      consumer = create_consumer
+      merchant = create_merchant
+      other_merchant = create_merchant
+      visit = create_visit(consumer: consumer, merchant: merchant, amount: 1000)
+
+      patch "/api/v1/visits/#{visit.id}",
+        params: { visit: { merchant_id: other_merchant.id, amount: 99999 } },
+        headers: auth_headers_for(consumer)
+
+      expect(response).to have_http_status(:ok)
+      visit.reload
+      expect(visit.merchant_id).to eq(merchant.id)
+      expect(visit.amount.to_f).to eq(1000.0)
     end
 
     it "ignores client-supplied reward_applied/reward_description_snapshot on update too" do
