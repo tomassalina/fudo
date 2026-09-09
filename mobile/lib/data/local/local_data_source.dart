@@ -12,6 +12,7 @@ import '../models/loyalty_rule.dart';
 import '../models/menu_item.dart';
 import '../models/merchant.dart';
 import '../models/search_history.dart';
+import '../models/search_query_filters.dart';
 import '../models/tag.dart';
 import '../models/visit.dart';
 import '../models/visit_summary.dart';
@@ -382,5 +383,27 @@ class LocalDataSource implements DataSource {
         .toList();
     _searchHistory = history;
     return history;
+  }
+
+  /// [ConnectionMode.local] has no Gemini-backed backend to call — there is
+  /// no natural-language-parsing equivalent to stand in for it here (same
+  /// posture as web's `resolve-ai-search.ts`, which has no mock branch at
+  /// all for this call). Rather than fake structured output, this degrades
+  /// to a plain free-text pass-through (only [SearchQueryFilters.query] set,
+  /// everything else `null`) — the search screen's existing local
+  /// `filterMerchants` text match still handles it, same as web's own
+  /// AiSearchResolver catch-branch degrade on a real failure.
+  @override
+  Future<SearchQueryFilters> parseSearchQuery(String query) async {
+    return SearchQueryFilters(
+      neighborhood: null,
+      type: null,
+      tags: const [],
+      pricePerPerson: null,
+      open: null,
+      reward: null,
+      query: query.trim().isEmpty ? null : query.trim(),
+      resultMode: null,
+    );
   }
 }

@@ -7,6 +7,7 @@ import 'models/loyalty_rule.dart';
 import 'models/menu_item.dart';
 import 'models/merchant.dart';
 import 'models/search_history.dart';
+import 'models/search_query_filters.dart';
 import 'models/tag.dart';
 import 'models/visit.dart';
 import 'models/visit_summary.dart';
@@ -146,4 +147,15 @@ abstract class DataSource {
 
   /// The demo consumer's past searches (home screen "Continuar búsqueda").
   Future<List<SearchHistory>> getSearchHistory();
+
+  /// Sends a free-text query to the Gemini-backed natural-language search
+  /// parser (`POST /api/v1/search`, `backend/app/services/
+  /// search_query_parser.rb`) and returns the structured filters it
+  /// derived — the home hero's "AI search" (`features/home/home_screen.dart`),
+  /// matching `web/lib/api/search.ts`'s `parseSearchQuery` 1:1. Public on the
+  /// real backend (no auth required, see `SearchController`'s own doc
+  /// comment) — [RemoteDataSource] makes this call the same way as any other
+  /// request; the shared [Dio] client only attaches a bearer token when one
+  /// is already stored, so this works fully logged out too.
+  Future<SearchQueryFilters> parseSearchQuery(String query);
 }

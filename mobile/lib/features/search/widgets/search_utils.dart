@@ -7,6 +7,8 @@ import '../../../core/location/location_service.dart';
 import '../../../data/models/business_hour.dart';
 import '../../../data/models/loyalty_rule.dart';
 import '../../../data/models/merchant.dart';
+import '../../../data/models/search_query_filters.dart';
+import '../../../data/models/tag.dart';
 
 /// Shared filtering/formatting helpers for the search results list and map
 /// views, so both stay in sync on what counts as "matching the query" and
@@ -428,3 +430,94 @@ List<Merchant> applySearchFilters(
 /// [SortOption.price]).
 double _representativePrice(Merchant merchant) =>
     merchant.pricePerPersonMin ?? merchant.pricePerPersonMax ?? double.infinity;
+
+// ---------------------------------------------------------------------------
+// Home AI search -> search screen handoff
+// ---------------------------------------------------------------------------
+
+/// Everything [SearchScreen] needs to jump straight into a result set
+/// resolved by the home hero's AI search, passed via `go_router`'s route
+/// `extra` (see `core/router/app_router.dart`) instead of URL query params —
+/// unlike web's shareable `/buscar?type=...&hood=...` URL, this app has no
+/// deep-linking requirement for AI search results yet, so a plain in-memory
+/// object avoids a query-string (de)serialization layer for
+/// [MerchantType]/[SearchFilters] under time pressure.
+@immutable
+class SearchScreenInitial {
+  const SearchScreenInitial({
+    required this.query,
+    this.filters = const SearchFilters(),
+    this.startInPlatos = false,
+  });
+
+  /// The free-text fragment to seed the results screen's own search field
+  /// with — Gemini's `query` field on success (may be empty when the query
+  /// was fully covered by structured filters), or the visitor's raw typed
+  /// text when the backend call itself failed (degrade, mirrors
+  /// `AiSearchResolver.tsx`'s catch branch).
+  final String query;
+
+  final SearchFilters filters;
+
+  /// Whether to land on the "Platos" result mode instead of the default
+  /// "Lugares" — mirrors `resolve-ai-search.ts`'s `mode` mapping
+  /// (`result_mode === "platos"`).
+  final bool startInPlatos;
+}
+
+/// Maps the backend's structured [SearchQueryFilters] onto this app's own
+/// [SearchScreenInitial]/[SearchFilters] vocabulary — the Flutter analogue
+/// of web's `resolve-ai-search.ts` `resolveAiSearchFilters`. [allTags]
+/// resolves Gemini's tag *names* to this app's tag *ids*
+/// (`SearchFilters.dietTagIds`); an unknown/out-of-vocabulary name is
+/// silently dropped, same posture as `SearchQueryParser#sanitize_tags!` on
+/// the backend.
+SearchScreenInitial mapSearchQueryFiltersToInitial(
+  SearchQueryFilters filters,
+  List<Tag> allTags,
+) {
+  MerchantType? type;
+  final rawType = filters.type;
+  if (rawType != null) {
+    try {
+      type = MerchantTypeJson.fromJson(rawType);
+    } catch (_) {
+      // Shouldn't happen — the backend's schema enum only allows real
+      // `merchant_type_enum` values — but a client-side parse must never
+      // crash the whole AI search over an unexpected value.
+      type = null;
+    }
+  }
+
+  final tagIds = <int>{};
+  if (filters.tags.isNotEmpty) {
+    final idByName = {for (final tag in allTags) tag.name: tag.id};
+    for (final name in filters.tags) {
+      final id = idByName[name];
+      if (id != null) tagIds.add(id);
+    }
+  }
+
+  return SearchScreenInitial(
+    // On success, an absent `query` means Gemini considered the request
+    // fully covered by the structured fields above — NOT a signal to fall
+    // back to the visitor's raw text (that fallback only belongs to a real
+    // request failure, handled by the caller). Mirrors `AiSearchResolver
+    // .tsx`'s `.then` branch, which passes `filters.q` (nullable) through
+    // as-is rather than substituting the original query string.
+    query: filters.query?.trim() ?? '',
+    filters: SearchFilters(
+      merchantType: type,
+      openNowOnly: filters.open == true,
+      // A single Gemini-estimated price-per-person reads as a budget
+      // ceiling ("barato" -> a low number), not an exact point value this
+      // app's `RangeSlider`-shaped filter could match precisely — so this
+      // maps onto the upper bound only, leaving the lower bound open.
+      maxPricePerPerson: filters.pricePerPerson,
+      dietTagIds: tagIds,
+      neighborhood: filters.neighborhood,
+      rewardAvailableOnly: filters.reward == true,
+    ),
+    startInPlatos: filters.resultMode == 'platos',
+  );
+}

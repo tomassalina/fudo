@@ -7,6 +7,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/my_places/my_places_screen.dart';
 import '../../features/search/restaurant_detail_screen.dart';
 import '../../features/search/search_screen.dart';
+import '../../features/search/widgets/search_utils.dart';
 import '../../shared/widgets/main_shell.dart';
 
 /// Bottom nav tab order: Inicio (0), Buscar (1), Mis Lugares (2), Regalar
@@ -63,7 +64,13 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: AppRoutes.search,
-          builder: (context, state) => const SearchScreen(),
+          // `state.extra` carries a `SearchScreenInitial` when this route
+          // was reached from the home hero's AI search (see
+          // `features/home/home_screen.dart`'s `_submitSearch`) — `null` for
+          // a plain "Buscar" tab switch, in which case [SearchScreen] shows
+          // its normal home/search-entry view exactly as before.
+          builder: (context, state) =>
+              SearchScreen(initial: state.extra as SearchScreenInitial?),
         ),
         GoRoute(
           path: AppRoutes.myPlaces,

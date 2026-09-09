@@ -33,7 +33,14 @@ enum _ResultMode { lugares, platos }
 /// query text, and navigation to the restaurant detail route; delegates
 /// actual rendering to the view-specific widgets under `widgets/`.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({this.initial, super.key});
+
+  /// A result already resolved by the home hero's AI search (see
+  /// `core/router/app_router.dart`'s `SearchScreen(initial: state.extra
+  /// as SearchScreenInitial?)`), or `null` for a plain tab switch — in
+  /// which case this screen shows its normal home/search-entry view exactly
+  /// as before.
+  final SearchScreenInitial? initial;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -54,6 +61,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial == null) return;
+    // Deferred to the post-frame callback: calling setState synchronously
+    // inside initState (before the first build) throws.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _applyAiSearchResult(initial);
+    });
+  }
+
+  @override
   void dispose() {
     _resultsSearchController.dispose();
     super.dispose();
@@ -66,8 +86,35 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() {
       _query = trimmed;
       _resultsSearchController.text = trimmed;
-      _view = _SearchView.loading;
     });
+    _enterLoading();
+  }
+
+  /// Same "loading -> list" transition as [_startSearch], but seeded from an
+  /// already-resolved AI search result (home hero -> `POST /api/v1/search`
+  /// -> `mapSearchQueryFiltersToInitial`, see `search_utils.dart`) instead
+  /// of a plain typed query. Unlike [_startSearch], an empty [query] is
+  /// valid here — Gemini may have fully covered the request via structured
+  /// filters alone (e.g. "algo picante y barato en Palermo" has no leftover
+  /// free-text fragment), so this must not bail out the way [_startSearch]'s
+  /// empty-text guard does.
+  void _applyAiSearchResult(SearchScreenInitial initial) {
+    if (initial.query.isNotEmpty) {
+      ref.read(analyticsServiceProvider).trackSearchSubmitted(initial.query);
+    }
+    setState(() {
+      _query = initial.query;
+      _resultsSearchController.text = initial.query;
+      _filters = initial.filters;
+      _resultMode = initial.startInPlatos
+          ? _ResultMode.platos
+          : _ResultMode.lugares;
+    });
+    _enterLoading();
+  }
+
+  void _enterLoading() {
+    setState(() => _view = _SearchView.loading);
     Future.delayed(_searchDelay, () {
       // Guard against the user navigating away (or restarting a search)
       // while the simulated delay was still running.

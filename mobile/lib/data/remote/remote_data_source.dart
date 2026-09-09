@@ -11,6 +11,7 @@ import '../models/loyalty_rule.dart';
 import '../models/menu_item.dart';
 import '../models/merchant.dart';
 import '../models/search_history.dart';
+import '../models/search_query_filters.dart';
 import '../models/tag.dart';
 import '../models/visit.dart';
 import '../models/visit_summary.dart';
@@ -416,5 +417,30 @@ class RemoteDataSource implements DataSource {
   @override
   Future<List<SearchHistory>> getSearchHistory() {
     return _getAllPages('/search_histories', SearchHistory.fromJson);
+  }
+
+  /// `POST /api/v1/search`, body `{"query": "<free text>"}` (confirmed live
+  /// via `curl` — see `search_controller.rb`/`search_query_parser.rb`).
+  /// Public/unauthenticated by product rule: no `authenticate_consumer!` on
+  /// the controller, so this call needs no special no-auth handling — the
+  /// shared [Dio] instance's request interceptor (`core/config/
+  /// dio_client.dart`) already only attaches `Authorization` when
+  /// [TokenStorage.readToken] actually has a token, exactly the same
+  /// "attach if present, omit otherwise" behavior `web/lib/api/search.ts`
+  /// documents for its own `authHeader()` call. The response also embeds
+  /// `data`/`meta` (matched merchants + pagination) alongside `filters`, but
+  /// those are deliberately unused here for the same reason web's
+  /// `parseSearchQuery` ignores them: the search screen re-derives its own
+  /// result set from `filters` via the existing merchant list/filter
+  /// pipeline (`applySearchFilters`/`filterMerchants`), not a second,
+  /// parallel result set that never went through it.
+  @override
+  Future<SearchQueryFilters> parseSearchQuery(String query) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/search',
+      data: {'query': query},
+    );
+    final filters = response.data?['filters'] as Map<String, dynamic>?;
+    return SearchQueryFilters.fromJson(filters ?? const {});
   }
 }
