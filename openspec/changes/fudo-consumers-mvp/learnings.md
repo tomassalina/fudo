@@ -84,6 +84,30 @@ Continuación de `design.md` (Decisiones 1-13, fases tempranas de planificación
 
 **Por qué:** El endpoint de búsqueda de menu items ya existía en el backend real; la brecha era solo de cliente. Se priorizó llevar Flutter a paridad exacta con lo ya construido en Next.js (`ResultModeToggle.tsx`, `DishCard.tsx`) en vez de dejar mobile un ciclo por detrás — documentado en `docs/flutter-vs-nextjs-gap-report.md`, Tarea 3.
 
+## Decisión 21: Pin card del mapa (`MerchantMapCard`) por encima del nav — elevar el layer entero, no portalear la card
+
+**Fecha:** 2026-09-09
+**Estado:** Aceptada, implementada (commit `1b305e4`)
+
+**Decisión:** `MerchantMapCard` se renderiza dentro de un `<Popup>` de `react-leaflet`, a su vez dentro del layer de mapa full-screen de `MapToggleSection.tsx` (`position: fixed`, con su propia clase `z-*`). Ese `position: fixed` + `z-index` explícito crea un **stacking context propio**: ningún z-index de lo que hay adentro (el popup de Leaflet incluido, que topea alrededor de z-index 700 internamente) puede pintar nunca por encima de un hermano de afuera con z-index mayor — como `PhoneNav` (`z-30`) — sin importar qué tan alto sea ese z-index interno. Confirmado en vivo con `orca eval`: el layer del mapa reportaba `z-index:20` de forma fija y el pin card quedaba siempre tapado por el nav flotante.
+
+La solución elegida fue: `LeafletMap` reporta `popupopen`/`popupclose` (vía un `useMapEvents` watcher chico) hacia arriba a través de `MapPanel` hasta `MapToggleSection`, que sube el z-index de **todo el wrapper fixed del mapa** (no solo la card) a `z-[100]` mientras hay una card abierta, y lo vuelve a `z-20` al cerrarla.
+
+**Alternativas descartadas:**
+- **Portalear solo la card (`ReactDOM.createPortal` a `document.body`)**, dejando el resto del mapa en su z-20 normal. Es la solución "más limpia" en teoría (no eleva nada más que la card), pero exige reimplementar a mano el posicionamiento que Leaflet ya calcula internamente para el popup (`popupAnchor`, autoPan, seguimiento del marcador al hacer pan/zoom) — desproporcionado para el alcance de este fix.
+- **Subir el z-index del wrapper del mapa de forma permanente** (no solo mientras la card está abierta). Se descartó: taparía el nav todo el tiempo que el mapa esté activo, no solo cuando hay una card abierta — contradice el comentario de diseño explícito en `use-map-mode.ts` de que "el mapa nunca debe tapar el nav" (que ahí se refiere a que el scroll-hide del nav no debe dispararse durante el pan del mapa, un problema distinto pero relacionado).
+
+**Por qué importa para quien toque el mapa de nuevo:** cualquier otro elemento flotante nuevo que se agregue dentro del layer `fixed` de `MapToggleSection` (chips, botones, etc.) va a tener el mismo techo — ningún z-index interno lo va a sacar de ahí sin repetir este mismo patrón (levantar el wrapper entero condicionalmente) o portalear afuera del árbol.
+
+## Decisión 22: Gotcha adicional sobre `git commit -- <pathspec>` en working tree compartido (refina Decisión 18.3)
+
+**Fecha:** 2026-09-09
+**Estado:** Aceptada — refinamiento de una regla ya vigente
+
+**Contexto:** Durante la misma sesión larga (ver Decisión 18), un fix de `/buscar` (sacar el `<Header />` mobile, ver commit `e8385e8`) quedó sin comitear por un rato mientras otro agente trabajaba en paralelo sobre archivos distintos del mismo working tree. Ese otro agente corrió `git commit -- web/app/buscar/page.tsx <otros paths>` con pathspec explícito (siguiendo la regla de Decisión 18.3) para comitear SU propio cambio en ese mismo archivo — pero `git commit -- <pathspec>` re-stagea esos paths **desde el working tree**, no desde un índice pre-armado. Si el índice para ese archivo ya tenía algo parcial stageado a mano (ej. vía `git apply --cached` para excluir a propósito un cambio ajeno todavía sin comitear), ese staging parcial se pisa silenciosamente por el contenido completo del working tree — el `<Header />` sin comitear de la otra tarea viajó adentro de un commit con un mensaje que no lo mencionaba. Se detectó, se revirtió pensando que era screen accidental ("scope-leak"), y tuvo que volver a aplicarse una vez aclarado que era intencional (commits `ae8f8ac` → `b44087d` → `e8385e8`).
+
+**Regla que queda, más específica que Decisión 18.3:** `git add <pathspec>` + `git commit` (dos pasos, sin `--` de pathspec en el commit) es más seguro que `git commit -- <pathspec>` cuando puede haber staging parcial en juego, porque separa explícitamente "qué quedó en el índice" de "qué hay en el working tree" — y agiliza notar un diff inesperado con `git diff --cached` antes de comitear. Y sobre todo: **no dejar cambios sin comitear por más de unos minutos en un working tree compartido**, incluso si son de un archivo que "nadie más está tocando" — otro agente puede tocar ese mismo archivo por una razón no relacionada y arrastrar el cambio ajeno sin querer.
+
 ## Nota operativa: colisión de puertos entre worktrees de Docker Compose
 
 **Fecha:** 2026-09-08
