@@ -131,6 +131,24 @@ class RemoteDataSource implements DataSource {
     );
   }
 
+  /// Same `GET /business_hours` route as [getBusinessHours], just without
+  /// the `merchant_id` filter. Unlike [getMerchantTagIdsByMerchant], this is
+  /// a genuine bulk fetch, not an N+1 fan-out: the backend's
+  /// `filtered_business_hours` (`backend/app/controllers/api/v1/
+  /// business_hours_controller.rb`) only scopes by `merchant_id` when the
+  /// param is present, so omitting it returns every merchant's rows in one
+  /// paginated fetch — confirmed against the live backend, along with
+  /// [getLoyaltyRulesByMerchant]'s sibling method.
+  @override
+  Future<Map<int, List<BusinessHour>>> getBusinessHoursByMerchant() async {
+    final hours = await _getAllPages('/business_hours', BusinessHour.fromJson);
+    final result = <int, List<BusinessHour>>{};
+    for (final hour in hours) {
+      result.putIfAbsent(hour.merchantId, () => <BusinessHour>[]).add(hour);
+    }
+    return result;
+  }
+
   @override
   Future<List<LoyaltyRule>> getLoyaltyRules(int merchantId) {
     return _getAllPages(
@@ -138,6 +156,21 @@ class RemoteDataSource implements DataSource {
       LoyaltyRule.fromJson,
       queryParameters: {'merchant_id': merchantId},
     );
+  }
+
+  /// Same `GET /loyalty_rules` route as [getLoyaltyRules], just without the
+  /// `merchant_id` filter — see [getBusinessHoursByMerchant]'s doc for why
+  /// this is a genuine single bulk fetch (the backend's
+  /// `filtered_loyalty_rules` has the identical "scope by merchant_id only
+  /// when present" shape).
+  @override
+  Future<Map<int, List<LoyaltyRule>>> getLoyaltyRulesByMerchant() async {
+    final rules = await _getAllPages('/loyalty_rules', LoyaltyRule.fromJson);
+    final result = <int, List<LoyaltyRule>>{};
+    for (final rule in rules) {
+      result.putIfAbsent(rule.merchantId, () => <LoyaltyRule>[]).add(rule);
+    }
+    return result;
   }
 
   @override

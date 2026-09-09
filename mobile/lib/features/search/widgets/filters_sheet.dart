@@ -18,9 +18,9 @@ import 'search_utils.dart';
 ///
 /// Categories match the brief: Básico (orden/tipo/abierto ahora), Precio
 /// (rango + dieta), Platos (simplified — see [_PlatosCategory] doc),
-/// Ubicación (barrio/distancia) and Premios (simplified — see
-/// [_PremiosCategory] doc). "Ocultar visitados" sits outside the categories,
-/// same as in the design.
+/// Ubicación (barrio/distancia) and Premios (premio de fidelización
+/// disponible). "Ocultar visitados" sits outside the categories, same as in
+/// the design.
 class FiltersSheet extends ConsumerStatefulWidget {
   const FiltersSheet({required this.initialFilters, super.key});
 
@@ -216,10 +216,6 @@ class _SectionLabel extends StatelessWidget {
 }
 
 /// "Básico": sort order, merchant type, and "Abierto ahora".
-///
-/// [SearchFilters.openNowOnly] is rendered as a real toggle here (matching
-/// the design) but is NOT applied by `applySearchFilters` — see
-/// [SearchFilters]'s class doc.
 class _BasicoCategory extends StatelessWidget {
   const _BasicoCategory({required this.filters, required this.onChanged});
 
@@ -267,7 +263,6 @@ class _BasicoCategory extends StatelessWidget {
         _ToggleRow(
           label: 'Abierto ahora',
           value: filters.openNowOnly,
-          enabled: false,
           onChanged: (value) =>
               onChanged(filters.copyWith(openNowOnly: value)),
         ),
@@ -563,20 +558,9 @@ class _UbicacionCategory extends ConsumerWidget {
   }
 }
 
-/// "Premios": intentionally simplified.
-///
-/// Checking "does this merchant currently have an unclaimed loyalty reward
-/// available" requires cross-referencing `loyalty_rules` +
-/// `visit_summaries` *per merchant* — both are exposed by [DataSource] only
-/// scoped to a single merchant id (`loyaltyRulesProvider`/
-/// `visitSummariesProvider(merchantId)`), because that's what the detail
-/// screen's loyalty timeline needs. Computing it for every merchant in the
-/// search results from this sheet would mean fetching both fixtures for
-/// each of them on every filter change. So [SearchFilters.rewardAvailableOnly]
-/// is a real toggle the user can set, but `applySearchFilters` does not act
-/// on it yet — a future bulk data-source method
-/// (mirroring [DataSource.getMerchantTagIdsByMerchant]) would let a caller
-/// wire this up without changing this sheet's contract.
+/// "Premios": "does this merchant currently have an earned loyalty reward"
+/// — see `search_utils.dart`'s `hasAvailableReward` doc for what "available"
+/// means (the app has no "claimed" concept for loyalty rewards).
 class _PremiosCategory extends StatelessWidget {
   const _PremiosCategory({required this.filters, required this.onChanged});
 
@@ -591,7 +575,6 @@ class _PremiosCategory extends StatelessWidget {
         _ToggleRow(
           label: 'Solo con premio de fidelización disponible',
           value: filters.rewardAvailableOnly,
-          enabled: false,
           onChanged: (value) =>
               onChanged(filters.copyWith(rewardAvailableOnly: value)),
         ),
@@ -621,64 +604,18 @@ class _ToggleRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onChanged,
-    this.enabled = true,
   });
 
   final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  /// When `false`, the switch renders disabled (grayed out, `onChanged:
-  /// null`) with a "Próximamente" badge next to the label — for a filter
-  /// that's modeled in [SearchFilters] but not yet applied by
-  /// `applySearchFilters` (see [_BasicoCategory]/[_PremiosCategory]'s doc
-  /// comments for why). Found by review: a real toggle with no visual
-  /// difference from a working one, that silently does nothing when
-  /// applied, is the same "looks functional, isn't" defect as an earlier
-  /// bug in the Regalar screen — this makes the gap visible instead of
-  /// silent.
-  final bool enabled;
-
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Row(
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  style: enabled
-                      ? AppTheme.body
-                      : AppTheme.body.copyWith(color: AppTheme.textTertiary),
-                ),
-              ),
-              if (!enabled) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceSecondary,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  ),
-                  child: Text(
-                    'Próximamente',
-                    style: AppTheme.body.copyWith(
-                      color: AppTheme.textTertiary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        Switch(value: value, onChanged: enabled ? onChanged : null),
+        Expanded(child: Text(label, style: AppTheme.body)),
+        Switch(value: value, onChanged: onChanged),
       ],
     );
   }

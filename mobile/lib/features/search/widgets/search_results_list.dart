@@ -45,14 +45,19 @@ class SearchResultsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final merchantsAsync = ref.watch(merchantsProvider);
     final favoriteIds = ref.watch(favoriteIdsProvider);
-    // Both default to an empty map while still loading — `applySearchFilters`
-    // treats that as "no effect yet" for the filters that need them (dieta,
-    // ocultar visitados, más visitados), rather than blocking the whole list
-    // on two extra fetches.
+    // All four default to an empty map while still loading —
+    // `applySearchFilters` treats that as "no effect yet" for the filters
+    // that need them (dieta, ocultar visitados, más visitados, abierto
+    // ahora, premio disponible), rather than blocking the whole list on
+    // extra fetches.
     final merchantTagIds = ref.watch(merchantTagIdsProvider).value ?? const {};
     final visitCountsByMerchant = _visitCountsByMerchant(
       ref.watch(visitSummariesProvider(null)).value,
     );
+    final businessHoursByMerchant =
+        ref.watch(businessHoursByMerchantProvider).value ?? const {};
+    final loyaltyRulesByMerchant =
+        ref.watch(loyaltyRulesByMerchantProvider).value ?? const {};
 
     return merchantsAsync.when(
       data: (merchants) {
@@ -61,6 +66,8 @@ class SearchResultsList extends ConsumerWidget {
           filters,
           merchantTagIds: merchantTagIds,
           visitCountsByMerchant: visitCountsByMerchant,
+          businessHoursByMerchant: businessHoursByMerchant,
+          loyaltyRulesByMerchant: loyaltyRulesByMerchant,
         );
         if (filtered.isEmpty) {
           return _EmptyResults(

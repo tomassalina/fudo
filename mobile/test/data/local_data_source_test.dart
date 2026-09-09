@@ -46,5 +46,41 @@ void main() {
       expect(consumer.firstName, 'Martina');
       expect(consumer.hasDniOnFile, isTrue);
     });
+
+    test(
+      'getBusinessHoursByMerchant groups every business_hours row by '
+      'merchant id, matching getBusinessHours(merchantId) for a real one',
+      () async {
+        const merchantId = 1;
+        final byMerchant = await dataSource.getBusinessHoursByMerchant();
+        final scoped = await dataSource.getBusinessHours(merchantId);
+
+        expect(byMerchant, isNotEmpty);
+        expect(byMerchant[merchantId], isNotNull);
+        expect(byMerchant[merchantId]!.length, scoped.length);
+        expect(
+          byMerchant[merchantId]!.every((h) => h.merchantId == merchantId),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'getLoyaltyRulesByMerchant groups every loyalty_rules row by merchant '
+      'id, matching getLoyaltyRules(merchantId) for a real one',
+      () async {
+        const merchantId = 1;
+        final byMerchant = await dataSource.getLoyaltyRulesByMerchant();
+        final scoped = await dataSource.getLoyaltyRules(merchantId);
+
+        expect(byMerchant, isNotEmpty);
+        expect(byMerchant[merchantId], isNotNull);
+        expect(byMerchant[merchantId]!.length, scoped.length);
+        expect(
+          byMerchant[merchantId]!.every((r) => r.merchantId == merchantId),
+          isTrue,
+        );
+      },
+    );
   });
 }

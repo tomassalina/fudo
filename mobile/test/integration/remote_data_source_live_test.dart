@@ -34,7 +34,10 @@ import 'package:mobile/core/auth/token_storage.dart';
 import 'package:mobile/core/config/dio_client.dart';
 import 'package:mobile/data/auth/auth_repository.dart';
 import 'package:mobile/data/auth/current_consumer_session.dart';
+import 'package:mobile/data/models/business_hour.dart' show DayOfWeek;
 import 'package:mobile/data/remote/remote_data_source.dart';
+import 'package:mobile/features/search/widgets/search_utils.dart'
+    show SearchFilters, applySearchFilters, hasAvailableReward, isOpenNow;
 
 const _demoEmail = 'info@tomassalina.com';
 const _demoPassword = 'Demo1234';
@@ -110,6 +113,93 @@ Future<bool> _isBackendUp() async {
   }
 }
 
+/// Independent reference implementation of "is this merchant open right
+/// now", worked directly from the RAW `GET /business_hours` JSON (the exact
+/// shape `curl` sees) rather than through `BusinessHour.fromJson` — so the
+/// live-backend check below doesn't just exercise the same normalization
+/// step twice under two names. Same day-of-week/"doble turno"/overnight-shift
+/// algorithm as `search_utils.dart`'s `isOpenNow`, deliberately reimplemented
+/// here rather than shared.
+bool _referenceIsOpenNow(List<Map<String, dynamic>> rawHours, DateTime now) {
+  const weekOrder = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+  final today = weekOrder[now.weekday - 1];
+  final yesterday = weekOrder[(now.weekday - 2 + 7) % 7];
+  final nowMinutes = now.hour * 60 + now.minute;
+
+  int? minutesOf(String? raw) {
+    if (raw == null) return null;
+    final tIndex = raw.indexOf('T');
+    final timePart = tIndex == -1 ? raw : raw.substring(tIndex + 1);
+    final match = RegExp(r'^(\d{2}):(\d{2})').firstMatch(timePart);
+    if (match == null) return null;
+    return int.parse(match.group(1)!) * 60 + int.parse(match.group(2)!);
+  }
+
+  for (final row in rawHours.where((h) => h['day_of_week'] == today)) {
+    if (row['closed'] == true) continue;
+    final opens = minutesOf(row['opens_at'] as String?);
+    final closes = minutesOf(row['closes_at'] as String?);
+    if (opens == null || closes == null) continue;
+    final effectiveCloses = closes <= opens ? 1440 : closes;
+    if (nowMinutes >= opens && nowMinutes < effectiveCloses) return true;
+  }
+  for (final row in rawHours.where((h) => h['day_of_week'] == yesterday)) {
+    if (row['closed'] == true) continue;
+    final opens = minutesOf(row['opens_at'] as String?);
+    final closes = minutesOf(row['closes_at'] as String?);
+    if (opens == null || closes == null) continue;
+    final wrapsPastMidnight = closes > 0 && closes <= opens;
+    if (wrapsPastMidnight && nowMinutes < closes) return true;
+  }
+  return false;
+}
+
+const List<DayOfWeek> _weekOrder = [
+  DayOfWeek.monday,
+  DayOfWeek.tuesday,
+  DayOfWeek.wednesday,
+  DayOfWeek.thursday,
+  DayOfWeek.friday,
+  DayOfWeek.saturday,
+  DayOfWeek.sunday,
+];
+
+/// Parses an already-normalized `"HH:MM:SS"` string (post
+/// `BusinessHour.fromJson`) into minutes-since-midnight.
+int? _minutesOfHHmmss(String? hhmmss) {
+  if (hhmmss == null) return null;
+  final parts = hhmmss.split(':');
+  if (parts.length < 2) return null;
+  final hours = int.tryParse(parts[0]);
+  final minutes = int.tryParse(parts[1]);
+  if (hours == null || minutes == null) return null;
+  return hours * 60 + minutes;
+}
+
+/// The nearest upcoming (or today's) real calendar date whose weekday is
+/// [day], at [minutesOfDay] past midnight — lets a test assert against a
+/// specific real business_hours weekday without depending on which weekday
+/// it happens to be when the test actually runs.
+DateTime _dateTimeForWeekdayAt(DayOfWeek day, int minutesOfDay) {
+  final targetIsoWeekday = _weekOrder.indexOf(day) + 1; // Monday == 1.
+  final now = DateTime.now();
+  final daysToAdd = (targetIsoWeekday - now.weekday + 7) % 7;
+  final base = now.add(Duration(days: daysToAdd));
+  return DateTime(
+    base.year,
+    base.month,
+    base.day,
+  ).add(Duration(minutes: minutesOfDay));
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   // See the file-level doc comment above — undoes the test binding's fake
@@ -176,6 +266,192 @@ void main() {
           allMenuItems.every((item) => merchantIds.contains(item.merchantId)),
           isTrue,
         );
+
+        // 3c. getBusinessHoursByMerchant()/getLoyaltyRulesByMerchant() (the
+        // "Abierto ahora"/"Solo con premio de fidelización disponible"
+        // filters' bulk data source) return real data in one fetch each,
+        // matching the per-merchant scoped calls for a real merchant.
+        final businessHoursByMerchant = await remoteDataSource
+            .getBusinessHoursByMerchant();
+        final loyaltyRulesByMerchant = await remoteDataSource
+            .getLoyaltyRulesByMerchant();
+        expect(businessHoursByMerchant, isNotEmpty);
+        expect(loyaltyRulesByMerchant, isNotEmpty);
+
+        final firstMerchantId = merchants.first.id;
+        final scopedHours = await remoteDataSource.getBusinessHours(
+          firstMerchantId,
+        );
+        expect(
+          businessHoursByMerchant[firstMerchantId]?.length,
+          scopedHours.length,
+        );
+        final scopedRules = await remoteDataSource.getLoyaltyRules(
+          firstMerchantId,
+        );
+        expect(
+          loyaltyRulesByMerchant[firstMerchantId]?.length,
+          scopedRules.length,
+        );
+
+        // 3d. `BusinessHour.fromJson` must have normalized the live API's
+        // `opens_at`/`closes_at` down to bare `"HH:MM:SS"` — confirmed live
+        // (via `curl`) that this backend actually serializes a `time
+        // without time zone` column as a full ISO 8601 datetime anchored to
+        // a dummy date (`"2000-01-01T18:00:00.000Z"`), not a bare time. A
+        // value still containing `"T"` here means that normalization
+        // regressed, which would make every downstream open/closed check
+        // (`isOpenNow` below, and `restaurant_detail_screen.dart`'s
+        // `_computeOpenStatus`) silently fail to parse the hour and treat
+        // every merchant as closed, always — this assertion catches that
+        // directly, independent of the real wall-clock time.
+        final anyRealHour = businessHoursByMerchant.values
+            .expand((hours) => hours)
+            .firstWhere((h) => !h.closed && h.opensAt != null);
+        expect(anyRealHour.opensAt, isNot(contains('T')));
+        expect(anyRealHour.opensAt, matches(RegExp(r'^\d{2}:\d{2}:\d{2}$')));
+
+        // The real case this whole method exists for — confirmed against
+        // the actual running backend, not a canned fixture: pick one real
+        // merchant, independently work out "is it open right now" straight
+        // from a fresh raw HTTP response (bypassing `BusinessHour.fromJson`
+        // entirely, so this doesn't just re-check the same normalization
+        // step twice), and confirm `isOpenNow`/`applySearchFilters` agree —
+        // then confirm the filter's actual output (open merchants only)
+        // matches that same ground truth across every merchant.
+        final now = DateTime.now();
+        final referenceMerchant = merchants.first;
+        final rawHoursResponse = await dio.get<Map<String, dynamic>>(
+          '/business_hours',
+          queryParameters: {'merchant_id': referenceMerchant.id, 'page': 1},
+        );
+        final rawHours =
+            (rawHoursResponse.data?['data'] as List<dynamic>)
+                .cast<Map<String, dynamic>>();
+        final expectedOpen = _referenceIsOpenNow(rawHours, now);
+        final actualOpen = isOpenNow(
+          businessHoursByMerchant[referenceMerchant.id] ?? const [],
+          now,
+        );
+        expect(
+          actualOpen,
+          expectedOpen,
+          reason:
+              'isOpenNow() disagreed with an independent computation from '
+              'the raw (non-normalized) API response for merchant '
+              '${referenceMerchant.id} at $now',
+        );
+
+        final openNowResults = applySearchFilters(
+          merchants,
+          const SearchFilters(openNowOnly: true),
+          businessHoursByMerchant: businessHoursByMerchant,
+          now: now,
+        );
+        expect(
+          openNowResults.any((m) => m.id == referenceMerchant.id),
+          expectedOpen,
+          reason:
+              'applySearchFilters(openNowOnly: true) disagreed with the '
+              'reference merchant\'s real open/closed status',
+        );
+        // The filter never returns a merchant `isOpenNow` says is closed —
+        // the actual "Abierto ahora" toggle's real-data guarantee.
+        expect(
+          openNowResults.every(
+            (m) => isOpenNow(businessHoursByMerchant[m.id] ?? const [], now),
+          ),
+          isTrue,
+        );
+
+        // Whatever time this test happens to run, seeded restaurant hours
+        // may all be closed right now (e.g. 6am) — that alone wouldn't
+        // distinguish "the fix works" from "coincidentally everything's
+        // closed anyway". So also prove BOTH a real "open" and a real
+        // "closed" verdict deterministically: scan the real (normalized)
+        // `businessHoursByMerchant` data for one plain same-day shift (no
+        // overnight wrap — mid-shift is unambiguously open) and one day a
+        // real merchant marked fully `closed: true`, then evaluate
+        // `isOpenNow` at a synthetic instant on that exact real weekday.
+        ({int merchantId, DayOfWeek day, int opens, int closes})? openSample;
+        ({int merchantId, DayOfWeek day})? closedSample;
+        outer:
+        for (final entry in businessHoursByMerchant.entries) {
+          for (final hour in entry.value) {
+            if (hour.closed) {
+              closedSample ??= (merchantId: entry.key, day: hour.dayOfWeek);
+              continue;
+            }
+            final opens = _minutesOfHHmmss(hour.opensAt);
+            final closes = _minutesOfHHmmss(hour.closesAt);
+            if (opens != null && closes != null && closes > opens) {
+              openSample ??= (
+                merchantId: entry.key,
+                day: hour.dayOfWeek,
+                opens: opens,
+                closes: closes,
+              );
+            }
+          }
+          if (openSample != null && closedSample != null) break outer;
+        }
+
+        expect(
+          openSample,
+          isNotNull,
+          reason:
+              'expected at least one real merchant with a plain same-day '
+              'business_hours row (no overnight wrap) to prove the "open" '
+              'case deterministically',
+        );
+        final resolvedOpenSample = openSample!;
+        final midShiftMinutes =
+            (resolvedOpenSample.opens + resolvedOpenSample.closes) ~/ 2;
+        final openInstant = _dateTimeForWeekdayAt(
+          resolvedOpenSample.day,
+          midShiftMinutes,
+        );
+        expect(
+          isOpenNow(
+            businessHoursByMerchant[resolvedOpenSample.merchantId]!,
+            openInstant,
+          ),
+          isTrue,
+          reason:
+              'merchant ${resolvedOpenSample.merchantId} should read as '
+              'open at $openInstant — mid-shift on a real, same-day '
+              'business_hours row fetched from the live backend',
+        );
+
+        if (closedSample != null) {
+          final closedInstant = _dateTimeForWeekdayAt(
+            closedSample.day,
+            12 * 60,
+          );
+          expect(
+            isOpenNow(
+              businessHoursByMerchant[closedSample.merchantId]!,
+              closedInstant,
+            ),
+            isFalse,
+            reason:
+                'merchant ${closedSample.merchantId} should read as closed '
+                'at $closedInstant — a real business_hours row explicitly '
+                'marked closed: true for that day',
+          );
+        }
+
+        // 3e. Same live-data sanity check for `hasAvailableReward`: real
+        // consumer with real visit_summaries/loyalty_rules data.
+        final anyRewardAvailable = merchants.any(
+          (m) => hasAvailableReward(
+            loyaltyRulesByMerchant[m.id] ?? const [],
+            0, // A merchant this consumer never visited has 0 visits.
+          ),
+        );
+        // No `loyalty_rules` row seeded with `visits_required: 0`, so a
+        // never-visited merchant must never read as "reward available".
+        expect(anyRewardAvailable, isFalse);
 
         // 4. getCurrentConsumer() reads the session snapshot set by login().
         final consumer = await remoteDataSource.getCurrentConsumer();

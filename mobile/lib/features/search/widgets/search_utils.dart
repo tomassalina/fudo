@@ -3,6 +3,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/formatting/currency_format.dart';
+import '../../../core/location/location_service.dart';
+import '../../../data/models/business_hour.dart';
+import '../../../data/models/loyalty_rule.dart';
 import '../../../data/models/merchant.dart';
 
 /// Shared filtering/formatting helpers for the search results list and map
@@ -82,11 +85,16 @@ List<Merchant> filterMerchants(List<Merchant> merchants, String query) {
   }).toList();
 }
 
-/// Distance in kilometers from the simulated "user location"
-/// ([AppConstants.defaultMapCenter]) to [merchant].
+/// Distance in kilometers from the user to [merchant].
+///
+/// Uses the real device location once the user has activated it (see
+/// `core/location/location_service.dart`'s [userLocationController]) —
+/// falling back to [AppConstants.defaultMapCenter] (a simulated location)
+/// while it hasn't been requested yet, or when permission was denied/the
+/// platform call failed, so every merchant still has *a* distance to show.
 double distanceKmFromUser(Merchant merchant) => _distanceCalculator.as(
   LengthUnit.Kilometer,
-  AppConstants.defaultMapCenter,
+  userLocationController.value ?? AppConstants.defaultMapCenter,
   LatLng(merchant.latitude, merchant.longitude),
 );
 
@@ -134,17 +142,12 @@ extension SortOptionLabel on SortOption {
 /// Immutable snapshot of everything selected in the advanced filters sheet
 /// (`filters_sheet.dart`, design brief §2.9).
 ///
-/// Two fields are intentionally modeled but NOT applied by
-/// [applySearchFilters]: [openNowOnly] and [rewardAvailableOnly]. Both would
-/// require cross-referencing every merchant in the list against per-merchant
-/// data (`business_hours`/`loyalty_rules` + `visit_summaries`) that the
-/// [DataSource] interface only exposes scoped to a single merchant id today
-/// — doing that for the whole result set from this sheet would mean N extra
-/// fetches per filter change. They're kept on the model (and rendered as
-/// real toggles in the sheet) so the UI/UX matches the design brief and the
-/// count badge reflects the user's full intent, but callers that later add a
-/// bulk data source method for either can wire them into
-/// [applySearchFilters] without changing this class's shape.
+/// [openNowOnly] and [rewardAvailableOnly] are both applied by
+/// [applySearchFilters], using the bulk `businessHoursByMerchant`/
+/// `loyaltyRulesByMerchant` maps (`data/providers.dart`) so checking either
+/// across the whole result set costs one request total, not one per
+/// merchant — see `DataSource.getBusinessHoursByMerchant`/
+/// `DataSource.getLoyaltyRulesByMerchant`.
 @immutable
 class SearchFilters {
   const SearchFilters({
@@ -250,6 +253,80 @@ class SearchFilters {
   );
 }
 
+/// Whether a merchant is open right now, given its full `business_hours`
+/// list and the current wall-clock time.
+///
+/// Mirrors `restaurant_detail_screen.dart`'s `_computeOpenStatus` open/closed
+/// algorithm exactly (same day-of-week lookup, "doble turno" — more than one
+/// row for the same day — and overnight-shift handling): a merchant can have
+/// more than one row for today, so every non-closed row is checked, not just
+/// the first; `closes_at == "00:00:00"` reads as "open until the end of
+/// today" (minute 1440), not as wrapping into tomorrow; and a row that
+/// genuinely spans past midnight (e.g. opens 22:00, closes 02:00) is looked
+/// up as *yesterday's* row when checking whether we're still inside an
+/// overnight shift early this morning. Duplicated rather than shared because
+/// that helper is private to the detail screen and returns extra UI-only
+/// data (`todayHours`) this filter doesn't need.
+bool isOpenNow(List<BusinessHour> hours, DateTime now) {
+  final today = _weekOrder[now.weekday - 1];
+  final yesterday = _weekOrder[(now.weekday - 2 + 7) % 7];
+  final nowMinutes = now.hour * 60 + now.minute;
+
+  for (final hour in hours.where((h) => h.dayOfWeek == today)) {
+    if (hour.closed) continue;
+    final opens = _parseHHmmToMinutes(hour.opensAt);
+    final closes = _parseHHmmToMinutes(hour.closesAt);
+    if (opens == null || closes == null) continue;
+    final effectiveCloses = closes <= opens ? 1440 : closes;
+    if (nowMinutes >= opens && nowMinutes < effectiveCloses) return true;
+  }
+
+  for (final hour in hours.where((h) => h.dayOfWeek == yesterday)) {
+    if (hour.closed) continue;
+    final opens = _parseHHmmToMinutes(hour.opensAt);
+    final closes = _parseHHmmToMinutes(hour.closesAt);
+    if (opens == null || closes == null) continue;
+    final wrapsPastMidnight = closes > 0 && closes <= opens;
+    if (wrapsPastMidnight && nowMinutes < closes) return true;
+  }
+
+  return false;
+}
+
+const List<DayOfWeek> _weekOrder = [
+  DayOfWeek.monday,
+  DayOfWeek.tuesday,
+  DayOfWeek.wednesday,
+  DayOfWeek.thursday,
+  DayOfWeek.friday,
+  DayOfWeek.saturday,
+  DayOfWeek.sunday,
+];
+
+int? _parseHHmmToMinutes(String? hhmmss) {
+  if (hhmmss == null) return null;
+  final parts = hhmmss.split(':');
+  if (parts.length < 2) return null;
+  final hours = int.tryParse(parts[0]);
+  final minutes = int.tryParse(parts[1]);
+  if (hours == null || minutes == null) return null;
+  return hours * 60 + minutes;
+}
+
+/// Whether the consumer has already earned at least one loyalty reward at
+/// this merchant, given its full `loyalty_rules` ladder and the consumer's
+/// visit [count].
+///
+/// The app has no "claimed" concept for loyalty rewards — `Visit
+/// .reward_applied` stays `false` forever server-side (never set by any real
+/// flow, per `backend/app/controllers/api/v1/visits_controller.rb`) — so
+/// "available" simply mirrors `restaurant_detail_screen.dart`'s
+/// `_LoyaltyContent` "reached a rung on the ladder" reading: some rule's
+/// `visitsRequired <= count`.
+bool hasAvailableReward(List<LoyaltyRule> rules, int count) {
+  return rules.any((rule) => count >= rule.visitsRequired);
+}
+
 /// Applies [filters] on top of a list already narrowed by [filterMerchants]'
 /// free-text query — this is an extension of that filter, not a parallel
 /// system.
@@ -257,18 +334,26 @@ class SearchFilters {
 /// [merchantTagIds] is `merchantTagIdsProvider`'s value (merchant id → its
 /// tag ids), used for the "dieta" filter. [visitCountsByMerchant] is derived
 /// from `visitSummariesProvider(null)` (merchant id → visit count), used for
-/// "Ocultar visitados" and the "Más visitados" sort. Both default to empty
-/// maps so this stays callable before those providers resolve — filters that
-/// need them simply have no effect yet in that window.
-///
-/// [openNowOnly] and [rewardAvailableOnly] are read from [filters] but never
-/// checked here — see the class doc on [SearchFilters] for why.
+/// "Ocultar visitados", "Solo con premio de fidelización disponible" and the
+/// "Más visitados" sort. [businessHoursByMerchant] is
+/// `businessHoursByMerchantProvider`'s value, used for "Abierto ahora" (via
+/// [isOpenNow], evaluated against [now], which defaults to `DateTime.now()`
+/// — overridable so this stays deterministic in tests).
+/// [loyaltyRulesByMerchant] is `loyaltyRulesByMerchantProvider`'s value, used
+/// for "Solo con premio de fidelización disponible" (via
+/// [hasAvailableReward]). All maps default to empty so this stays callable
+/// before those providers resolve — filters that need them simply have no
+/// effect yet in that window.
 List<Merchant> applySearchFilters(
   List<Merchant> merchants,
   SearchFilters filters, {
   Map<int, Set<int>> merchantTagIds = const {},
   Map<int, int> visitCountsByMerchant = const {},
+  Map<int, List<BusinessHour>> businessHoursByMerchant = const {},
+  Map<int, List<LoyaltyRule>> loyaltyRulesByMerchant = const {},
+  DateTime? now,
 }) {
+  final effectiveNow = now ?? DateTime.now();
   final result = merchants.where((merchant) {
     if (filters.merchantType != null &&
         merchant.type != filters.merchantType) {
@@ -304,6 +389,15 @@ List<Merchant> applySearchFilters(
     if (filters.hideVisited &&
         (visitCountsByMerchant[merchant.id] ?? 0) > 0) {
       return false;
+    }
+    if (filters.openNowOnly) {
+      final hours = businessHoursByMerchant[merchant.id] ?? const [];
+      if (!isOpenNow(hours, effectiveNow)) return false;
+    }
+    if (filters.rewardAvailableOnly) {
+      final rules = loyaltyRulesByMerchant[merchant.id] ?? const [];
+      final visits = visitCountsByMerchant[merchant.id] ?? 0;
+      if (!hasAvailableReward(rules, visits)) return false;
     }
     return true;
   }).toList();

@@ -52,6 +52,8 @@ void main() {
     await dataSource.getFavorites();
     await dataSource.getMerchantTagIdsByMerchant();
     await dataSource.getVisitSummaries(merchantId: null);
+    await dataSource.getBusinessHoursByMerchant();
+    await dataSource.getLoyaltyRulesByMerchant();
     _warmDataSource = dataSource;
   });
 
@@ -103,6 +105,21 @@ void main() {
 
       expect(find.text('Ningún lugar con esos filtros'), findsOneWidget);
       expect(find.text('Limpiar filtros'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Solo con premio de fidelización disponible" narrows results to the 5 '
+    'fixture merchants whose visit count already reached a loyalty_rules '
+    'threshold (merchants without a visit_summaries row have 0 visits, '
+    'below every threshold)',
+    (tester) async {
+      await _pumpList(
+        tester,
+        filters: const SearchFilters(rewardAvailableOnly: true),
+      );
+
+      expect(find.text('5 coincidencias'), findsOneWidget);
     },
   );
 }

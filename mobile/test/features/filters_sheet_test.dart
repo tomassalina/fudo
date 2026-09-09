@@ -74,6 +74,8 @@ void main() {
     await dataSource.getMerchants();
     await dataSource.getTags();
     await dataSource.getMerchantTagIdsByMerchant();
+    await dataSource.getBusinessHoursByMerchant();
+    await dataSource.getLoyaltyRulesByMerchant();
     _warmDataSource = dataSource;
   });
 
@@ -106,33 +108,54 @@ void main() {
   );
 
   testWidgets(
-    '"Abierto ahora" is disabled with a "Próximamente" badge, unlike the '
-    'real "Ocultar visitados" toggle (regression: found by review — this '
-    'switch used to look identical to a working one while silently doing '
-    'nothing when applied)',
+    '"Abierto ahora" is a real, enabled toggle — not the disabled '
+    '"Próximamente" placeholder from before the bulk business-hours data '
+    'source method existed — and bumps activeCount like any other filter',
     (tester) async {
       await _pumpSheet(tester);
 
-      // "Próximamente" appears once (Abierto ahora) here on Básico.
-      expect(find.text('Próximamente'), findsOneWidget);
+      // No "Próximamente" badge anywhere on Básico anymore.
+      expect(find.text('Próximamente'), findsNothing);
 
       final switches = tester.widgetList<Switch>(find.byType(Switch)).toList();
-      final abiertoAhoraSwitch = switches.firstWhere(
-        (s) => s.onChanged == null,
-        orElse: () => throw StateError('Expected a disabled Switch'),
-      );
-      expect(abiertoAhoraSwitch.onChanged, isNull);
+      expect(switches, isNotEmpty);
+      expect(switches.every((s) => s.onChanged != null), isTrue);
 
-      // "Ocultar visitados", on this same category, must stay real/enabled.
-      final ocultarVisitadosSwitch = switches.firstWhere(
-        (s) => s.onChanged != null,
-      );
-      expect(ocultarVisitadosSwitch.onChanged, isNotNull);
+      // "Abierto ahora" is the first Switch in the tree — the category
+      // body renders above the always-visible "Ocultar visitados" toggle.
+      // It sits below several rows of chips, so (like `_tapText`) it needs
+      // `ensureVisible` before it can be hit-tested inside the scrollable
+      // category body.
+      final abiertoAhoraSwitch = find.byType(Switch).first;
+      await tester.ensureVisible(abiertoAhoraSwitch);
+      await tester.pumpAndSettle();
+      await tester.tap(abiertoAhoraSwitch, warnIfMissed: false);
+      await tester.pump();
+      expect(find.text('1 filtro activo'), findsOneWidget);
+    },
+  );
 
-      // Premios' toggle is disabled too, once you switch to that category.
+  testWidgets(
+    '"Solo con premio de fidelización disponible" (Premios) is a real, '
+    'enabled toggle — same regression coverage as "Abierto ahora" above',
+    (tester) async {
+      await _pumpSheet(tester);
+
       await tester.tap(find.text('Premios'));
       await tester.pumpAndSettle();
-      expect(find.text('Próximamente'), findsOneWidget);
+
+      expect(find.text('Próximamente'), findsNothing);
+      final premiosSwitchFinder = find.byType(Switch).first;
+      expect(
+        tester.widget<Switch>(premiosSwitchFinder).onChanged,
+        isNotNull,
+      );
+
+      await tester.ensureVisible(premiosSwitchFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(premiosSwitchFinder, warnIfMissed: false);
+      await tester.pump();
+      expect(find.text('1 filtro activo'), findsOneWidget);
     },
   );
 

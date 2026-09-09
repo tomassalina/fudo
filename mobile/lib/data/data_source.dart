@@ -67,6 +67,24 @@ abstract class DataSource {
   /// call per merchant.
   Future<Map<int, Set<int>>> getMerchantTagIdsByMerchant();
 
+  /// All `business_hours` rows for every merchant, grouped by merchant id.
+  ///
+  /// Exists for callers that need to know whether merchants are open
+  /// *right now* across the whole search result set (the search filters
+  /// sheet's "Abierto ahora" filter, design brief §2.9) without issuing one
+  /// [getBusinessHours] call per merchant — mirrors
+  /// [getMerchantTagIdsByMerchant]'s bulk shape.
+  Future<Map<int, List<BusinessHour>>> getBusinessHoursByMerchant();
+
+  /// All `loyalty_rules` rows for every merchant, grouped by merchant id.
+  ///
+  /// Exists for callers that need to know whether merchants currently have
+  /// an earned loyalty reward across the whole search result set (the
+  /// search filters sheet's "Solo con premio de fidelización disponible"
+  /// filter, design brief §2.9) without issuing one [getLoyaltyRules] call
+  /// per merchant — mirrors [getMerchantTagIdsByMerchant]'s bulk shape.
+  Future<Map<int, List<LoyaltyRule>>> getLoyaltyRulesByMerchant();
+
   /// Tags associated with a menu item via `menu_items_tags`.
   Future<List<Tag>> getTagsForMenuItem(int menuItemId);
 

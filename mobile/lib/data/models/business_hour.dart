@@ -41,6 +41,8 @@ extension DayOfWeekJson on DayOfWeek {
 /// `opens_at`/`closes_at` are Postgres `time without time zone` columns,
 /// kept here as raw `"HH:MM:SS"` strings (no wall-clock date component to
 /// anchor a `DateTime`, and no `TimeOfDay` dependency in the data layer).
+/// [BusinessHour.fromJson] normalizes both fields to that bare shape — see
+/// its doc for why that's needed at all.
 @immutable
 class BusinessHour {
   const BusinessHour({
@@ -59,13 +61,34 @@ class BusinessHour {
   final String? closesAt;
   final bool closed;
 
+  /// The real backend (confirmed live against `localhost:3000`, not
+  /// documented in the OpenAPI schema — `opens_at`/`closes_at` are just
+  /// `type: string` there) serializes a `time without time zone` column as
+  /// Rails' default `Time#as_json`: a full ISO 8601 datetime anchored to a
+  /// dummy date, e.g. `"2000-01-01T18:00:00.000Z"` — NOT the bare
+  /// `"HH:MM:SS"` the local JSON fixtures use (e.g. `"18:00:00"`). Every
+  /// caller of [opensAt]/[closesAt] (this app's open/closed logic —
+  /// `restaurant_detail_screen.dart`'s `_computeOpenStatus` and
+  /// `search_utils.dart`'s `isOpenNow`) expects the bare shape and would
+  /// otherwise silently fail to parse it (a value like
+  /// `"2000-01-01T18"` isn't a valid hour), so both fields are normalized
+  /// once, here, instead of making every caller handle two shapes.
+  static String? _normalizeTimeOfDay(String? raw) {
+    if (raw == null) return null;
+    final tIndex = raw.indexOf('T');
+    if (tIndex == -1) return raw; // Already bare "HH:MM:SS".
+    final afterT = raw.substring(tIndex + 1);
+    final match = RegExp(r'^(\d{2}:\d{2}:\d{2})').firstMatch(afterT);
+    return match?.group(1) ?? afterT;
+  }
+
   factory BusinessHour.fromJson(Map<String, dynamic> json) {
     return BusinessHour(
       id: json['id'] as int,
       merchantId: json['merchant_id'] as int,
       dayOfWeek: DayOfWeekJson.fromJson(json['day_of_week'] as String),
-      opensAt: json['opens_at'] as String?,
-      closesAt: json['closes_at'] as String?,
+      opensAt: _normalizeTimeOfDay(json['opens_at'] as String?),
+      closesAt: _normalizeTimeOfDay(json['closes_at'] as String?),
       closed: json['closed'] as bool,
     );
   }

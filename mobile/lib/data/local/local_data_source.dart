@@ -110,6 +110,16 @@ class LocalDataSource implements DataSource {
     return hours.where((hour) => hour.merchantId == merchantId).toList();
   }
 
+  @override
+  Future<Map<int, List<BusinessHour>>> getBusinessHoursByMerchant() async {
+    final hours = await _allBusinessHours();
+    final result = <int, List<BusinessHour>>{};
+    for (final hour in hours) {
+      result.putIfAbsent(hour.merchantId, () => <BusinessHour>[]).add(hour);
+    }
+    return result;
+  }
+
   Future<List<LoyaltyRule>> _allLoyaltyRules() async {
     final cached = _loyaltyRules;
     if (cached != null) return cached;
@@ -125,6 +135,16 @@ class LocalDataSource implements DataSource {
   Future<List<LoyaltyRule>> getLoyaltyRules(int merchantId) async {
     final rules = await _allLoyaltyRules();
     return rules.where((rule) => rule.merchantId == merchantId).toList();
+  }
+
+  @override
+  Future<Map<int, List<LoyaltyRule>>> getLoyaltyRulesByMerchant() async {
+    final rules = await _allLoyaltyRules();
+    final result = <int, List<LoyaltyRule>>{};
+    for (final rule in rules) {
+      result.putIfAbsent(rule.merchantId, () => <LoyaltyRule>[]).add(rule);
+    }
+    return result;
   }
 
   @override
