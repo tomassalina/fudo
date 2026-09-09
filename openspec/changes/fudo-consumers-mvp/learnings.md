@@ -108,6 +108,17 @@ La solución elegida fue: `LeafletMap` reporta `popupopen`/`popupclose` (vía un
 
 **Regla que queda, más específica que Decisión 18.3:** `git add <pathspec>` + `git commit` (dos pasos, sin `--` de pathspec en el commit) es más seguro que `git commit -- <pathspec>` cuando puede haber staging parcial en juego, porque separa explícitamente "qué quedó en el índice" de "qué hay en el working tree" — y agiliza notar un diff inesperado con `git diff --cached` antes de comitear. Y sobre todo: **no dejar cambios sin comitear por más de unos minutos en un working tree compartido**, incluso si son de un archivo que "nadie más está tocando" — otro agente puede tocar ese mismo archivo por una razón no relacionada y arrastrar el cambio ajeno sin querer.
 
+## Decisión 23: Skeletons de `loadingMore` en el grid de escritorio (`SearchResultsGrid.tsx`) — leer `gridTemplateColumns` calculado en vez de recalcular columnas a mano
+
+**Fecha:** 2026-09-09
+**Estado:** Aceptada, implementada
+
+**Decisión:** El grid de resultados en desktop usa `grid-cols-[repeat(auto-fit,minmax(260px,1fr))]` — la cantidad real de columnas es responsive y depende del ancho disponible, no es un número fijo conocido en JS. Para que los skeletons del `loadingMore` completen la fila incompleta (en vez de arrancar una fila nueva fija de 3, que era el bug original), la cantidad de columnas se lee directamente del browser post-layout: `getComputedStyle(gridEl).gridTemplateColumns.split(" ").length`, sobre un `ResizeObserver` en el contenedor del grid (no un listener de `resize` en `window`, porque también hay que reaccionar a cambios de layout que no disparan ese evento, p. ej. el sidebar de filtros). Con esa columna real se calcula `remainder = visibleCount % columns` y se renderizan exactamente `columns - remainder` (o `columns` si `remainder === 0`) placeholders, como **hermanos DOM de las cards reales dentro del mismo contenedor grid** (no en un `<div>` de grid separado debajo) — así el auto-placement de CSS Grid completa solo el hueco de la última fila antes de bajar a la próxima, sin que el componente tenga que decidir a mano dónde termina cada fila.
+
+**Por qué `getComputedStyle` y no recalcular a mano:** replicar el algoritmo de `auto-fit`/`minmax` a mano (ancho del contenedor ÷ ancho de ítem + gap, con redondeo) es una segunda implementación del mismo cálculo que el browser ya resuelve de forma exacta y gratis, y que se desincroniza en los bordes (scrollbar, `box-sizing`, breakpoints intermedios no contemplados). Leer el resultado ya resuelto del layout evita esa duplicación y es la única forma de tener el número de columnas *real*, no aproximado.
+
+**Confirmado con Playwright/CDP (1440×900, `/buscar`):** con 3 columnas reales y 10 cards visibles (`10 % 3 = 1`), aparecieron exactamente 2 skeletons a la derecha de la última card; con 2 columnas reales (viewport 1120px) y 10 cards (`10 % 2 = 0`), aparecieron exactamente 2 skeletons formando una fila nueva completa. El comportamiento de phone (`RowSkeleton`, contenedor flex separado, cantidad fija de 3) no se tocó.
+
 ## Nota operativa: colisión de puertos entre worktrees de Docker Compose
 
 **Fecha:** 2026-09-08
