@@ -76,8 +76,12 @@ class _SearchLoadingViewState extends State<SearchLoadingView>
   }
 }
 
-/// A single skeleton "card" placeholder: a photo-sized block plus two
-/// text-line-sized blocks, all sharing one shimmer sweep animation.
+/// A single skeleton "card" placeholder that mirrors `_MerchantCard`
+/// (`search_results_list.dart`) 1:1 — same `AspectRatio(16/9)` image box on
+/// top of the same `Material` surface/radius, same `EdgeInsets.all(12)` text
+/// area below — so results don't jump size once they arrive. The image box
+/// and text bars share one shimmer sweep animation, same gradient-sweep
+/// technique the previous placeholder used.
 class _ShimmerSkeleton extends StatefulWidget {
   const _ShimmerSkeleton();
 
@@ -100,25 +104,38 @@ class _ShimmerSkeletonState extends State<_ShimmerSkeleton>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCardLarge),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusCardLarge),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _shimmerBox(width: 64, height: 64, radius: AppTheme.radiusPhotoSmall),
-          const SizedBox(width: 12),
-          Expanded(
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _shimmerBox(height: double.infinity, radius: 0),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _shimmerBox(width: double.infinity, height: 16, radius: 6),
-                const SizedBox(height: 10),
-                _shimmerBox(width: 120, height: 12, radius: 6),
+                FractionallySizedBox(
+                  widthFactor: 0.6,
+                  child: _shimmerBox(height: 16, radius: 6),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _shimmerBox(
+                      width: 46,
+                      height: 20,
+                      radius: AppTheme.radiusPill,
+                    ),
+                    const SizedBox(width: 8),
+                    _shimmerBox(width: 60, height: 12, radius: 6),
+                  ],
+                ),
               ],
             ),
           ),
@@ -128,7 +145,7 @@ class _ShimmerSkeletonState extends State<_ShimmerSkeleton>
   }
 
   Widget _shimmerBox({
-    required double width,
+    double width = double.infinity,
     required double height,
     required double radius,
   }) {
