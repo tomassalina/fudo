@@ -65,10 +65,15 @@ RSpec.describe "Api::V1::Search", type: :request do
       end
     end
 
-    it "returns 401 without authentication" do
-      post "/api/v1/search", params: { query: "pizza" }
+    it "returns 200 without authentication and does not persist search history" do
+      expect {
+        post "/api/v1/search", params: { query: "pizza" }
+      }.not_to change(SearchHistory, :count)
 
-      expect(response).to have_http_status(:unauthorized)
+      expect(response).to have_http_status(:ok)
+      expect(json_response).to have_key("data")
+      expect(json_response).to have_key("meta")
+      expect(json_response).to have_key("filters")
     end
 
     it "returns 400 when query is missing" do

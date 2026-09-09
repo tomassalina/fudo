@@ -37,11 +37,14 @@ RSpec.describe "Search", type: :request do
   path "/api/v1/search" do
     post "Parses a free-text query into merchant filters and returns matching merchants" do
       tags "Search"
-      security [ bearer_auth: [] ]
       consumes "application/json"
       produces "application/json"
-      description "Persists the query and its parsed filters to the authenticated consumer's search " \
-        "history (SearchHistory), then filters merchants the same way GET /api/v1/merchants does."
+      description "Public, no authentication required — AI search and /buscar are free to use " \
+        "(product rule: only profile/gifting/visit-history need a session). When a bearer token " \
+        "IS supplied for an authenticated consumer, the query and its parsed filters are also " \
+        "persisted to that consumer's search history (SearchHistory); an anonymous call skips " \
+        "that persistence entirely. Either way, this filters merchants the same way " \
+        "GET /api/v1/merchants does."
       parameter name: :body, in: :body, schema: {
         type: :object,
         properties: { query: { type: :string } },
@@ -87,11 +90,36 @@ RSpec.describe "Search", type: :request do
         run_test!
       end
 
-      response "401", "not authenticated" do
-        schema "$ref" => "#/components/schemas/error"
+      response "200", "query parsed and matching merchants returned, no authentication" do
+        schema type: :object,
+          properties: {
+            data: { type: :array, items: merchant_list_item },
+            meta: { "$ref" => "#/components/schemas/pagination_meta" },
+            filters: {
+              type: :object,
+              properties: {
+                neighborhood: { type: :string, nullable: true },
+                type: { type: :string, nullable: true, enum: Merchant.types.keys },
+                tags: { type: :array, items: { type: :string, enum: seeded_tag_names } },
+                price_per_person: { type: :number, nullable: true },
+                open: { type: :boolean, nullable: true },
+                reward: { type: :boolean, nullable: true }
+              },
+              required: %w[neighborhood type tags price_per_person open reward]
+            }
+          },
+          required: %w[data meta filters]
 
         let(:Authorization) { nil }
         let(:body) { { query: "pizza" } }
+        before do
+          allow(SearchQueryParser).to receive(:call).and_return(
+            {
+              "neighborhood" => nil, "type" => nil, "tags" => [], "price_per_person" => nil,
+              "open" => nil, "reward" => nil
+            }
+          )
+        end
         run_test!
       end
 

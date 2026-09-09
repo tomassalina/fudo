@@ -1,14 +1,22 @@
 module Api
   module V1
+    # Public, unauthenticated on purpose — product rule (confirmed live by
+    # the product owner): AI search and /buscar (browsing/filtering/search)
+    # are free to use with no account; only profile, gift purchase, and
+    # visit-history/loyalty data require a logged-in consumer. Do NOT add
+    # `authenticate_consumer!` back here. When a valid bearer token IS
+    # present (an already-logged-in consumer using search), the query is
+    # still attributed and saved to that consumer's search history, same as
+    # before — see build_search_history below. For an anonymous caller
+    # (current_consumer nil) no SearchHistory row is written at all, since
+    # search_history.consumer_id is NOT NULL (belongs_to :consumer,
+    # required) and there is no "anonymous" consumer to attribute it to.
     class SearchController < BaseController
-      before_action :authenticate_consumer!
-
       def create
         query_text = params.require(:query)
         structured_output = SearchQueryParser.call(query_text)
 
-        search_history = build_search_history(query_text, structured_output)
-        search_history.save!
+        build_search_history(query_text, structured_output)&.save!
 
         merchants = paginate(Merchant.search(
           neighborhood: structured_output["neighborhood"],
@@ -36,6 +44,8 @@ module Api
       private
 
       def build_search_history(query_text, structured_output)
+        return nil unless current_consumer
+
         current_consumer.search_histories.new(
           query_text: query_text,
           structured_output: structured_output,
