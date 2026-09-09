@@ -156,8 +156,9 @@ export function BuscarView({
   // (rather than inlined twice) so the exact same chunk can be handed to
   // MapToggleSection as its floating `overlay` while the phone map is open
   // (`mapOverlay` below), AND to DesktopMapSplit as its own map-column
-  // overlay while the desktop map view is open (`desktopMapOverlay` below),
-  // instead of sitting in normal flow above either.
+  // `mapOverlay` prop while the desktop map view is open (passed inline
+  // below, same chunk, no separate variable needed), instead of sitting in
+  // normal flow above either.
   //
   // The filter TRIGGER (not the search input itself) only renders on phone
   // OR while the desktop map view is showing: FilterSidebar (the always

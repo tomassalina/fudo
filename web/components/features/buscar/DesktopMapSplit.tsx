@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type ReactNode } from "react";
 import type { Merchant } from "@/lib/types";
 import type { Coordinates } from "@/lib/location/use-location";
 import { MapPanel } from "./MapPanel";
@@ -16,6 +17,17 @@ export interface DesktopMapSplitProps {
    * applies here too. See `LeafletMap`'s own doc comment for why this is a
    * dedicated prop rather than a synthetic `Merchant`. */
   userLocation?: Coordinates | null;
+  /**
+   * Search bar + filter-trigger button, floated on top of the map column
+   * only — per product's explicit correction, the left compact-list column
+   * stays exactly as described above (count + "Ver lista" + list, nothing
+   * else); the search bar belongs over the map, not over the list, matching
+   * the phone full-screen map view's floating search+filter overlay
+   * (MapToggleSection's `overlay` prop). Threaded straight through to
+   * `MapPanel`'s own `overlay` prop rather than laid out here, since
+   * DesktopMapSplit shouldn't need to know it's specifically a search bar.
+   */
+  mapOverlay?: ReactNode;
 }
 
 /**
@@ -35,7 +47,20 @@ export function DesktopMapSplit({
   countLabel,
   onExit,
   userLocation,
+  mapOverlay,
 }: DesktopMapSplitProps) {
+  // Mirrors, one level up, the narrowed-to-viewport set LeafletMap already
+  // computes for its own pins (see its `onVisibleMerchantsChange` doc
+  // comment) — the left column shows exactly what's currently pinned on the
+  // map, Airbnb-style, instead of the full unfiltered result set. Seeded
+  // with the full `merchants` list for the same reason LeafletMap seeds its
+  // own pin state that way: something to show before the map's first real
+  // bounds are known. Left column will resync to a fresh `merchants` (a new
+  // filter/search upstream) inside the effect-driven pass LeafletMap's own
+  // ZoneWatcher runs immediately on that same prop change — see its doc
+  // comment.
+  const [visibleMerchants, setVisibleMerchants] = useState(merchants);
+
   return (
     <div className="grid h-[calc(100vh-220px)] min-h-[520px] grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-stretch gap-4">
       <div className="flex min-h-0 flex-col gap-3">
@@ -54,9 +79,9 @@ export function DesktopMapSplit({
           </button>
         </div>
 
-        {merchants.length > 0 ? (
+        {visibleMerchants.length > 0 ? (
           <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
-            {merchants.map((merchant) => (
+            {visibleMerchants.map((merchant) => (
               <MerchantCard key={merchant.id} merchant={merchant} layout="row" />
             ))}
           </div>
@@ -67,7 +92,12 @@ export function DesktopMapSplit({
         )}
       </div>
 
-      <MapPanel merchants={merchants} userLocation={userLocation} />
+      <MapPanel
+        merchants={merchants}
+        userLocation={userLocation}
+        onVisibleMerchantsChange={setVisibleMerchants}
+        overlay={mapOverlay}
+      />
     </div>
   );
 }

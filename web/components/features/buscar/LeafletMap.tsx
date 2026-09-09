@@ -6,7 +6,7 @@
 // under SSR/prerendering otherwise.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./leaflet-map.css";
@@ -225,6 +225,23 @@ function PopupWatcher({
   return null;
 }
 
+// Hands the underlying Leaflet map instance up to LeafletMap itself (as
+// state) so the "locate me" button below — rendered *outside*
+// `<MapContainer>`, alongside the "Buscando en la zona…" chip, same as
+// ZoneWatcher/PopupWatcher's reason for existing at all — can call `flyTo`
+// on click. `useMap()` only works inside `<MapContainer>`'s own children,
+// but unlike those two this doesn't subscribe to map *events*, it just needs
+// the map *object* once it exists.
+function MapInstanceBridge({ onReady }: { onReady: (map: L.Map) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    onReady(map);
+  }, [map, onReady]);
+  return null;
+}
+
+const LOCATE_MIN_ZOOM = 15;
+
 export interface LeafletMapProps {
   merchants: Merchant[];
   /** Show the type-label pill under each pin (phone full-screen map). Omitted on the compact desktop split view. */
@@ -246,6 +263,15 @@ export interface LeafletMapProps {
    * above) is the honest shape for data that isn't a merchant at all.
    */
   userLocation?: Coordinates | null;
+  /**
+   * Fires with the merchants currently inside the map's viewport, every time
+   * `ZoneWatcher` (re)computes that set — pan/zoom (debounced) and an
+   * upstream `merchants` change alike. Lets a consumer (DesktopMapSplit's
+   * compact list) mirror exactly what's pinned on the map instead of always
+   * showing the full unfiltered result set. Optional: the phone full-screen
+   * map view has no side list to sync, so it simply never passes this.
+   */
+  onVisibleMerchantsChange?: (visible: Merchant[]) => void;
 }
 
 export function LeafletMap({
@@ -253,6 +279,7 @@ export function LeafletMap({
   showLabels = false,
   onPopupOpenChange,
   userLocation,
+  onVisibleMerchantsChange,
 }: LeafletMapProps) {
   const center: [number, number] = [
     USER_LOCATION.latitude,
@@ -275,6 +302,16 @@ export function LeafletMap({
   // are known (its very first render, pre-mount) rather than an empty map.
   const [markers, setMarkers] = useState(allMarkers);
   const [searchingZone, setSearchingZone] = useState(false);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+
+  // ZoneWatcher's own narrowed-to-viewport set doubles as what
+  // `onVisibleMerchantsChange` reports upstream — same array, same moment,
+  // just also handed to a consumer outside this component instead of only
+  // driving the pins here.
+  function handleVisibleChange(visible: Merchant[]) {
+    setMarkers(visible);
+    onVisibleMerchantsChange?.(visible);
+  }
 
   // Lets a pin's own popup card "next result" arrow open the following pin's
   // popup/pan there, without lifting a "selected merchant" React state up —
@@ -315,10 +352,11 @@ export function LeafletMap({
         <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
         <ZoneWatcher
           merchants={allMarkers}
-          onVisibleChange={setMarkers}
+          onVisibleChange={handleVisibleChange}
           onSearchingChange={setSearchingZone}
         />
         <PopupWatcher onPopupOpenChange={onPopupOpenChange} />
+        <MapInstanceBridge onReady={setMapInstance} />
         {userLocation ? (
           <Marker
             position={[userLocation.latitude, userLocation.longitude]}
@@ -366,6 +404,36 @@ export function LeafletMap({
             Buscando en la zona…
           </span>
         </div>
+      ) : null}
+
+      {/* "Locate me" — centers/pans the map on the visitor's already-resolved
+          position (`userLocation`, from `useLocation()`'s `coords`) without
+          ever calling `requestLocation()` itself: passive-only, same
+          contract as the "you are here" marker above. Only rendered once a
+          position actually exists — no permission prompt to trigger, no
+          disabled dead button to explain. Bottom-left per product's explicit
+          placement call (confirmed against the phone full-screen map view
+          too, not just this compact desktop panel — this component is
+          shared by both, see the file-level doc comment at the top).
+          Shares the same shared component across mobile/desktop on purpose:
+          one button, one behavior, instead of duplicating it per layout. */}
+      {userLocation ? (
+        <button
+          type="button"
+          onClick={() =>
+            mapInstance?.flyTo(
+              [userLocation.latitude, userLocation.longitude],
+              Math.max(mapInstance.getZoom(), LOCATE_MIN_ZOOM),
+            )
+          }
+          aria-label="Centrar el mapa en mi ubicación"
+          title="Mi ubicación"
+          className="absolute bottom-4 left-4 z-[1000] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-foreground shadow-lg shadow-black/30 transition-colors hover:border-accent/50"
+        >
+          <span aria-hidden className="material-symbols text-[20px]">
+            my_location
+          </span>
+        </button>
       ) : null}
     </>
   );
