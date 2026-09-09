@@ -97,7 +97,7 @@ jobs:
       - run: pnpm test
 
   mobile:
-    name: Mobile (flutter analyze)
+    name: Mobile (analyze, test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -114,3 +114,8 @@ jobs:
       - run: flutter pub get
 
       - run: flutter analyze
+
+      # Excludes @Tags(['integration']) tests: those hit real network/HTTP
+      # stack behavior (see test/integration/remote_data_source_live_test.dart)
+      # and aren't appropriate for a fast/basic gate on every push.
+      - run: flutter test --exclude-tags=integration
