@@ -92,6 +92,7 @@ Nota sobre numeración: `learnings.md` tiene tres números de decisión repetido
 - **18** — 3 lecciones de git en working tree compartido sin worktrees aislados: nunca `isolation: worktree` en este proyecto (colisión de puertos Docker), nunca `git stash`, y siempre `git add <archivos específicos>` en vez de `git add .`/`git commit -a`. Incluye la nota operativa sobre colisión de puertos de Docker Compose entre worktrees, generalizada como parte de esta misma regla. *(`learnings.md`, "Decisión 18"; nota operativa relacionada: "Nota operativa: colisión de puertos entre worktrees de Docker Compose")*
 - **22** — Refinamiento de la regla anterior: `git commit -- <pathspec>` re-stagea desde el working tree y puede pisar silenciosamente un staging parcial; preferir `git add <pathspec>` + `git commit` en dos pasos separados. *(`learnings.md`, "Decisión 22")*
 - **28** — Gotcha de tooling: correr `bundle exec rspec` dentro del contenedor Docker de `development` corre contra ese entorno (no `test`) si no se fuerza `RAILS_ENV=test` explícito, porque `rails_helper.rb` usa `||=`. *(`learnings.md`, "Decisión 28")*
+- **48** — Diff pendiente de `mobile/ios/` tras el trabajo de app icon/splash: verificado y comiteado por ser sync legítimo de tooling (CocoaPods + Swift Package Manager), no ruido ni cambio a medio terminar. *(`learnings.md`, "Decisión 48")*
 
 ## 14. Deploy e infraestructura
 
