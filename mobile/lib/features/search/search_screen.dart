@@ -53,7 +53,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   /// between is used instead.
   static const _searchDelay = Duration(milliseconds: 700);
 
-  _SearchView _view = _SearchView.home;
+  // Default landing state for the Buscar tab (fix, 2026-09-09): the AI
+  // prompt/hero (`_SearchView.home` -> `SearchHomeView`) belongs only on
+  // Home — `/buscar` itself is a real, query-less results list on web
+  // (`web/app/buscar/page.tsx`), so tapping the tab must land straight on
+  // the merchant list, not the hero. `_SearchView.home` is only ever
+  // entered here as this initial value; nothing else in this class sets it
+  // (see `_enterLoading`/`_toggleResultsMode`/`_setResultMode`), so it's
+  // intentionally unreachable now rather than removed outright — no time to
+  // rip out `SearchHomeView` wiring under today's deadline.
+  _SearchView _view = _SearchView.list;
   _ResultMode _resultMode = _ResultMode.lugares;
   String _query = '';
   SearchFilters _filters = const SearchFilters();
@@ -196,37 +205,54 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: switch (_view) {
           _SearchView.home => SearchHomeView(onSearch: _startSearch),
           _SearchView.loading => SearchLoadingView(query: _query),
-          _SearchView.list => Column(
+          _SearchView.list => Stack(
             children: [
-              _ResultsHeader(
-                controller: _resultsSearchController,
-                onChanged: _updateQueryLive,
-                onClear: _clearQuery,
-                resultMode: _resultMode,
-                onResultModeChanged: _setResultMode,
-                showingMap: false,
-                onToggleMode: _toggleResultsMode,
-                activeFilterCount: _filters.activeCount,
-                onOpenFilters: _openFiltersSheet,
-              ),
-              Expanded(
-                child: switch (_resultMode) {
-                  _ResultMode.platos => DishResultsList(
-                    query: _query,
-                    filters: _filters,
-                    onClearSearch: _clearQuery,
-                    onClearFilters: _clearFilters,
-                    onOpenMerchant: _openMerchant,
+              Column(
+                children: [
+                  _ResultsHeader(
+                    controller: _resultsSearchController,
+                    onChanged: _updateQueryLive,
+                    onClear: _clearQuery,
+                    resultMode: _resultMode,
+                    onResultModeChanged: _setResultMode,
+                    showingMap: false,
+                    activeFilterCount: _filters.activeCount,
+                    onOpenFilters: _openFiltersSheet,
                   ),
-                  _ResultMode.lugares => SearchResultsList(
-                    query: _query,
-                    filters: _filters,
-                    onClearSearch: _clearQuery,
-                    onClearFilters: _clearFilters,
-                    onOpenMerchant: _openMerchant,
+                  Expanded(
+                    child: switch (_resultMode) {
+                      _ResultMode.platos => DishResultsList(
+                        query: _query,
+                        filters: _filters,
+                        onClearSearch: _clearQuery,
+                        onClearFilters: _clearFilters,
+                        onOpenMerchant: _openMerchant,
+                      ),
+                      _ResultMode.lugares => SearchResultsList(
+                        query: _query,
+                        filters: _filters,
+                        onClearSearch: _clearQuery,
+                        onClearFilters: _clearFilters,
+                        onOpenMerchant: _openMerchant,
+                      ),
+                    },
                   ),
-                },
+                ],
               ),
+              // Floating "Mapa" pill (design-brief parity with web's
+              // `MapToggleSection.tsx` phone pill): dishes have no map pins
+              // (see [_ResultMode]'s doc), so this only shows in "Lugares"
+              // mode, same guard as the old inline toggle it replaces.
+              // Positioned above the shell's floating bottom nav (
+              // `main_shell.dart`'s `_FloatingBottomNav`, `extendBody: true`
+              // there means this screen's own coordinate space already
+              // extends behind it) instead of overlapping it.
+              if (_resultMode == _ResultMode.lugares)
+                Positioned(
+                  right: 16,
+                  bottom: 96,
+                  child: _FloatingMapButton(onTap: _toggleResultsMode),
+                ),
             ],
           ),
           // Full-height map (matches web's `966b371` fix): the map fills the
@@ -257,7 +283,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   resultMode: _resultMode,
                   onResultModeChanged: _setResultMode,
                   showingMap: true,
-                  onToggleMode: _toggleResultsMode,
                   activeFilterCount: _filters.activeCount,
                   onOpenFilters: _openFiltersSheet,
                 ),
@@ -362,7 +387,6 @@ class _ResultsHeader extends StatelessWidget {
     required this.resultMode,
     required this.onResultModeChanged,
     required this.showingMap,
-    required this.onToggleMode,
     required this.activeFilterCount,
     required this.onOpenFilters,
   });
@@ -373,7 +397,6 @@ class _ResultsHeader extends StatelessWidget {
   final _ResultMode resultMode;
   final ValueChanged<_ResultMode> onResultModeChanged;
   final bool showingMap;
-  final VoidCallback onToggleMode;
   final int activeFilterCount;
   final VoidCallback onOpenFilters;
 
@@ -416,20 +439,23 @@ class _ResultsHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _ResultModeToggle(
-                mode: resultMode,
-                onChanged: onResultModeChanged,
-              ),
-              const Spacer(),
-              // Dishes have no map view (see [_ResultMode]'s doc) — the
-              // Lista/Mapa toggle only makes sense in "Lugares" mode.
-              if (resultMode == _ResultMode.lugares)
-                _ModeToggle(showingMap: showingMap, onToggle: onToggleMode),
-            ],
-          ),
+          // Matches web's actual phone toolbar (`BuscarView.tsx`): the
+          // Lugares/Platos toggle only shows in normal list mode — the map
+          // overlay floats just the search bar + filter trigger on top of
+          // the map (`mapOverlay` there is `<>{searchBar}</>`, no
+          // `ResultModeToggle`). Previously this row also crammed in a
+          // second Lista/Mapa pill (removed — see [_FloatingMapButton],
+          // which now owns that job, same as web's `MapToggleSection`
+          // floating pill), which is what caused the real "RIGHT OVERFLOWED
+          // BY 26 PIXELS" render error on narrow phones: two full pill rows
+          // sharing one `Row` with only a `Spacer` between them can still
+          // overflow if their own intrinsic widths alone exceed the
+          // available width, since `Spacer` only claims leftover space and
+          // never shrinks its siblings.
+          if (!showingMap) ...[
+            const SizedBox(height: 12),
+            _ResultModeToggle(mode: resultMode, onChanged: onResultModeChanged),
+          ],
         ],
       ),
     );
@@ -579,83 +605,48 @@ class _FiltersButton extends StatelessWidget {
   }
 }
 
-class _ModeToggle extends StatelessWidget {
-  const _ModeToggle({required this.showingMap, required this.onToggle});
+/// Floating "Mapa" pill shown over the results list (design-brief parity
+/// with web's `MapToggleSection.tsx` phone pill, e.g. `bg-nav ... shadow-nav
+/// backdrop-blur-md`): switches into the already-built [SearchMapView] map
+/// mode. Web's own back-the-other-way control is a separate in-map button
+/// (`format_list_bulleted` pill while the map is open) — this app's
+/// equivalent is `SearchMapView`'s existing `search-map-back-to-list` FAB,
+/// untouched here.
+class _FloatingMapButton extends StatelessWidget {
+  const _FloatingMapButton({required this.onTap});
 
-  final bool showingMap;
-  final VoidCallback onToggle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
+    return Material(
+      color: AppTheme.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        border: Border.all(color: AppTheme.border),
+        side: const BorderSide(color: AppTheme.border),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ModeButton(
-            label: 'Lista',
-            icon: Symbols.view_list,
-            selected: !showingMap,
-            onTap: showingMap ? onToggle : null,
-          ),
-          _ModeButton(
-            label: 'Mapa',
-            icon: Symbols.map,
-            selected: showingMap,
-            onTap: showingMap ? null : onToggle,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeButton extends StatelessWidget {
-  const _ModeButton({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? Colors.white : AppTheme.textSecondary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: AppTheme.body.copyWith(
-                color: selected ? Colors.white : AppTheme.textSecondary,
-                fontSize: 13,
+      elevation: 8,
+      shadowColor: AppTheme.shadow,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Symbols.map, size: 19, color: AppTheme.textPrimary),
+              const SizedBox(width: 8),
+              Text(
+                'Mapa',
+                style: AppTheme.body.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
