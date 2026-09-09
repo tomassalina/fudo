@@ -52,6 +52,128 @@ tags = TAG_NAMES.index_with do |name|
 end
 
 # ----------------------------------------------------------------------------
+# Real Unsplash photos (merchant covers & menu item photos)
+# ----------------------------------------------------------------------------
+# Source: docs/design-reference/Fudo Customers.dc.html (the approved design
+# reference for the mobile app). Every Unsplash photo ID below was copied
+# verbatim from that file — none were invented. They appear there as:
+#   - <meta name="ext-resource-dependency" ... images.unsplash.com/photo-...>
+#     preload tags (lines ~40-135),
+#   - the `M(...)` mock-merchant array, one photo ID per merchant, grouped
+#     below by `type` (lines ~1073-1102),
+#   - the `IMG` / `IMG_RULES` / `imgFor(name, i)` dish-photo lookup used by
+#     the design to pick a food photo from a dish's name (lines ~1152-1193).
+#
+# URL convention:
+#   https://images.unsplash.com/photo-<ID>?w=<W>&q=80&auto=format&fit=crop
+# using w=1200 for merchant cover images (wide hero banners) and w=800 for
+# menu item photos (grid/list thumbnails).
+#
+# Matching criterion:
+# - Merchant covers: grouped by merchant `type` exactly as the design
+#   reference paired them (MERCHANT_COVER_PHOTO_IDS_BY_TYPE), then cycled by
+#   occurrence index per type — reusing IDs when a type has more seeded
+#   merchants than distinct design photos for that type (e.g. pizzeria has
+#   only 1 design photo for 3 seeded pizzerias).
+# - Menu items: ported verbatim from the design's own `IMG_RULES` keyword
+#   list (dish name -> category -> photo ID), applied to each seeded dish
+#   name; falls back to the design's own "table" (generic plate) photo when
+#   no keyword matches.
+#
+# Unique photo IDs used (29 total, all present in the design reference):
+#   1414235077428-338989a2e8c0  1436076863939-06870fe779c2
+#   1470337458703-46ad1756a187  1476224203421-9ac39bcb3327
+#   1495474472287-4d71bcdd2085  1504674900247-0877df9cc836
+#   1512058564366-18510be2db19  1514362545857-3bc16c4c7d1b
+#   1514933651103-005eec06c04b  1521017432531-fbd92d768814
+#   1529042410759-befb1204b468  1533777324565-a040eb52facd
+#   1540189549336-e6e99c3679fe  1546069901-ba9599a7e63c
+#   1551024709-8f23befc6f87     1551782450-a2132b4ba21d
+#   1554118811-1e0d58224f24     1555939594-58d7cb561ad1
+#   1558030006-450675393462     1565299624946-b28f40a0ae38
+#   1565958011703-44f9829ba187  1569718212165-3a8278d5f624
+#   1572116469696-31de0f17cc34  1579871494447-9811cf80d66c
+#   1591814468924-caf88d1232e1  1600891964092-4316c288032e
+#   1601050690597-df0568f70950  1608270586620-248524c67de9
+#   1621263764928-df1444c5e859
+
+def unsplash_url(photo_id, width)
+  "https://images.unsplash.com/photo-#{photo_id}?w=#{width}&q=80&auto=format&fit=crop"
+end
+
+# Grouped by merchant `type`, taken verbatim from the design reference's
+# M(...) mock-merchant array (each entry there pairs one merchant of a given
+# type with one specific photo ID).
+MERCHANT_COVER_PHOTO_IDS_BY_TYPE = {
+  "restaurant" => %w[
+    1476224203421-9ac39bcb3327 1600891964092-4316c288032e 1579871494447-9811cf80d66c
+    1540189549336-e6e99c3679fe 1558030006-450675393462 1414235077428-338989a2e8c0
+    1591814468924-caf88d1232e1 1504674900247-0877df9cc836 1529042410759-befb1204b468
+    1569718212165-3a8278d5f624 1572116469696-31de0f17cc34
+  ],
+  "cafe" => %w[
+    1554118811-1e0d58224f24 1495474472287-4d71bcdd2085 1521017432531-fbd92d768814
+    1533777324565-a040eb52facd 1565958011703-44f9829ba187
+  ],
+  "bar" => %w[
+    1514933651103-005eec06c04b 1470337458703-46ad1756a187 1551024709-8f23befc6f87
+    1514362545857-3bc16c4c7d1b
+  ],
+  "pizzeria" => %w[1565299624946-b28f40a0ae38],
+  "dark_kitchen" => %w[
+    1512058564366-18510be2db19 1551782450-a2132b4ba21d 1546069901-ba9599a7e63c
+  ],
+  "brewery" => %w[1608270586620-248524c67de9 1436076863939-06870fe779c2],
+  "food_truck" => %w[1555939594-58d7cb561ad1 1601050690597-df0568f70950]
+}.freeze
+
+# Dish-name keyword -> photo category, ported verbatim (same order — first
+# match wins) from the design reference's IMG_RULES.
+DISH_PHOTO_RULES = [
+  [ /taco|quesadilla|birria|pastor/i, "taco" ],
+  [ /empanada|tamal/i, "empanada" ],
+  [ /pizza|fugazzeta|fain|napolitana|muzzarella/i, "pizza" ],
+  [ /bife|asado|costillar|vac[ií]o|bondiola|chorizo|molleja|provoleta|ojo de bife|choripán|parrilla|milanesa/i, "grill" ],
+  [ /salm[oó]n|ceviche|corvina/i, "steak" ],
+  [ /ramen|wok|pad thai|fideos|ravioles|pasta|gyoza/i, "noodle" ],
+  [ /sushi|niguiri|roll spicy|combinado|edamame|sake/i, "sushi" ],
+  [ /burger|hamburguesa|cheddar|smash/i, "burger" ],
+  [ /caf[eé]|espresso|latte|cappuccino|cold brew|submarino|filtrado|flat white|t[eé] verde/i, "coffee" ],
+  [ /croissant|medialuna|pan |budín|budin|roll de canela|alfajor|cheesecake|tiramis|flan|postre|dulce de leche|masa madre|pastel/i, "bakery" ],
+  [ /ensalada|hummus|falafel|tarta|guacamole|elote|bowl|quinoa|wrap|tostado|palta|burrata/i, "veg" ],
+  [ /pinta|cerveza|alitas|stout|ipa/i, "beer" ],
+  [ /copa|vino|malbec|blend|c[oó]ctel|negroni|gin|vermú|vermu/i, "drink" ],
+  [ /limonada|jugo|agua|jamaica|gaseosa|soda/i, "soft" ],
+  [ /papas|totopos|tortilla|rabas|tabla|picada|focaccia|queso/i, "plate" ]
+].freeze
+
+# Same photo IDs the design reference's IMG map uses for each dish category
+# (the "table" entry is the design's own generic fallback photo).
+DISH_PHOTO_IDS = {
+  "taco" => "1476224203421-9ac39bcb3327",
+  "empanada" => "1601050690597-df0568f70950",
+  "pizza" => "1565299624946-b28f40a0ae38",
+  "grill" => "1558030006-450675393462",
+  "steak" => "1600891964092-4316c288032e",
+  "noodle" => "1569718212165-3a8278d5f624",
+  "sushi" => "1579871494447-9811cf80d66c",
+  "burger" => "1551782450-a2132b4ba21d",
+  "coffee" => "1495474472287-4d71bcdd2085",
+  "bakery" => "1565958011703-44f9829ba187",
+  "veg" => "1540189549336-e6e99c3679fe",
+  "beer" => "1608270586620-248524c67de9",
+  "drink" => "1551024709-8f23befc6f87",
+  "soft" => "1621263764928-df1444c5e859",
+  "plate" => "1529042410759-befb1204b468",
+  "table" => "1414235077428-338989a2e8c0"
+}.freeze
+
+def dish_photo_id(dish_name)
+  category = DISH_PHOTO_RULES.find { |(regex, _)| regex.match?(dish_name) }&.last || "table"
+  DISH_PHOTO_IDS.fetch(category)
+end
+
+# ----------------------------------------------------------------------------
 # Merchants
 # ----------------------------------------------------------------------------
 puts "Creating merchants..."
@@ -98,9 +220,17 @@ MERCHANTS_DATA = [
 # and spread across the neighborhood rather than stacked on one point.
 geo_rng = Random.new(20_260_908)
 
+# Cycles each merchant `type`'s design-reference photo pool independently, so
+# merchants of the same type don't all collide on occurrence 0.
+merchant_type_occurrence = Hash.new(0)
+
 merchants = MERCHANTS_DATA.each_with_index.map do |(name, type, address, price_min, price_max), index|
   lat = (-34.595 + geo_rng.rand * 0.030).round(6)
   lng = (-58.452 + geo_rng.rand * 0.054).round(6)
+
+  cover_photo_pool = MERCHANT_COVER_PHOTO_IDS_BY_TYPE.fetch(type)
+  cover_photo_id = cover_photo_pool[merchant_type_occurrence[type] % cover_photo_pool.size]
+  merchant_type_occurrence[type] += 1
 
   Merchant.create!(
     name: name,
@@ -113,6 +243,7 @@ merchants = MERCHANTS_DATA.each_with_index.map do |(name, type, address, price_m
     zip_code: "C1414",
     latitude: lat,
     longitude: lng,
+    cover_image_url: unsplash_url(cover_photo_id, 1200),
     whatsapp_number: "+5491150001#{format('%03d', index)}",
     price_per_person_min: price_min,
     price_per_person_max: price_max,
@@ -233,6 +364,7 @@ merchants.each_with_index do |merchant, merchant_index|
       price: price,
       currency: "ars",
       section: item_index < 2 ? "Entradas" : "Principales",
+      image_url: unsplash_url(dish_photo_id(dish_name), 800),
       active: true,
       created_by: SYSTEM_ACTOR_ID
     )
