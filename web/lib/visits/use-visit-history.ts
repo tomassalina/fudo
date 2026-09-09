@@ -68,8 +68,15 @@ function getSnapshot(): VisitState {
   return state;
 }
 
+// Stable reference reused across every call — `useSyncExternalStore` requires
+// `getServerSnapshot` to return a cached value, not a fresh object literal
+// each time, or React throws "The result of getServerSnapshot should be
+// cached to avoid an infinite loop" (only reproduces logged-out, since an
+// authenticated load settles `state` via `getSnapshot` before this matters).
+const SERVER_SNAPSHOT: VisitState = { visits: [], visitSummaries: [], loading: true, error: false };
+
 function getServerSnapshot(): VisitState {
-  return { visits: [], visitSummaries: [], loading: true, error: false };
+  return SERVER_SNAPSHOT;
 }
 
 function setState(next: Partial<VisitState>) {
