@@ -38,6 +38,18 @@ describe("buscarHref", () => {
       "/buscar?q=pizza&type=pizzeria&sort=distancia",
     );
   });
+
+  it("carries forward lat/lng after every other field", () => {
+    const current = { ...DEFAULT_BUSCAR_PARAMS, q: "sushi", lat: "-34.603", lng: "-58.381" };
+    expect(buscarHref(current)).toBe(
+      "/buscar?q=sushi&lat=-34.603&lng=-58.381",
+    );
+  });
+
+  it("clears lat/lng when both overrides are null", () => {
+    const current = { ...DEFAULT_BUSCAR_PARAMS, lat: "-34.603", lng: "-58.381" };
+    expect(buscarHref(current, { lat: null, lng: null })).toBe("/buscar");
+  });
 });
 
 describe("countActiveFilters", () => {
@@ -57,5 +69,10 @@ describe("countActiveFilters", () => {
       hideVisited: "1",
     };
     expect(countActiveFilters(current)).toBe(7);
+  });
+
+  it("is zero when only lat/lng are set — position data, not a filter the visitor picked", () => {
+    const current = { ...DEFAULT_BUSCAR_PARAMS, lat: "-34.603", lng: "-58.381" };
+    expect(countActiveFilters(current)).toBe(0);
   });
 });

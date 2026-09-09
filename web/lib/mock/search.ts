@@ -17,6 +17,15 @@ export interface SearchFilters {
   type?: MerchantType;
   /** Tags a merchant must have at least one of (OR within tags, AND with type/query). */
   tags?: string[];
+  /**
+   * Exact neighborhood match. NOT applied by this function — accepted here
+   * only so `lib/data/search.ts` can pass one `SearchFilters` object through
+   * both branches: in real-API mode it's forwarded as the confirmed
+   * `neighborhood` query param (see lib/api/merchants.ts) before this
+   * function ever runs; in mock mode it's ignored here and the `hood` filter
+   * in app/buscar/page.tsx's `applyExtraFilters` does the narrowing instead.
+   */
+  neighborhood?: string;
 }
 
 export function searchMerchants(

@@ -17,6 +17,18 @@ export interface BuscarParams {
   dist: string;
   sort: string;
   hideVisited: string;
+  /**
+   * Visitor's live coordinates (fixed to 3 decimals, ~110m — "city-scale"
+   * precision, same rationale as use-location.ts's GEOLOCATION_OPTIONS
+   * comment), synced into the URL by BuscarView whenever the header's
+   * "Activar ubicación" pill is on. Not a filter a person picks directly —
+   * excluded from countActiveFilters below, same as q/mode/sort — but
+   * app/buscar/page.tsx reads them to compute each merchant's real
+   * distanceKm server-side, which the "dist" filter and "sort=distancia"
+   * both depend on.
+   */
+  lat: string;
+  lng: string;
 }
 
 export const DEFAULT_BUSCAR_PARAMS: BuscarParams = {
@@ -29,6 +41,8 @@ export const DEFAULT_BUSCAR_PARAMS: BuscarParams = {
   dist: "",
   sort: "",
   hideVisited: "",
+  lat: "",
+  lng: "",
 };
 
 /** Fixed key order so the resulting query string is deterministic (and testable). */
@@ -42,6 +56,8 @@ const FIELD_ORDER: (keyof BuscarParams)[] = [
   "dist",
   "sort",
   "hideVisited",
+  "lat",
+  "lng",
 ];
 
 /**
@@ -69,7 +85,9 @@ export function buscarHref(
  * design, counting `type`, each tag, `price`, `hood`, `dist`, and
  * `hideVisited` as one each. `q`, `mode`, and `sort` are search text/display
  * choices, not filters, so they're excluded — same distinction the design
- * itself draws (`hasFilters` never reacts to the query or sort order). */
+ * itself draws (`hasFilters` never reacts to the query or sort order).
+ * `lat`/`lng` are position data synced automatically from the browser, not a
+ * filter the visitor picks, so they're excluded too. */
 export function countActiveFilters(current: BuscarParams): number {
   let count = 0;
   if (current.type) count += 1;

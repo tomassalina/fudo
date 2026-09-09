@@ -6,15 +6,28 @@
 // comment for why the phone/wide split and the loadMore reveal both live
 // there instead of duplicating server logic.
 //
-// The base query/type/tags filter still goes through lib/data/search (mock
-// fixture dataset by default, real `POST /api/v1/search`'s equivalent
-// client-side re-filter once NEXT_PUBLIC_API_BASE_URL is set — see
-// lib/api/README.md). price/hood/dist/sort/hideVisited are additional
-// dimensions layered on top directly in this file, the same way the design
-// reference's own `merchantsBase()` chains one filter after another — they
-// don't have a confirmed server-side equivalent, so narrowing the
-// already-fetched array here is the honest option instead of inventing an
-// API param.
+// The base query/tags filter still goes through lib/data/search (mock
+// fixture dataset by default, real `GET /api/v1/merchants` once
+// NEXT_PUBLIC_API_BASE_URL is set — see lib/api/README.md). `type` and
+// `neighborhood` are forwarded to the same real query params (see
+// Api::V1::MerchantsController#filtered_merchants); `price`/`dist`/`sort`/
+// `hideVisited` are additional dimensions layered on top directly in this
+// file, the same way the design reference's own `merchantsBase()` chains one
+// filter after another:
+// - `price` has no server-side equivalent that matches this UI's semantics —
+//   the backend's `price_per_person` param finds merchants whose min/max
+//   range *covers one point value* (see `Merchant.filter_by_price_per_person`
+//   in the backend), while this UI offers price *bands* ("Hasta $20.000").
+//   Forcing a single representative number from a band onto that point-match
+//   contract would silently change what "Hasta $20.000" means, so this stays
+//   an honest client-side narrowing over the already-fetched (real, not
+//   mock) merchant list instead.
+// - `dist`/`sort=distancia` need each merchant's distance from the visitor,
+//   which the backend has no lat/lng-aware endpoint for at all — computed
+//   server-side in this file instead from the `?lat=&lng=` query params
+//   BuscarView syncs from the browser's geolocation (see its doc comment).
+// - `hideVisited` is a cosmetic client-only gate (see its own comment below)
+//   with no real per-consumer data behind it yet.
 
 import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import { FluidContainer } from "@/components/ui/FluidContainer";
@@ -26,6 +39,11 @@ import { searchMerchants } from "@/lib/data/search";
 import { getMockVisitCount } from "@/lib/mock/loyalty";
 import { MERCHANT_TYPES_IN_USE, TAGS_IN_USE } from "@/lib/mock/merchants";
 import type { Merchant, MerchantType } from "@/lib/types";
+import {
+  haversineDistanceKm,
+  roundToOneDecimal,
+  type Coordinates,
+} from "@/lib/utils/distance";
 import type { BuscarParams } from "@/lib/utils/buscar-href";
 import { buscarHref } from "@/lib/utils/buscar-href";
 
@@ -60,12 +78,64 @@ function parsePriceRange(raw: string): [number, number] | null {
   return [Number(match[1]), Number(match[2])];
 }
 
+/**
+ * `?lat=`/`?lng=` -> a finite number within `[min, max]`, or `null` for
+ * missing/malformed/out-of-range input — an out-of-bounds value (e.g.
+ * `?lat=999`) is treated the same as an absent one rather than producing a
+ * nonsensical distance.
+ */
+function parseCoordinateParam(raw: string, min: number, max: number): number | null {
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= min && value <= max ? value : null;
+}
+
+/**
+ * Computes each merchant's real distance from `origin` server-side, using
+ * the same haversine formula (lib/utils/distance.ts) the client card
+ * recalculation (lib/location/use-merchant-distance.ts) uses — this is what
+ * makes the "dist" filter and "sort=distancia" below actually mean something
+ * instead of comparing every merchant's default `distanceKm: 0`
+ * (lib/api/merchants.ts's `parseMerchant` — a request-time API layer has no
+ * access to the browser's live position on its own). No-ops entirely when
+ * `origin` is null (visitor hasn't activated location yet). When a merchant's
+ * own coordinates fail to parse (`NaN` sentinel, see `parseCoordinate`), its
+ * distance is unknown rather than zero — same criterion the client-side
+ * recomputation (lib/location/use-merchant-distance.ts) uses, which returns
+ * `null` for this exact case instead of defaulting to "0 km away". Since
+ * `Merchant.distanceKm` is a strict `number`, `Infinity` stands in as the
+ * "unknown" sentinel here: it fails any finite `dist` radius filter
+ * (`Infinity <= km` is always false, so the merchant is excluded rather than
+ * passing by default) and always sorts last under `sort=distancia`, without
+ * widening the shared `Merchant` type.
+ */
+function withDistances(
+  merchants: Merchant[],
+  origin: Coordinates | null,
+): Merchant[] {
+  if (!origin) return merchants;
+  return merchants.map((merchant) => {
+    if (!Number.isFinite(merchant.latitude) || !Number.isFinite(merchant.longitude)) {
+      return { ...merchant, distanceKm: Number.POSITIVE_INFINITY };
+    }
+    return {
+      ...merchant,
+      distanceKm: roundToOneDecimal(haversineDistanceKm(origin, merchant)),
+    };
+  });
+}
+
 function applyExtraFilters(
   merchants: Merchant[],
   params: BuscarParams,
 ): Merchant[] {
   let out = merchants;
 
+  // Real query param in API mode (see searchMerchants call below, which
+  // forwards `hood` as the confirmed `neighborhood` filter) — this re-check
+  // is then a harmless no-op. In mock mode it's the only place `hood`
+  // narrows anything, since `lib/mock/search.ts`'s `searchMerchants` doesn't
+  // understand `neighborhood` (see its doc comment).
   if (params.hood) {
     out = out.filter((merchant) => merchant.neighborhood === params.hood);
   }
@@ -115,6 +185,17 @@ export default async function BuscarPage({
   searchParams,
 }: PageProps<"/buscar">) {
   const rawParams = await searchParams;
+  const rawLat = firstString(rawParams.lat);
+  const rawLng = firstString(rawParams.lng);
+  const parsedLat = parseCoordinateParam(rawLat, -90, 90);
+  const parsedLng = parseCoordinateParam(rawLng, -180, 180);
+  // Both coordinates or neither — a lone lat/lng with no pair isn't a usable
+  // origin, so it's dropped from the URL entirely rather than kept half-set.
+  const origin: Coordinates | null =
+    parsedLat != null && parsedLng != null
+      ? { latitude: parsedLat, longitude: parsedLng }
+      : null;
+
   const current: BuscarParams = {
     q: firstString(rawParams.q),
     type: firstString(rawParams.type),
@@ -125,6 +206,8 @@ export default async function BuscarPage({
     dist: firstString(rawParams.dist),
     sort: firstString(rawParams.sort),
     hideVisited: firstString(rawParams.hideVisited) === "1" ? "1" : "",
+    lat: origin ? rawLat : "",
+    lng: origin ? rawLng : "",
   };
 
   const query = current.q;
@@ -139,15 +222,33 @@ export default async function BuscarPage({
     Boolean(current.dist) ||
     current.hideVisited === "1";
 
-  const baseResults = await searchMerchants({
+  // Fetched without `neighborhood` so the hood dropdown always lists every
+  // neighborhood available under the current type/tags/query, even while a
+  // hood filter is active (see availableHoods below) — narrowing this same
+  // fetch by hood would collapse the dropdown to just the selected one.
+  const availabilityResults = await searchMerchants({
     query,
     type: type ?? undefined,
     tags,
   });
+  // Only re-fetched (this time with `neighborhood` forwarded as the real
+  // query param) when a hood filter is actually active — otherwise it's the
+  // exact same request as availabilityResults above, so there's no reason to
+  // pay for a second round trip.
+  const scopedResults = current.hood
+    ? await searchMerchants({
+        query,
+        type: type ?? undefined,
+        tags,
+        neighborhood: current.hood,
+      })
+    : availabilityResults;
+
+  const baseResults = withDistances(scopedResults, origin);
   const merchants = applyExtraFilters(baseResults, current);
   const availableHoods = Array.from(
     new Set(
-      baseResults
+      availabilityResults
         .map((merchant) => merchant.neighborhood)
         .filter((hood): hood is string => Boolean(hood)),
     ),

@@ -30,3 +30,12 @@ export function haversineDistanceKm(from: Coordinates, to: Coordinates): number 
 
   return EARTH_RADIUS_KM * c;
 }
+
+/** Rounded to 1 decimal — the precision both the client card recalculation
+ * (lib/location/use-merchant-distance.ts) and the /buscar Server Component's
+ * lat/lng-driven sort/filter (app/buscar/page.tsx) use, so a merchant's
+ * distance reads the same whether it was computed server-side from the
+ * `?lat=&lng=` query params or client-side from the live browser position. */
+export function roundToOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}

@@ -13,13 +13,11 @@
 // distance with no real position behind it.
 
 import { useLocation } from "./use-location";
-import { haversineDistanceKm, type Coordinates } from "@/lib/utils/distance";
-
-/** Rounded to 1 decimal, same precision `lib/mock/merchants.ts` already uses
- * for its own simulated-location distance. */
-function roundToOneDecimal(value: number): number {
-  return Math.round(value * 10) / 10;
-}
+import {
+  haversineDistanceKm,
+  roundToOneDecimal,
+  type Coordinates,
+} from "@/lib/utils/distance";
 
 export function useMerchantDistanceKm(merchant: Coordinates): number | null {
   const { coords } = useLocation();

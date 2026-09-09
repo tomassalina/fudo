@@ -7,7 +7,7 @@
 // live /api-docs/v1/swagger.yaml, not just PLAN.md's prose description.
 
 import { cache } from "react";
-import type { BusinessHours, Merchant } from "@/lib/types";
+import type { BusinessHours, Merchant, MerchantType } from "@/lib/types";
 import { apiFetch, ApiError } from "./client";
 
 /**
@@ -173,6 +173,13 @@ export interface MerchantsListFilters {
    * real merchants.
    */
   tags?: string[];
+  /** Forwarded as the confirmed `type` query param — see
+   * `Api::V1::MerchantsController#filtered_merchants`. Exact match against
+   * one of the `Merchant.types` enum values. */
+  type?: MerchantType;
+  /** Forwarded as the confirmed `neighborhood` query param — see
+   * `Api::V1::MerchantsController#filtered_merchants`. Exact string match. */
+  neighborhood?: string;
 }
 
 export async function fetchMerchants(
@@ -185,10 +192,14 @@ export async function fetchMerchants(
     tags.length > 0
       ? `&tags=${tags.map(encodeURIComponent).join(",")}`
       : "";
+  const typeParam = filters?.type ? `&type=${encodeURIComponent(filters.type)}` : "";
+  const neighborhoodParam = filters?.neighborhood
+    ? `&neighborhood=${encodeURIComponent(filters.neighborhood)}`
+    : "";
 
   for (;;) {
     const response = await apiFetch<MerchantsListResponse>(
-      `/merchants?page=${page}&per_page=100${tagsParam}`,
+      `/merchants?page=${page}&per_page=100${tagsParam}${typeParam}${neighborhoodParam}`,
     );
     merchants.push(...response.data.map(parseMerchant));
 

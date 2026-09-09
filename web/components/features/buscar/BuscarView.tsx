@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
+import { useLocation } from "@/lib/location/use-location";
 import { useSession } from "@/lib/session/use-session";
 import type { DishSearchResult, Merchant, MerchantType } from "@/lib/types";
-import type { BuscarParams } from "@/lib/utils/buscar-href";
+import { buscarHref, type BuscarParams } from "@/lib/utils/buscar-href";
 import { SearchBar } from "./SearchBar";
 import { AiChips } from "./AiChips";
 import { ResultModeToggle, type ResultMode } from "./ResultModeToggle";
@@ -26,6 +29,17 @@ export interface BuscarViewProps {
   countLabel: string;
   emptyTitle: string;
   clearHref: string;
+}
+
+/**
+ * Rounded to 3 decimals (~110m) before it ever reaches the URL — enough
+ * precision for the "closest neighborhood" use case (same "city-scale
+ * accuracy" call use-location.ts's GEOLOCATION_OPTIONS makes), while not
+ * putting the visitor's exact live position into a link that's plainly
+ * visible and easy to copy/share.
+ */
+function toUrlCoordinate(value: number): string {
+  return value.toFixed(3);
 }
 
 /**
@@ -56,6 +70,34 @@ export function BuscarView({
 }: BuscarViewProps) {
   const isPhone = useIsPhoneViewport();
   const { isAuthenticated } = useSession();
+  const router = useRouter();
+  const { coords } = useLocation();
+  const latitude = coords?.latitude;
+  const longitude = coords?.longitude;
+
+  // The Server Component (app/buscar/page.tsx) has no access to the
+  // browser's geolocation on its own, so once the visitor activates it via
+  // the header's "Activar ubicación" pill (lib/location/use-location.ts),
+  // this syncs it into the URL as `?lat=&lng=` — the page then reads those
+  // from `searchParams` to compute each merchant's real distanceKm
+  // server-side (see withDistances there), which "sort=distancia" and the
+  // "dist" filter both depend on. `router.replace` (not `push`) so toggling
+  // location on/off doesn't spam the back-button history, and the effect
+  // only fires a navigation when the URL's current lat/lng actually
+  // disagrees with the live value — otherwise every render would loop.
+  useEffect(() => {
+    if (latitude != null && longitude != null) {
+      const lat = toUrlCoordinate(latitude);
+      const lng = toUrlCoordinate(longitude);
+      if (current.lat !== lat || current.lng !== lng) {
+        router.replace(buscarHref(current, { lat, lng }), { scroll: false });
+      }
+    } else if (current.lat || current.lng) {
+      router.replace(buscarHref(current, { lat: null, lng: null }), {
+        scroll: false,
+      });
+    }
+  }, [latitude, longitude, current, router]);
 
   const filterFieldsProps = {
     current,
@@ -101,8 +143,16 @@ export function BuscarView({
           <SearchResultsGrid
             // Remounts (resetting the infinite-scroll reveal window) on any
             // filter/query change instead of patching state via an effect —
-            // see the component's own doc comment.
-            key={JSON.stringify(current)}
+            // see the component's own doc comment. `lat`/`lng` are excluded
+            // (JSON.stringify drops `undefined`-valued keys) for the same
+            // reason countActiveFilters (lib/utils/buscar-href.ts) excludes
+            // them from the filter badge: they're position data synced
+            // automatically by the effect above, not a filter the visitor
+            // picked. Without this exclusion, activating geolocation
+            // mid-session — or any later lat/lng drift — would remount the
+            // grid and silently reset the visibleCount the visitor already
+            // revealed via infinite scroll.
+            key={JSON.stringify({ ...current, lat: undefined, lng: undefined })}
             mode={mode}
             merchants={merchants}
             dishes={dishes}
