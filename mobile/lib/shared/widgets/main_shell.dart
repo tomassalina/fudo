@@ -29,6 +29,45 @@ const double _scrollHideThreshold = 8;
 /// `topOffset` default (there's no content above to have scrolled past).
 const double _scrollHideTopOffset = 0;
 
+/// Height (px) of the floating bottom nav pill itself, not counting the
+/// safe-area gap below it. Exposed as a real shared constant (bug fix
+/// 2026-09-09, product-reported floating "Mapa" button mispositioned) so
+/// anything that needs to float just above the nav — e.g.
+/// `features/search/search_screen.dart`'s floating "Mapa" button — can
+/// anchor a robust relative offset instead of a magic number that only
+/// happened to match on one device/safe-area combination.
+const double mainShellNavPillHeight = 64;
+
+/// Bottom margin (px) reserved below the nav pill, as a pure function of
+/// [MediaQuery]'s safe-area inset — the exact formula [_FloatingBottomNav]
+/// itself uses for its own bottom padding — so a caller elsewhere in the
+/// tree (no access to the nav's own subtree/context) can compute the
+/// identical number instead of guessing it.
+double mainShellNavBottomMargin(BuildContext context) {
+  final bottomSafeArea = MediaQuery.of(context).padding.bottom;
+  return bottomSafeArea > 0 ? bottomSafeArea + 8 : 20;
+}
+
+/// Shared scroll-visibility signal (bug fix 2026-09-09): true while the
+/// floating bottom nav pill is visible, false while scroll-down has hidden
+/// it. [_MainShellState._handleScrollNotification] is the sole writer (it
+/// already owns the one `NotificationListener<ScrollNotification>` for the
+/// whole shell); anything else that must hide/show in sync with the nav
+/// (e.g. `SearchScreen`'s floating "Mapa" button) reads this instead of
+/// standing up a second, independently-timed scroll listener that could
+/// drift out of sync with the nav's own visibility.
+class NavVisibleNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void setVisible(bool visible) => state = visible;
+}
+
+/// See [NavVisibleNotifier].
+final navVisibleProvider = NotifierProvider<NavVisibleNotifier, bool>(
+  NavVisibleNotifier.new,
+);
+
 /// Bottom navigation shell shared by the four main tabs (Inicio, Search,
 /// My Places, Gifting). Wraps whatever branch go_router is currently
 /// showing and drives navigation via [onTap].
@@ -72,7 +111,6 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  bool _navVisible = true;
   double _lastScrollY = 0;
 
   /// Auth-gated QR quick action, mirroring web's `handleOpenQr`: a logged-in
@@ -115,10 +153,11 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     final currentY = notification.metrics.pixels;
     final delta = currentY - _lastScrollY;
+    final navVisible = ref.read(navVisibleProvider);
 
     if (currentY <= _scrollHideTopOffset) {
       _lastScrollY = currentY;
-      if (!_navVisible) setState(() => _navVisible = true);
+      if (!navVisible) ref.read(navVisibleProvider.notifier).setVisible(true);
       return false;
     }
 
@@ -126,8 +165,8 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     final goingDown = delta > 0;
     _lastScrollY = currentY;
-    if (_navVisible == goingDown) {
-      setState(() => _navVisible = !goingDown);
+    if (navVisible == goingDown) {
+      ref.read(navVisibleProvider.notifier).setVisible(!goingDown);
     }
     return false;
   }
@@ -144,7 +183,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       ),
       bottomNavigationBar: _FloatingBottomNav(
         currentIndex: widget.currentIndex,
-        visible: _navVisible,
+        visible: ref.watch(navVisibleProvider),
         isLoggedIn: ref.watch(isLoggedInProvider),
         onTap: _handleTap,
         onQrTap: () => _openQrSheet(context),
@@ -172,13 +211,10 @@ class _FloatingBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
   final VoidCallback onQrTap;
 
-  static const double _pillHeight = 64;
   static const Duration _visibilityDuration = Duration(milliseconds: 300);
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafeArea = MediaQuery.of(context).padding.bottom;
-
     // pointer-events-none while hidden (web's `translate-y-24 opacity-0
     // pointer-events-none`) — IgnorePointer keeps a hidden pill from eating
     // taps on content underneath it.
@@ -197,14 +233,14 @@ class _FloatingBottomNav extends StatelessWidget {
               20,
               0,
               20,
-              bottomSafeArea > 0 ? bottomSafeArea + 8 : 20,
+              mainShellNavBottomMargin(context),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                 child: Container(
-                  height: _pillHeight,
+                  height: mainShellNavPillHeight,
                   decoration: BoxDecoration(
                     color: AppTheme.navBackground,
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),

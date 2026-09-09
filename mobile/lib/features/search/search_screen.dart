@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/providers.dart';
+import '../../shared/widgets/main_shell.dart';
 import 'widgets/dish_results_list.dart';
 import 'widgets/filters_sheet.dart';
 import 'widgets/search_home_view.dart';
@@ -243,15 +244,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               // `MapToggleSection.tsx` phone pill): dishes have no map pins
               // (see [_ResultMode]'s doc), so this only shows in "Lugares"
               // mode, same guard as the old inline toggle it replaces.
-              // Positioned above the shell's floating bottom nav (
-              // `main_shell.dart`'s `_FloatingBottomNav`, `extendBody: true`
-              // there means this screen's own coordinate space already
-              // extends behind it) instead of overlapping it.
+              //
+              // Bug fix 2026-09-09 (product-reported, screenshot showed it
+              // floating mid-list, not anchored above the nav): `bottom: 96`
+              // was a guessed magic number that only happened to roughly
+              // match the nav's height + margin on one device/safe-area
+              // combination. Anchored for real now, off the shell's own
+              // shared metrics (`main_shell.dart`'s `mainShellNavPillHeight`
+              // / `mainShellNavBottomMargin`, the exact numbers
+              // `_FloatingBottomNav` itself uses) plus a fixed 12px gap, so
+              // it tracks the nav's actual height/safe-area instead of
+              // drifting out of sync with it — `extendBody: true` on that
+              // shell's `Scaffold` is what makes this screen's own
+              // coordinate space extend behind the nav in the first place,
+              // so a `Positioned.bottom` here is measured from the same
+              // screen edge the nav floats above.
+              //
+              // Same bug report: the button must hide/reappear in sync with
+              // the nav's own scroll-hide behavior instead of always
+              // showing — driven here by the shared [navVisibleProvider]
+              // (also `main_shell.dart`) that the nav's own scroll listener
+              // already writes to, so both move together instead of two
+              // independent, potentially-desynced listeners.
               if (_resultMode == _ResultMode.lugares)
                 Positioned(
                   right: 16,
-                  bottom: 96,
-                  child: _FloatingMapButton(onTap: _toggleResultsMode),
+                  bottom:
+                      mainShellNavBottomMargin(context) +
+                      mainShellNavPillHeight +
+                      12,
+                  child: _FloatingMapButton(
+                    onTap: _toggleResultsMode,
+                    visible: ref.watch(navVisibleProvider),
+                  ),
                 ),
             ],
           ),
@@ -612,40 +637,69 @@ class _FiltersButton extends StatelessWidget {
 /// (`format_list_bulleted` pill while the map is open) — this app's
 /// equivalent is `SearchMapView`'s existing `search-map-back-to-list` FAB,
 /// untouched here.
+///
+/// Bug fix 2026-09-09: hides/reappears per [visible] using the exact same
+/// [IgnorePointer] + [AnimatedSlide] + [AnimatedOpacity] treatment as
+/// `main_shell.dart`'s `_FloatingBottomNav`, driven by the same shared
+/// [navVisibleProvider] signal — so this pill always moves in lockstep with
+/// the bottom nav instead of running its own independent scroll listener.
 class _FloatingMapButton extends StatelessWidget {
-  const _FloatingMapButton({required this.onTap});
+  const _FloatingMapButton({required this.onTap, required this.visible});
 
   final VoidCallback onTap;
+  final bool visible;
+
+  static const Duration _visibilityDuration = Duration(milliseconds: 300);
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        side: const BorderSide(color: AppTheme.border),
-      ),
-      elevation: 8,
-      shadowColor: AppTheme.shadow,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Symbols.map, size: 19, color: AppTheme.textPrimary),
-              const SizedBox(width: 8),
-              Text(
-                'Mapa',
-                style: AppTheme.body.copyWith(
-                  color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+    return IgnorePointer(
+      ignoring: !visible,
+      child: AnimatedSlide(
+        duration: _visibilityDuration,
+        curve: Curves.easeOut,
+        offset: visible ? Offset.zero : const Offset(0, 1.6),
+        child: AnimatedOpacity(
+          duration: _visibilityDuration,
+          curve: Curves.easeOut,
+          opacity: visible ? 1 : 0,
+          child: Material(
+            color: AppTheme.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              side: const BorderSide(color: AppTheme.border),
+            ),
+            elevation: 8,
+            shadowColor: AppTheme.shadow,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Symbols.map,
+                      size: 19,
+                      color: AppTheme.textPrimary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mapa',
+                      style: AppTheme.body.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
