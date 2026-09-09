@@ -155,13 +155,14 @@ export function BuscarView({
   // column, stacked above the results, not as a full-width header floating
   // above the [FilterSidebar | content] grid. Kept as its own JSX chunk
   // (rather than inlined twice) so the exact same chunk can be handed to
-  // MapToggleSection as its floating `overlay` while the phone map is open
-  // (`mapOverlay` below), AND reused as its own in-flow row directly above
-  // DesktopMapSplit while the desktop map view is open (below, in the main
-  // return) — desktop-only, and deliberately NOT floating over the map:
-  // product's final call after a couple of rounds of live feedback was its
-  // own section, pushing the map down, not overlapping it (mobile's
-  // floating overlay stays exactly as-is, untouched by this).
+  // MapToggleSection as its floating `overlay` while the phone map is open,
+  // AND to DesktopMapSplit as its own `mapOverlay` prop while the desktop
+  // map view is open (below) — floating over the map column in both cases.
+  // Went through a couple of live-feedback rounds landing on an in-flow row
+  // instead for desktop, then back to floating (final call, this time
+  // aligned to DesktopMapSplit's left-column header row — see MapPanel's
+  // own `overlay` doc comment for that alignment contract). Mobile's
+  // floating overlay was never touched by any of that back-and-forth.
   //
   // The filter TRIGGER (not the search input itself) only renders on phone
   // OR while the desktop map view is showing: FilterSidebar (the always
@@ -227,12 +228,6 @@ export function BuscarView({
         showDesktopMapSplit && "h-[calc(100vh-101px)] -mb-28",
       )}
     >
-      {showDesktopMapSplit ? (
-        // Desktop-only, in-flow row directly above the split — NOT floating
-        // over the map (see `searchBar`'s own doc comment above for why).
-        <div className="flex flex-col gap-4">{searchBar}</div>
-      ) : null}
-
       <div
         className={cn(
           "grid gap-7",
@@ -264,6 +259,7 @@ export function BuscarView({
             countLabel={countLabel}
             onExit={() => handleToggleMap(false)}
             userLocation={coords}
+            mapOverlay={searchBar}
           />
         ) : (
           <>

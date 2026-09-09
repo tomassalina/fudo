@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { Merchant } from "@/lib/types";
 import type { Coordinates } from "@/lib/location/use-location";
 import { MapPanel } from "./MapPanel";
@@ -17,6 +17,15 @@ export interface DesktopMapSplitProps {
    * applies here too. See `LeafletMap`'s own doc comment for why this is a
    * dedicated prop rather than a synthetic `Merchant`. */
   userLocation?: Coordinates | null;
+  /**
+   * Search bar + filter-trigger button, floated on top of the map column —
+   * see MapPanel's own `overlay` doc comment for the top-alignment contract
+   * (must line up with this component's own left-column header row below).
+   * Threaded straight through to `MapPanel`'s `overlay` prop rather than
+   * laid out here, since DesktopMapSplit shouldn't need to know it's
+   * specifically a search bar.
+   */
+  mapOverlay?: ReactNode;
 }
 
 /**
@@ -36,6 +45,7 @@ export function DesktopMapSplit({
   countLabel,
   onExit,
   userLocation,
+  mapOverlay,
 }: DesktopMapSplitProps) {
   // Mirrors, one level up, the narrowed-to-viewport set LeafletMap already
   // computes for its own pins (see its `onVisibleMerchantsChange` doc
@@ -93,6 +103,7 @@ export function DesktopMapSplit({
         merchants={merchants}
         userLocation={userLocation}
         onVisibleMerchantsChange={setVisibleMerchants}
+        overlay={mapOverlay}
       />
     </div>
   );

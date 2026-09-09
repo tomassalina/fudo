@@ -9,6 +9,7 @@
 // next/dynamic in Server Components"), hence this thin 'use client'
 // wrapper.
 import dynamic from "next/dynamic";
+import type { ReactNode } from "react";
 import type { Merchant } from "@/lib/types";
 import type { Coordinates } from "@/lib/location/use-location";
 import { cn } from "@/lib/utils/cn";
@@ -47,6 +48,24 @@ export interface MapPanelProps {
   /** See LeafletMap's own doc comment on `onVisibleMerchantsChange` — only
    * wired up by the desktop split view's compact list. */
   onVisibleMerchantsChange?: (visible: Merchant[]) => void;
+  /**
+   * Floats on top of the map itself (search bar + filter trigger, in
+   * practice) instead of sitting in normal document flow above it — 4th
+   * round of live product feedback on this exact spot, final call: back to
+   * floating over the map (not a separate in-flow row), but with its top
+   * edge aligned to DesktopMapSplit's left-column header row instead of an
+   * arbitrary inset. `top-0` here is that alignment, not a stylistic
+   * choice: this wrapper has no top padding of its own before the overlay,
+   * same as the left column's own wrapper has no top padding before its
+   * count/"Ver lista" row — both are items in the same `items-stretch` grid
+   * row one level up (DesktopMapSplit), so both boxes already start at the
+   * same y-coordinate; `top-0` just keeps this one from moving off that
+   * shared baseline instead of introducing a new offset (the previous
+   * `top-3` did, which is exactly why alignment broke). `undefined`/`null`
+   * renders no overlay row, same as every other caller (MapToggleSection's
+   * phone overlay is a sibling of this component, not a prop through it).
+   */
+  overlay?: ReactNode;
 }
 
 export function MapPanel({
@@ -56,6 +75,7 @@ export function MapPanel({
   onPopupOpenChange,
   userLocation,
   onVisibleMerchantsChange,
+  overlay,
 }: MapPanelProps) {
   return (
     <div
@@ -71,6 +91,15 @@ export function MapPanel({
         userLocation={userLocation}
         onVisibleMerchantsChange={onVisibleMerchantsChange}
       />
+
+      {overlay ? (
+        // z-[1001]: above Leaflet's own panes/zoom control (cap ~700) and
+        // the "Buscando en la zona…" chip (z-[1000]) — same reasoning as
+        // MapToggleSection's identical phone overlay row.
+        <div className="absolute inset-x-3 top-0 z-[1001] flex flex-col gap-2.5">
+          {overlay}
+        </div>
+      ) : null}
     </div>
   );
 }
