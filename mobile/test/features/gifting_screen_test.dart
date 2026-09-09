@@ -1,47 +1,47 @@
 // Widget tests for the "Regalar" (gift cards) screen.
 //
 // Covers: all 4 tier cards render, selecting Platinum reveals the custom
-// amount field, the CTA button's label/enabled state react to the screen's
-// form state, and the login-required gate (Tarea 4) shows/hides the
-// checkout form based on `isLoggedInProvider`.
+// amount field, and the CTA button's label/enabled state react to the
+// screen's form state.
+//
+// `GiftingScreen` used to also carry its own `isLoggedInProvider`-based
+// login-required gate (Tarea 4, tested here as its own group) — removed
+// once confirmed unreachable now that `core/router/app_router.dart`'s
+// `ShellRoute` gates the entire shell before this screen can even build
+// while logged out (see that screen's own doc comment). Session-gating
+// behavior is exercised at the router level instead — see
+// `test/core/router/app_router_session_test.dart`.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/data/providers.dart';
 import 'package:mobile/features/gifting/gifting_screen.dart';
 
-/// Forces `isLoggedInProvider` to `true` without going through a real (or
-/// fake-local) login flow — the purchase-flow tests below only care about
-/// the checkout form itself, not how the session got established.
-class _AlwaysLoggedInNotifier extends IsLoggedInNotifier {
-  @override
-  bool build() => true;
-}
-
 void main() {
-  Future<void> pumpGiftingScreen(
-    WidgetTester tester, {
-    bool loggedIn = true,
-  }) async {
+  Future<void> pumpGiftingScreen(WidgetTester tester) async {
     // `GiftingScreen` is now a `ConsumerStatefulWidget` (it reads
     // `connectionModeProvider`/`dataSourceProvider` on submit — see
     // `gifting_screen.dart`), so it needs a `ProviderScope` ancestor.
-    // `isLoggedInProvider` defaults to `false` (see `data/providers.dart`),
-    // so the purchase-flow tests below force it to `true` — the gate itself
-    // is covered by the dedicated group further down.
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          if (loggedIn)
-            isLoggedInProvider.overrideWith(_AlwaysLoggedInNotifier.new),
-        ],
         child: MaterialApp(theme: AppTheme.dark, home: const GiftingScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    // `pumpAndSettle()` is intentionally NOT used anywhere in this file:
+    // `GiftingScreen` drives its tier cards' and CTA button's idle sheen
+    // sweep off a shared `_sheenController` that `repeat()`s for as long as
+    // the screen is mounted (`gifting_screen.dart`, matching web's
+    // `[animation-duration:3.6s]` `animate-fudo-sheen`), so `pumpAndSettle`
+    // — which waits for every animation/microtask to go idle — times out by
+    // design. Bounded `pump()`s (300ms, comfortably past this screen's own
+    // longest transient animation: the 280ms tier-carousel scroll) are used
+    // instead, same pattern already established by
+    // `test/features/qr_sheet_test.dart` and `test/shared/main_shell_test.dart`
+    // for their own always-looping effects.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   }
 
   testWidgets('renders the 4 gift tier cards', (tester) async {
@@ -64,7 +64,8 @@ void main() {
     final platinumCard = find.byKey(const ValueKey('giftTierTap_platinum'));
     await tester.ensureVisible(platinumCard);
     await tester.tap(platinumCard);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byKey(const ValueKey('giftCustomAmountField')), findsOneWidget);
     expect(find.text('MONTO PERSONALIZADO'), findsOneWidget);
@@ -85,11 +86,23 @@ void main() {
           matching: find.byType(Text),
         ),
       );
+      // `.first`: `_GiftCtaButton`'s own enabled/disabled `Opacity` is the
+      // outermost widget in its subtree (the very first match in traversal
+      // order), but when the button is enabled its nested `_SheenSweep`
+      // (the idle shimmer, `gifting_screen.dart`) also paints its own
+      // `Opacity` for the sweep band's fade in/out — a second, deeper match
+      // whenever the shared sheen animation's value puts it mid-fade at the
+      // moment this is read. Without `.first` this finder is ambiguous
+      // (`Bad state: Too many elements`) any time that inner opacity is
+      // also non-zero; `.first` pins it to the button's own opacity, not
+      // the sheen's, regardless of the sheen's current animation phase.
       Opacity ctaOpacity() => tester.widget<Opacity>(
-        find.descendant(
-          of: find.byKey(const ValueKey('giftCtaButton')),
-          matching: find.byType(Opacity),
-        ),
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('giftCtaButton')),
+              matching: find.byType(Opacity),
+            )
+            .first,
       );
 
       expect(ctaText().data, 'Comprar y enviar \$12.000');
@@ -100,7 +113,8 @@ void main() {
       final platinumCard = find.byKey(const ValueKey('giftTierTap_platinum'));
       await tester.ensureVisible(platinumCard);
       await tester.tap(platinumCard);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(ctaText().data, 'Ingresá un monto');
       expect(ctaOpacity().opacity, lessThan(1));
@@ -109,7 +123,8 @@ void main() {
         find.byKey(const ValueKey('giftCustomAmountField')),
         '50',
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(ctaText().data, 'Corregí el monto');
       expect(find.text('El mínimo es \$121.000'), findsOneWidget);
@@ -118,7 +133,8 @@ void main() {
         find.byKey(const ValueKey('giftCustomAmountField')),
         '150000',
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(ctaText().data, 'Comprar y enviar \$150.000');
       expect(ctaOpacity().opacity, 1);
@@ -133,7 +149,14 @@ void main() {
       // Classic is selected by default with a valid fixed amount and no
       // phone entered — per §2.6 this must still be submittable.
       await tester.tap(find.byKey(const ValueKey('giftCtaButton')));
-      await tester.pumpAndSettle();
+      // Opens `_GiftSuccessOverlay`, whose own entrance animation is a
+      // finite 1400ms `AnimationController..forward()` (unlike the parent
+      // `GiftingScreen`'s repeating sheen, this one does settle) — but the
+      // screen underneath the dialog stays mounted with its sheen still
+      // looping, so `pumpAndSettle` still can't be used here either. 1500ms
+      // comfortably clears the overlay's own animation.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1500));
 
       expect(find.text('¡Gift card enviada!'), findsOneWidget);
       expect(find.text('Lista para compartir por WhatsApp'), findsOneWidget);
@@ -151,58 +174,14 @@ void main() {
       '+54 9 11 1234 5678',
     );
     await tester.tap(find.byKey(const ValueKey('giftCtaButton')));
-    await tester.pumpAndSettle();
+    // See the previous test's comment: the success overlay's own entrance
+    // animation is finite (1400ms), but the screen underneath keeps its
+    // sheen looping, so `pumpAndSettle` still can't be used here.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1500));
 
     expect(find.text('¡Gift card enviada!'), findsOneWidget);
     expect(find.text('Enviada a +54 9 11 1234 5678'), findsOneWidget);
     expect(find.text('Lista para compartir por WhatsApp'), findsNothing);
-  });
-
-  group('login gate (isLoggedInProvider == false)', () {
-    testWidgets(
-      'shows the login-required card instead of the checkout form, tiers still visible',
-      (tester) async {
-        await pumpGiftingScreen(tester, loggedIn: false);
-
-        // Tiers are still browsable while logged out.
-        expect(find.text('CLASSIC'), findsOneWidget);
-        expect(find.text('GOLD'), findsOneWidget);
-
-        // Checkout form is gone.
-        expect(find.byKey(const ValueKey('giftPhoneField')), findsNothing);
-        expect(find.byKey(const ValueKey('giftCtaButton')), findsNothing);
-
-        // Gate card is shown instead.
-        expect(
-          find.byKey(const ValueKey('giftLoginRequiredCard')),
-          findsOneWidget,
-        );
-        expect(find.text('Iniciá sesión para comprar'), findsOneWidget);
-      },
-    );
-
-    testWidgets('logging in makes the checkout form appear', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(theme: AppTheme.dark, home: const GiftingScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const ValueKey('giftLoginRequiredCard')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const ValueKey('giftCtaButton')), findsNothing);
-
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(GiftingScreen)),
-      );
-      container.read(isLoggedInProvider.notifier).logIn();
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const ValueKey('giftLoginRequiredCard')), findsNothing);
-      expect(find.byKey(const ValueKey('giftCtaButton')), findsOneWidget);
-    });
   });
 }

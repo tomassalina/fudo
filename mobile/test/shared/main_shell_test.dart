@@ -5,12 +5,25 @@
 // a `FutureProvider`, so every pump here wraps in a `ProviderScope` and
 // flushes an extra frame where the sheet is involved — same pattern as
 // `test/features/qr_sheet_test.dart`.
+//
+// Stale-test correction (product decisions applied after this test was
+// first written — see `main_shell.dart`'s class doc comment and
+// `openspec/changes/fudo-consumers-mvp/learnings.md` Decisión 19): the nav
+// is icon-only now, ever — no text label next to the active tab anymore
+// (a product correction, "the product owner wants icons only") — and the
+// old "Mis Lugares" tab (index 2) is now the always-visible Perfil/Ingresar
+// slot: `Symbols.storefront` doesn't render there anymore, replaced by
+// `Symbols.person`/`Symbols.login` depending on `isLoggedInProvider`. The
+// active-tab color also isn't `AppTheme.accent` text anymore — `_NavItem`
+// now paints the active icon white on a gradient pill, muted
+// (`AppTheme.textTertiary`) otherwise.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/data/providers.dart';
 import 'package:mobile/shared/widgets/main_shell.dart';
 
 Future<void> _pumpShell(
@@ -46,7 +59,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.byIcon(Symbols.search));
     await tester.pump();
-    await tester.tap(find.byIcon(Symbols.storefront));
+    // Index 2 is the always-visible Perfil/Ingresar slot — logged out
+    // (`isLoggedInProvider`'s default in this test, no override), it shows
+    // `Symbols.login`, not the old `Symbols.storefront`.
+    await tester.tap(find.byIcon(Symbols.login));
     await tester.pump();
     await tester.tap(find.byIcon(Symbols.card_giftcard));
     await tester.pump();
@@ -60,6 +76,19 @@ void main() {
     (tester) async {
       final tapped = <int>[];
       await _pumpShell(tester, currentIndex: 0, onTap: tapped.add);
+
+      // The QR button is auth-gated (`MainShell._openQrSheet`, mirroring
+      // web's `handleOpenQr`): logged in opens `LoyaltyQrSheet`, logged out
+      // redirects to `AppRoutes.myPlaces` via `context.go` instead — which
+      // needs a real `GoRouter` this test doesn't set up. Force the
+      // logged-in branch so this test can assert what it's actually named
+      // for (the sheet opening); the logged-out redirect isn't this test's
+      // concern.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MainShell)),
+      );
+      container.read(isLoggedInProvider.notifier).logIn();
+      await tester.pump();
 
       expect(find.text('Tu código Fudo'), findsNothing);
 
@@ -84,29 +113,20 @@ void main() {
 
     final homeIcon = tester.widget<Icon>(find.byIcon(Symbols.home));
     final searchIcon = tester.widget<Icon>(find.byIcon(Symbols.search));
-    final placesIcon = tester.widget<Icon>(find.byIcon(Symbols.storefront));
+    // Index 2 (Perfil/Ingresar) — logged out by default here, so
+    // `Symbols.login`, not the old "Mis Lugares" `Symbols.storefront`.
+    final placesIcon = tester.widget<Icon>(find.byIcon(Symbols.login));
     final giftIcon = tester.widget<Icon>(find.byIcon(Symbols.card_giftcard));
 
-    // "Mis Lugares" (index 2) is the active tab here.
-    expect(placesIcon.color, AppTheme.accent);
-    expect(homeIcon.color, isNot(AppTheme.accent));
-    expect(searchIcon.color, isNot(AppTheme.accent));
-    expect(giftIcon.color, isNot(AppTheme.accent));
-    expect(searchIcon.color, equals(giftIcon.color));
-    expect(homeIcon.color, equals(giftIcon.color));
+    // `_NavItem` colors the active icon white on its gradient pill and
+    // every inactive icon `AppTheme.textTertiary` — not `AppTheme.accent`
+    // text with no pill, which is what this used to check.
+    expect(placesIcon.color, Colors.white);
+    expect(homeIcon.color, AppTheme.textTertiary);
+    expect(searchIcon.color, AppTheme.textTertiary);
+    expect(giftIcon.color, AppTheme.textTertiary);
 
-    // Labels are always mounted (so the width/opacity transition can
-    // animate), but only the active tab's label is actually visible.
-    AnimatedOpacity labelOpacityFor(String label) => tester.widget(
-      find.ancestor(
-        of: find.text(label),
-        matching: find.byType(AnimatedOpacity),
-      ),
-    );
-
-    expect(labelOpacityFor('Mis Lugares').opacity, 1);
-    expect(labelOpacityFor('Inicio').opacity, 0);
-    expect(labelOpacityFor('Buscar').opacity, 0);
-    expect(labelOpacityFor('Regalar').opacity, 0);
+    // Icon-only nav now (product correction — see this file's top comment)
+    // — no text label to assert visibility on anymore, active or not.
   });
 }

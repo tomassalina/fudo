@@ -89,18 +89,26 @@ void main() {
     userLocationController = _originalController;
   });
 
-  testWidgets('renders the header, welcome copy and featured grid', (
-    tester,
-  ) async {
+  testWidgets('renders the header and the AI search hero', (tester) async {
     await _pumpHome(tester);
 
-    expect(find.text('fudo'), findsOneWidget);
+    // Stale-test correction: `HomeScreen`'s doc comment (and
+    // `lib/features/home/widgets/home_header.dart`'s) documents Home as
+    // now hero-only — no "Bienvenido a Fudo" welcome copy, no featured-
+    // merchants grid below the hero (`FeaturedGrid` is kept unused
+    // elsewhere on purpose, not rendered here) — mirroring
+    // `web/app/(marketing)/page.tsx`'s own equivalent comment. The
+    // wordmark used to be a literal "fudo" text label; it's a real logo
+    // `Image.asset` now (`home_header.dart`: "This used to be a stylized
+    // italic 'fudo' text wordmark here, which web never renders at all —
+    // that mismatch was the bug"). This test used to assert all of the
+    // above; it's been updated to assert what the header/hero actually
+    // render today instead of removed functionality.
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('Activar ubicación'), findsOneWidget);
-    expect(find.text('Bienvenido a Fudo'), findsOneWidget);
-    expect(find.text('Lugares destacados'), findsOneWidget);
-    // Fixture's first merchant (id 1) — confirms real merchant data reached
-    // the featured grid, not just an empty/loading state.
-    expect(find.text('Don Chile Cantina'), findsOneWidget);
+    // `SearchHomeView`'s headline (`Text.rich`) — confirms the hero itself
+    // actually rendered its real content, not just an empty shell.
+    expect(find.textContaining('Encontrá dónde comer'), findsOneWidget);
   });
 
   testWidgets('tapping "Activar ubicación" activates the real location', (
@@ -134,15 +142,16 @@ void main() {
     expect(userLocationController.value, isNull);
   });
 
-  testWidgets('tapping a featured card calls onOpenMerchant with its id', (
-    tester,
-  ) async {
-    int? openedId;
-    await _pumpHome(tester, onOpenMerchant: (id) => openedId = id);
-
-    await tester.tap(find.text('Don Chile Cantina'));
-    await tester.pump();
-
-    expect(openedId, 1);
-  });
+  // A "tapping a featured card calls onOpenMerchant with its id" test used
+  // to live here. Removed (not just skipped) — `HomeScreen` no longer
+  // renders a featured-merchants grid at all (deliberate product decision:
+  // Home is hero-only now, see the class doc comment above and
+  // `openspec/changes/fudo-consumers-mvp/learnings.md` Decisión 19's "Otro
+  // cambio de producto en la misma categoría" note on the Home
+  // simplification, commit `cfcf166`), so there is no featured card left to
+  // tap. `onOpenMerchant` itself is kept only for
+  // `core/router/app_router.dart` call-site compatibility (see the field's
+  // own doc comment on `HomeScreen`) and is never invoked from this screen
+  // anymore — there is nothing left in `HomeScreen` for a test of this
+  // callback to legitimately exercise.
 }

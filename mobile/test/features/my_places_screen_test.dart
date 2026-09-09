@@ -5,6 +5,22 @@
 // *inside* a `testWidgets` body in this environment, so a single
 // `LocalDataSource` is pre-warmed once in `setUpAll` (awaiting every method
 // the screen needs) and injected via `dataSourceProvider.overrideWithValue`.
+//
+// Stale-test correction: the login form used to have a decorative
+// "Continuar con Google" mock button (with an "o con email" divider under
+// it) that just showed a disclaimer snackbar instead of doing anything real
+// — that whole block is gone from `my_places_screen.dart`'s
+// `_LoggedOutView.build` now. The form's own comment on the "Registrate"
+// button explains why: this screen's auth used to be entirely mocked, and
+// was wired up to the real `AuthRepository` instead ("used to be a mock
+// snackbar even though `AuthRepository.register()` already worked against
+// the real backend"). The dedicated "Continuar con Google is a decorative
+// mock" test this file used to have tested exactly that removed mock flow,
+// so it's gone too — there's no real replacement to assert on on the local/
+// `ConnectionMode.local` path this file exercises (still "100% fake login"
+// per `_onLoginPressed`'s own doc comment, just without the Google button);
+// `test/features/my_places_screen_remote_login_test.dart` already covers
+// the real `ConnectionMode.remote` login path this screen now has.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
@@ -55,12 +71,10 @@ void main() {
   });
 
   group('logged-out state', () {
-    testWidgets('shows the fake email/password login form', (tester) async {
+    testWidgets('shows the email/password login form', (tester) async {
       await _pumpMyPlacesScreen(tester);
 
       expect(find.text('Ingresá a tu cuenta de Fudo'), findsOneWidget);
-      expect(find.text('Continuar con Google'), findsOneWidget);
-      expect(find.text('o con email'), findsOneWidget);
       expect(find.text('tu@email.com'), findsOneWidget);
       expect(find.text('Tu contraseña'), findsOneWidget);
       expect(find.text('Iniciar sesión'), findsOneWidget);
@@ -70,22 +84,6 @@ void main() {
       expect(find.text('Visitas'), findsNothing);
       expect(find.text('Favoritos'), findsNothing);
       expect(find.text('Ajustes'), findsNothing);
-    });
-
-    testWidgets('"Continuar con Google" is a decorative mock, not a real flow', (
-      tester,
-    ) async {
-      await _pumpMyPlacesScreen(tester);
-
-      await tester.tap(find.text('Continuar con Google'));
-      await tester.pump();
-
-      // Shows the mock disclaimer instead of logging in or navigating.
-      expect(
-        find.text('Login con Google no disponible en este MVP'),
-        findsOneWidget,
-      );
-      expect(find.text('Ingresá a tu cuenta de Fudo'), findsOneWidget);
     });
   });
 
