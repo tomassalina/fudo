@@ -43,11 +43,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Material Symbols Outlined — the exact icon font the design
             reference uses for every glyph (location pins, delivery, chat,
             reward, etc.). Loaded the same way the reference does: a plain
-            Google Fonts stylesheet (not in next/font's curated Google set). */}
+            Google Fonts stylesheet (not in next/font's curated Google set).
+            The axis spec MUST use `min..max` ranges (Google's documented
+            recommended range for this family), not single fixed points —
+            the CSS2 API silently downgrades a single-point spec (e.g.
+            `@24,200,0,0`) to a STATIC font instance frozen at those exact
+            values, so any component that later sets a different
+            `fontVariationSettings` (e.g. FILL:1 to fill a favorited heart)
+            has no glyph to render against and gets no visual effect. */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- this rule targets the Pages Router's _document.js; the App Router's root layout *is* the once-per-app shell, so it applies here on every page already. */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,200,0,0&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
