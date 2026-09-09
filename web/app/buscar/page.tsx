@@ -31,7 +31,6 @@
 
 import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import { FluidContainer } from "@/components/ui/FluidContainer";
-import { Header } from "@/components/layout/Header";
 import { BuscarView } from "@/components/features/buscar/BuscarView";
 import { AiSearchResolver } from "@/components/features/buscar/AiSearchResolver";
 import type { ResultMode } from "@/components/features/buscar/ResultModeToggle";
@@ -249,7 +248,6 @@ export default async function BuscarPage({
   if (aiQuery) {
     return (
       <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
-        <Header />
         <AiSearchResolver query={aiQuery} presetType={firstString(rawParams.type)} />
       </FluidContainer>
     );
@@ -296,12 +294,24 @@ export default async function BuscarPage({
     current.hideVisited === "1" ||
     current.reward === "1";
 
+  // In Platos mode, the free-text query is a DISH name, not a merchant name
+  // (see getDishSearchResults below) — passing it into searchMerchants here
+  // would apply its merchant.name-only substring match (lib/mock/search.ts)
+  // and narrow (or empty) the candidate list before dish-level matching ever
+  // runs, so a dish-name query that doesn't also happen to match a merchant
+  // name would never surface its merchant/dish at all. Omitting `query`
+  // keeps the full type/tag-filtered merchant candidate set for
+  // getDishSearchResults to search by dish name instead. In Lugares mode
+  // (the default), `query` still narrows by merchant name here exactly as
+  // before (see 0fdc167) — dishes stay unused in that mode anyway.
+  const merchantNameQuery = mode === "platos" ? undefined : query;
+
   // Fetched without `neighborhood` so the hood dropdown always lists every
   // neighborhood available under the current type/tags/query, even while a
   // hood filter is active (see availableHoods below) — narrowing this same
   // fetch by hood would collapse the dropdown to just the selected one.
   const availabilityResults = await searchMerchants({
-    query,
+    query: merchantNameQuery,
     type: type ?? undefined,
     tags,
   });
@@ -311,7 +321,7 @@ export default async function BuscarPage({
   // pay for a second round trip.
   const scopedResults = current.hood
     ? await searchMerchants({
-        query,
+        query: merchantNameQuery,
         type: type ?? undefined,
         tags,
         neighborhood: current.hood,
@@ -352,7 +362,6 @@ export default async function BuscarPage({
 
   return (
     <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
-      <Header />
       <SearchAnalytics
         hasQuery={query.length > 0}
         queryText={query}

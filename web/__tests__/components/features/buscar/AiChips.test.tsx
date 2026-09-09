@@ -31,7 +31,12 @@ describe("AiChips", () => {
         availableTags={["vegano", "wifi"]}
       />,
     );
-    const wifiChip = screen.getByRole("link", { name: /WiFi/ });
+    // "wifi" has no entry in TAG_LABELS (it's not part of the real 5-tag
+    // vocabulary — see lib/mock/merchants.ts) — used here purely as an
+    // arbitrary second tag to exercise multi-tag toggling, so it falls back
+    // to rendering its own raw string (per the "falling back to the raw tag
+    // if unlabeled" test above).
+    const wifiChip = screen.getByRole("link", { name: /wifi/ });
     expect(wifiChip).toHaveAttribute("aria-pressed", "false");
     expect(wifiChip).toHaveAttribute("href", "/buscar?tags=vegano%2Cwifi");
   });
@@ -57,7 +62,12 @@ describe("AiChips", () => {
         availableTags={["vegano", "wifi"]}
       />,
     );
-    const wifiChip = screen.getByRole("link", { name: /WiFi/ });
+    // "wifi" has no entry in TAG_LABELS (it's not part of the real 5-tag
+    // vocabulary — see lib/mock/merchants.ts) — used here purely as an
+    // arbitrary second tag to exercise multi-tag toggling, so it falls back
+    // to rendering its own raw string (per the "falling back to the raw tag
+    // if unlabeled" test above).
+    const wifiChip = screen.getByRole("link", { name: /wifi/ });
     expect(wifiChip).toHaveAttribute(
       "href",
       "/buscar?q=centro&type=bar&tags=vegano%2Cwifi",

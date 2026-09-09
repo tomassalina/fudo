@@ -98,7 +98,7 @@ const DISTANCE_OPTIONS: FilterOptionDef[] = [
  * its own `dishDiet`/`diet` picker rows sit alongside the `aiChips` pill
  * row). Picking here replaces only these three tags in `current.tags`,
  * leaving any other active tag (e.g. "economico") untouched. */
-const DIET_TAG_KEYS = ["vegano", "sin_tacc", "picante"] as const;
+const DIET_TAG_KEYS = ["vegano", "sin_tacc", "picante", "vegetariano"] as const;
 
 function dietOptions(): FilterOptionDef[] {
   return [

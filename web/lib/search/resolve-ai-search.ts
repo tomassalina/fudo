@@ -15,6 +15,12 @@ export interface ResolvedAiFilters {
    * — never a raw point price, since that's not a shape /buscar's `price`
    * URL param understands. */
   priceBand: string | null;
+  /** Already mapped to /buscar's `open` param shape: "now" or null — never
+   * a raw boolean, since that's not what the URL param understands (and
+   * there's no real "explicitly not open" value the UI can express). */
+  open: "now" | null;
+  /** Already mapped to /buscar's `reward` param shape: "1" or null. */
+  reward: "1" | null;
 }
 
 /**
@@ -41,5 +47,7 @@ export async function resolveAiSearchFilters(
     neighborhood: filters.neighborhood,
     tags: filters.tags,
     priceBand: priceBandForAmount(filters.price_per_person),
+    open: filters.open === true ? "now" : null,
+    reward: filters.reward === true ? "1" : null,
   };
 }

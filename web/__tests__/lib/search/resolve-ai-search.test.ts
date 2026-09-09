@@ -46,6 +46,8 @@ describe("resolveAiSearchFilters", () => {
             type: "bar",
             tags: ["picante"],
             price_per_person: 8000,
+            open: null,
+            reward: null,
           },
         }),
     } as Response);
@@ -57,6 +59,8 @@ describe("resolveAiSearchFilters", () => {
       neighborhood: "Palermo",
       tags: ["picante"],
       priceBand: "0-20000",
+      open: null,
+      reward: null,
     });
   });
 
@@ -72,12 +76,77 @@ describe("resolveAiSearchFilters", () => {
         Promise.resolve({
           data: [],
           meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
-          filters: { neighborhood: null, type: null, tags: [], price_per_person: null },
+          filters: {
+            neighborhood: null,
+            type: null,
+            tags: [],
+            price_per_person: null,
+            open: null,
+            reward: null,
+          },
         }),
     } as Response);
 
     const resolved = await resolveAiSearchFilters("un bar con buena onda");
 
     expect(resolved.priceBand).toBeNull();
+  });
+
+  it("maps open: true and reward: true onto the buscar `open`/`reward` param shapes", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: {
+            neighborhood: null,
+            type: null,
+            tags: [],
+            price_per_person: null,
+            open: true,
+            reward: true,
+          },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("un bar abierto ahora con premios");
+
+    expect(resolved.open).toBe("now");
+    expect(resolved.reward).toBe("1");
+  });
+
+  it("maps open: false and reward: false to null (no filter), not a literal false param", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: {
+            neighborhood: null,
+            type: null,
+            tags: [],
+            price_per_person: null,
+            open: false,
+            reward: false,
+          },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("un bar, no importa si está cerrado");
+
+    expect(resolved.open).toBeNull();
+    expect(resolved.reward).toBeNull();
   });
 });

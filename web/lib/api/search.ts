@@ -23,13 +23,20 @@ import { apiFetch } from "./client";
 import { authHeader } from "@/lib/auth/token-storage";
 import type { MerchantType } from "@/lib/types";
 
-/** Mirrors `SearchQueryParser::RESPONSE_SCHEMA` / `SearchHistory#structured_output`
+/** Mirrors `SearchQueryParser.response_schema` / `SearchHistory#structured_output`
  * (backend/app/services/search_query_parser.rb) field-for-field. */
 export interface SearchQueryFilters {
   neighborhood: string | null;
   type: MerchantType | null;
   tags: string[];
   price_per_person: number | null;
+  /** "Abierto ahora" — maps onto /buscar's `open=now` param (see
+   * lib/search/resolve-ai-search.ts). No real backend filter behind it yet;
+   * see the backend schema's own doc comment on this field. */
+  open: boolean | null;
+  /** "Premio por visitas" — maps onto /buscar's `reward=1` param. Same
+   * no-backend-filter-yet situation as `open` above. */
+  reward: boolean | null;
 }
 
 interface RawSearchResponse {

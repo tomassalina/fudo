@@ -18,9 +18,10 @@
 // and this is what's on screen the moment it lands.
 //
 // Once resolved, replaces the URL with the plain filter params
-// (`type`/`hood`/`tags`/`price`) this app's other filters already use — a
-// shareable link, same convention as `?sort=distancia`/`?open=now` (see
-// lib/utils/buscar-href.ts). On failure (network error, Gemini unavailable,
+// (`type`/`hood`/`tags`/`price`/`open`/`reward`) this app's other filters
+// already use — a shareable link, same convention as
+// `?sort=distancia`/`?open=now` (see lib/utils/buscar-href.ts). On failure
+// (network error, Gemini unavailable,
 // mock/local mode with no real backend, or the visitor isn't logged in —
 // this endpoint requires `authenticate_consumer!`, see search_controller.rb)
 // it degrades to a plain name-only search with the same text instead of
@@ -63,6 +64,8 @@ export function AiSearchResolver({
             hood: filters.neighborhood,
             tags: filters.tags.length > 0 ? filters.tags.join(",") : null,
             price: filters.priceBand,
+            open: filters.open,
+            reward: filters.reward,
           }),
         );
       })
