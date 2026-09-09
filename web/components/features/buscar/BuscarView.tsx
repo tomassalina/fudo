@@ -148,16 +148,24 @@ export function BuscarView({
     isAuthenticated,
   };
 
-  // Search bar (+ phone filter trigger) — per the design reference
-  // (docs/design-reference/Fudo Customers.dc.html, the `isList` view) this
-  // lives INSIDE the grid's right column, stacked above the results, not as
-  // a full-width header floating above the [FilterSidebar | content] grid.
-  // Kept as its own JSX chunk (rather than inlined twice) so it can also sit
-  // above DesktopMapSplit unchanged when that view is active —
-  // DesktopMapSplit owns its own self-contained layout and isn't part of
-  // this grid (see its doc comment) — AND so the exact same chunk can be
-  // handed to MapToggleSection as its floating `overlay` while the phone map
-  // is open (`mapOverlay` below), instead of sitting in normal flow above it.
+  // Search bar (+ filter trigger on phone, and on desktop's map view — see
+  // below) — per the design reference (docs/design-reference/Fudo
+  // Customers.dc.html, the `isList` view) this lives INSIDE the grid's right
+  // column, stacked above the results, not as a full-width header floating
+  // above the [FilterSidebar | content] grid. Kept as its own JSX chunk
+  // (rather than inlined twice) so the exact same chunk can be handed to
+  // MapToggleSection as its floating `overlay` while the phone map is open
+  // (`mapOverlay` below), AND to DesktopMapSplit as its own map-column
+  // overlay while the desktop map view is open (`desktopMapOverlay` below),
+  // instead of sitting in normal flow above either.
+  //
+  // The filter TRIGGER (not the search input itself) only renders on phone
+  // OR while the desktop map view is showing: FilterSidebar (the always
+  // visible wide-layout filter column) is what desktop normally relies on,
+  // but DesktopMapSplit replaces that whole [FilterSidebar | grid] pair —
+  // filters need a way back in while it's active, same sheet-based trigger
+  // phone already uses (PhoneFilterSheet works as plain modal UI regardless
+  // of viewport, nothing phone-specific about its own rendering).
   const searchBar = (
     <div className="flex items-center gap-2.5">
       <div className="min-w-0 flex-1">
@@ -169,7 +177,7 @@ export function BuscarView({
           current={current}
         />
       </div>
-      {isPhone ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
+      {isPhone || showDesktopMapSplit ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
     </div>
   );
 
@@ -181,27 +189,14 @@ export function BuscarView({
   // while `hidePhoneListWhileMapping` is true; MapToggleSection itself is a
   // no-op on wide viewports and renders nothing while `showMap` is false, so
   // passing `undefined` the rest of the time keeps this cheap.
-  const mapOverlay = hidePhoneListWhileMapping ? (
-    <>
-      {searchBar}
-      <ResultModeToggle current={current} mode={mode} fullWidth />
-      <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
-    </>
-  ) : null;
+  // Map mode (phone): just the search bar + filter trigger float over the
+  // map — no Lugares/Platos toggle, no diet-tag chips. Filtering by dish
+  // doesn't make sense on a map of places, so both are deliberately omitted
+  // here even though they render in normal list mode above.
+  const mapOverlay = hidePhoneListWhileMapping ? <>{searchBar}</> : null;
 
   return (
     <div className="flex flex-col gap-4">
-      {showDesktopMapSplit ? (
-        // Above DesktopMapSplit there's no result count/sort row to fuse
-        // the toggle into (DesktopMapSplit renders its own "N lugares · Ver
-        // lista" row) and no AI chips (desktop never shows them — see
-        // below), so this header is just the search bar + mode toggle.
-        <div className="flex flex-col gap-4">
-          {searchBar}
-          <ResultModeToggle current={current} mode={mode} />
-        </div>
-      ) : null}
-
       <div
         className="grid items-start gap-7"
         style={
@@ -221,6 +216,7 @@ export function BuscarView({
             countLabel={countLabel}
             onExit={() => handleToggleMap(false)}
             userLocation={coords}
+            mapOverlay={searchBar}
           />
         ) : (
           <>
