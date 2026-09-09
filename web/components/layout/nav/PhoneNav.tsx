@@ -73,9 +73,24 @@ export function PhoneNav() {
             />
           ))}
 
-          {/* Reserves room for the QR button, which overlaps this pill —
-              see the absolutely-positioned button below. */}
-          <span className="w-11" aria-hidden />
+          {/* Reserves room for the QR button, which overlaps this span —
+              centering on this element (rather than the whole pill) keeps
+              the button aligned with the gap even when NAV_LEFT and
+              navRight hold an uneven number of items (e.g. Perfil hidden
+              while logged out), which would otherwise pull the pill's own
+              midpoint off-center and hide the item next to it. */}
+          <span className="relative w-11" aria-hidden>
+            <button
+              type="button"
+              onClick={handleOpenQr}
+              aria-label="Mi código QR"
+              className="absolute left-1/2 top-1/2 flex h-15 w-15 -translate-x-1/2 -translate-y-[58%] items-center justify-center rounded-full bg-gradient-to-b from-cta-from to-cta-to shadow-qr transition-transform duration-200 active:scale-95"
+            >
+              <span className="material-symbols text-2xl text-white">
+                qr_code_scanner
+              </span>
+            </button>
+          </span>
 
           {navRight.map((item) => (
             <TabLink
@@ -84,17 +99,6 @@ export function PhoneNav() {
               active={isActiveHref(pathname, item.href)}
             />
           ))}
-
-          <button
-            type="button"
-            onClick={handleOpenQr}
-            aria-label="Mi código QR"
-            className="absolute left-1/2 top-1/2 flex h-15 w-15 -translate-x-1/2 -translate-y-[58%] items-center justify-center rounded-full bg-gradient-to-b from-cta-from to-cta-to shadow-qr transition-transform duration-200 active:scale-95"
-          >
-            <span className="material-symbols text-2xl text-white">
-              qr_code_scanner
-            </span>
-          </button>
         </div>
       </nav>
 
