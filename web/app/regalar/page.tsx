@@ -61,6 +61,11 @@ export default function RegalarPage() {
                 ? `Enviada a ${gift.recipientPhone}`
                 : "Lista para compartir por WhatsApp"}
             </p>
+            {gift.purchasedGiftId ? (
+              <p className="text-xs text-foreground-faint">
+                Comprobante Nº {gift.purchasedGiftId}
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={gift.resetPurchase}
@@ -79,6 +84,7 @@ export default function RegalarPage() {
             buyLabel={gift.buyLabel}
             canPay={gift.canPay}
             onBuy={gift.buy}
+            error={gift.purchaseError}
           />
         )}
       </FluidContainer>

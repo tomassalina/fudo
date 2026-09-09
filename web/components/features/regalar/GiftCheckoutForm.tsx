@@ -12,6 +12,10 @@ export type GiftCheckoutFormProps = {
   buyLabel: string;
   canPay: boolean;
   onBuy: () => void;
+  /** Backend-provided (or network-fallback) message from the last failed
+   * `POST /api/v1/gifts` — sourced from lib/gift/use-gift-purchase.ts's
+   * `purchaseError`, `null` when there's nothing to show. */
+  error?: string | null;
 };
 
 const fieldClass =
@@ -36,8 +40,15 @@ export function GiftCheckoutForm({
   buyLabel,
   canPay,
   onBuy,
+  error,
 }: GiftCheckoutFormProps) {
   const isPhone = useIsPhoneViewport();
+
+  const errorMessage = error ? (
+    <p role="alert" className="text-[13px] text-accent-light">
+      {error}
+    </p>
+  ) : null;
 
   const buyButton = (
     <button
@@ -77,6 +88,7 @@ export function GiftCheckoutForm({
           placeholder="Mensaje (opcional)"
           className={fieldClass}
         />
+        {errorMessage}
         {buyButton}
       </div>
     );
@@ -115,6 +127,7 @@ export function GiftCheckoutForm({
             {payAmountLabel}
           </span>
         </div>
+        {errorMessage}
         {buyButton}
         <div className="text-[11.5px] text-foreground-faint">
           Se envía por WhatsApp · vence en 12 meses

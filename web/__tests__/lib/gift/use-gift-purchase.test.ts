@@ -1,8 +1,35 @@
-import { describe, expect, it } from "vitest";
-import { act, renderHook } from "@testing-library/react";
-import { useGiftPurchase } from "@/lib/gift/use-gift-purchase";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { ApiError } from "@/lib/api/client";
+
+// use-gift-purchase.ts is now backed by the real `POST /api/v1/gifts`
+// (lib/api/gifts.ts) — these tests mock the API client and the session's
+// `forceLogout`, same pattern as
+// __tests__/lib/favorites/favorites-store.test.ts.
+const { createGiftMock, forceLogoutMock } = vi.hoisted(() => ({
+  createGiftMock: vi.fn(),
+  forceLogoutMock: vi.fn(),
+}));
+
+vi.mock("@/lib/api/gifts", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/gifts")>(
+    "@/lib/api/gifts",
+  );
+  return { ...actual, createGift: createGiftMock };
+});
+
+vi.mock("@/lib/session/session-provider", () => ({
+  forceLogout: forceLogoutMock,
+}));
+
+const { useGiftPurchase } = await import("@/lib/gift/use-gift-purchase");
 
 describe("useGiftPurchase", () => {
+  beforeEach(() => {
+    createGiftMock.mockReset();
+    forceLogoutMock.mockReset();
+  });
+
   it("starts on the Clásica tier with its fixed amount payable", () => {
     const { result } = renderHook(() => useGiftPurchase());
 
@@ -87,23 +114,78 @@ describe("useGiftPurchase", () => {
     expect(result.current.canPay).toBe(true);
   });
 
-  it("does not mark itself purchased when buy() is called while unpayable", () => {
+  it("does not call the API or mark itself purchased when buy() is called while unpayable", async () => {
     const { result } = renderHook(() => useGiftPurchase());
     act(() => result.current.selectTier("custom"));
 
-    act(() => result.current.buy());
+    await act(() => result.current.buy());
+    expect(createGiftMock).not.toHaveBeenCalled();
     expect(result.current.purchased).toBe(false);
   });
 
-  it("marks itself purchased when buy() is called with a payable amount, and resets on resetPurchase()", () => {
+  it("calls POST /api/v1/gifts with the tier's type/amount and marks itself purchased with the real gift id, resetting on resetPurchase()", async () => {
+    createGiftMock.mockResolvedValue({ id: 129, status: "pending" });
     const { result } = renderHook(() => useGiftPurchase());
 
     act(() => result.current.setRecipientPhone("+54 9 11 5555 5555"));
-    act(() => result.current.buy());
+    act(() => result.current.setMessage("Feliz cumple"));
+    await act(() => result.current.buy());
+
+    expect(createGiftMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "classic",
+        amount: 12_000,
+        recipient_phone: "+54 9 11 5555 5555",
+        message: "Feliz cumple",
+      }),
+    );
     expect(result.current.purchased).toBe(true);
+    expect(result.current.purchasedGiftId).toBe(129);
 
     act(() => result.current.resetPurchase());
     expect(result.current.purchased).toBe(false);
+    expect(result.current.purchasedGiftId).toBe(null);
     expect(result.current.recipientPhone).toBe("");
+  });
+
+  it("omits `message` entirely when left blank", async () => {
+    createGiftMock.mockResolvedValue({ id: 1, status: "pending" });
+    const { result } = renderHook(() => useGiftPurchase());
+
+    await act(() => result.current.buy());
+
+    expect(createGiftMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ message: expect.anything() }),
+    );
+  });
+
+  it("surfaces a 422 recipient_phone validation error from the backend", async () => {
+    createGiftMock.mockRejectedValue(
+      new ApiError("API request failed", {
+        status: 422,
+        body: { errors: { recipient_phone: ["can't be blank"] } },
+      }),
+    );
+    const { result } = renderHook(() => useGiftPurchase());
+
+    await act(() => result.current.buy());
+
+    expect(result.current.purchased).toBe(false);
+    expect(result.current.purchaseError).toBe(
+      "Ingresá un teléfono de destinatario válido.",
+    );
+  });
+
+  it("clears the session (forceLogout) instead of showing an inline error on a 401", async () => {
+    createGiftMock.mockRejectedValue(
+      new ApiError("API request failed", { status: 401 }),
+    );
+    const { result } = renderHook(() => useGiftPurchase());
+
+    await act(() => result.current.buy());
+
+    await waitFor(() => expect(forceLogoutMock).toHaveBeenCalledTimes(1));
+    expect(result.current.purchased).toBe(false);
+    expect(result.current.purchaseError).toBe(null);
   });
 });
