@@ -5,17 +5,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/merchant.dart';
 import '../../../data/providers.dart';
+import 'search_utils.dart' show merchantTypeLabel;
 
 /// Home/landing view for the "Buscar" tab (design-brief §2.1): headline,
 /// floating search card with a typewriter-style animated placeholder, and an
 /// optional "CONTINUAR BÚSQUEDA" block surfacing the consumer's last search.
+///
+/// Also reused as-is by the "Inicio" tab (`features/home/home_screen.dart`)
+/// for its hero, mirroring web's home hero
+/// (`components/features/home/HeroSearch.tsx`) — that web component has NO
+/// "continue last search" affordance at all (confirmed by reading it), so
+/// [showContinueSearch] lets a caller opt out of that block without touching
+/// this widget's behavior for whoever else legitimately renders it with the
+/// block on (default `true`, unchanged from before).
 class SearchHomeView extends ConsumerStatefulWidget {
-  const SearchHomeView({required this.onSearch, super.key});
+  const SearchHomeView({
+    required this.onSearch,
+    this.showContinueSearch = true,
+    super.key,
+  });
 
   /// Called with the submitted query text — either typed by the user or the
   /// "continuar búsqueda" shortcut.
   final ValueChanged<String> onSearch;
+
+  /// Whether to render the "CONTINUAR BÚSQUEDA" block when a last search
+  /// exists. See class doc — defaults to `true` so existing callers are
+  /// unaffected.
+  final bool showContinueSearch;
 
   @override
   ConsumerState<SearchHomeView> createState() => _SearchHomeViewState();
@@ -41,6 +60,25 @@ class _SearchHomeViewState extends ConsumerState<SearchHomeView> {
   int _charCount = 0;
   bool _deleting = false;
   Timer? _timer;
+
+  /// Visual-only type filter, matching web's `HeroSearch.tsx` type-filter
+  /// pill (`selectedType`/`TYPE_OPTIONS`, "Cualquiera" = `null`). Not wired
+  /// into `widget.onSearch` (still `String`-only) on purpose: threading it
+  /// through to the real search filters means touching `search_screen.dart`
+  /// / `SearchScreenInitial`, which is out of this widget's scope — see
+  /// `home/home_screen.dart` for where that handoff happens.
+  MerchantType? _selectedType;
+
+  Future<void> _pickType() async {
+    final picked = await showModalBottomSheet<_TypeOption>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      builder: (context) => _TypeSheet(selected: _selectedType),
+    );
+    if (picked != null) {
+      setState(() => _selectedType = picked.value);
+    }
+  }
 
   @override
   void initState() {
@@ -113,61 +151,97 @@ class _SearchHomeViewState extends ConsumerState<SearchHomeView> {
         ? searchHistory.last.queryText
         : null;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text.rich(
-            TextSpan(
-              style: AppTheme.headline,
+    // Web's hero (`HeroSection.tsx`) centers the headline + search card in
+    // the full space left over after chrome instead of pinning it near the
+    // top — `LayoutBuilder` + a `minHeight` constraint reproduces that here
+    // while still allowing the column to scroll on short screens.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Web's `--text-hero-fluid-phone` token: `clamp(25px, 8.4vw, 36px)`.
+        final width = MediaQuery.sizeOf(context).width;
+        final headlineSize = (width * 0.084).clamp(25.0, 36.0);
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (constraints.maxHeight - 64).clamp(0, double.infinity),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const TextSpan(text: 'Encontrá dónde comer.\n'),
-                TextSpan(
-                  text: 'Ganá descuentos',
-                  style: AppTheme.headline.copyWith(
-                    fontStyle: FontStyle.italic,
-                    color: AppTheme.accent,
+                Text.rich(
+                  TextSpan(
+                    // Web: `font-black` (900) + `text-hero-fluid-phone`
+                    // (clamp 25-36px, line-height 1.1) — bigger/bolder than
+                    // the theme's default headline style.
+                    style: AppTheme.headline.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: headlineSize,
+                      height: 1.1,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Encontrá dónde comer.\n'),
+                      TextSpan(
+                        text: 'Ganá descuentos',
+                        style: const TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: AppTheme.accent,
+                        ),
+                      ),
+                      const TextSpan(text: ' por cada visita.'),
+                    ],
                   ),
                 ),
-                const TextSpan(text: ' por cada visita.'),
+                const SizedBox(height: 28),
+                _SearchCard(
+                  controller: _controller,
+                  displayedHint: _displayedHint,
+                  selectedType: _selectedType,
+                  onPickType: _pickType,
+                  onSubmit: _submit,
+                ),
+                if (widget.showContinueSearch && lastQuery != null) ...[
+                  const SizedBox(height: 24),
+                  _ContinueSearchBlock(
+                    query: lastQuery,
+                    onTap: () => widget.onSearch(lastQuery),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          _SearchCard(
-            controller: _controller,
-            displayedHint: _displayedHint,
-            onSubmit: _submit,
-          ),
-          if (lastQuery != null) ...[
-            const SizedBox(height: 24),
-            _ContinueSearchBlock(
-              query: lastQuery,
-              onTap: () => widget.onSearch(lastQuery),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
+/// Two-row search card matching web's `HeroSearch.tsx` phone layout exactly:
+/// row 1 is the full-width search input, row 2 is the type-filter pill
+/// (left) + round orange arrow submit button (right) — NOT the old single
+/// row with an inline magnifying-glass button.
 class _SearchCard extends StatelessWidget {
   const _SearchCard({
     required this.controller,
     required this.displayedHint,
+    required this.selectedType,
+    required this.onPickType,
     required this.onSubmit,
   });
 
   final TextEditingController controller;
   final String displayedHint;
+  final MerchantType? selectedType;
+  final VoidCallback onPickType;
   final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusHeroLarge),
@@ -180,47 +254,149 @@ class _SearchCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                if (controller.text.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: RichText(
-                      maxLines: 1,
-                      overflow: TextOverflow.clip,
-                      text: TextSpan(
-                        style: AppTheme.body.copyWith(
-                          color: AppTheme.textTertiary,
-                        ),
-                        children: [
-                          TextSpan(text: displayedHint),
-                          const TextSpan(text: '|'),
-                        ],
-                      ),
-                    ),
-                  ),
-                TextField(
-                  controller: controller,
-                  style: AppTheme.body,
-                  onSubmitted: (_) => onSubmit(),
-                  decoration: const InputDecoration(
-                    filled: false,
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+          Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              if (controller.text.isEmpty)
+                RichText(
+                  maxLines: 1,
+                  overflow: TextOverflow.clip,
+                  text: TextSpan(
+                    style: AppTheme.body.copyWith(color: AppTheme.textTertiary),
+                    children: [
+                      TextSpan(text: displayedHint),
+                      const TextSpan(text: '|'),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              TextField(
+                controller: controller,
+                style: AppTheme.body,
+                onSubmitted: (_) => onSubmit(),
+                decoration: const InputDecoration(
+                  filled: false,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  isDense: true,
+                ),
+              ),
+            ],
           ),
-          _SubmitButton(onTap: onSubmit),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _TypeFilterPill(selectedType: selectedType, onTap: onPickType),
+              _SubmitButton(onTap: onSubmit),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Type-filter pill (icon + label + chevron) — web: the "Cualquiera"/type
+/// button next to the arrow submit button, same row, below the input.
+class _TypeFilterPill extends StatelessWidget {
+  const _TypeFilterPill({required this.selectedType, required this.onTap});
+
+  final MerchantType? selectedType;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = selectedType == null
+        ? 'Cualquiera'
+        : merchantTypeLabel(selectedType!);
+
+    return Material(
+      color: AppTheme.surfaceSecondary,
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Symbols.storefront, size: 17, color: AppTheme.accent),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTheme.body.copyWith(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(
+                Symbols.expand_more,
+                size: 16,
+                color: AppTheme.textTertiary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One option in `_TypeSheet` — `value == null` is "Cualquiera" (web:
+/// `TYPE_OPTIONS`'s `{ value: null, label: "Cualquiera" }`).
+class _TypeOption {
+  const _TypeOption(this.value, this.label);
+
+  final MerchantType? value;
+  final String label;
+}
+
+/// Bottom sheet listing "Cualquiera" + every [MerchantType], mirroring web's
+/// `HeroSearch.tsx` type-picker `<Sheet>` (`TYPE_OPTIONS`).
+class _TypeSheet extends StatelessWidget {
+  const _TypeSheet({required this.selected});
+
+  final MerchantType? selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [
+      const _TypeOption(null, 'Cualquiera'),
+      for (final type in MerchantType.values)
+        _TypeOption(type, merchantTypeLabel(type)),
+    ];
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tipo de lugar',
+              style: AppTheme.title.copyWith(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            for (final option in options)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(option.label, style: AppTheme.body),
+                trailing: option.value == selected
+                    ? const Icon(
+                        Symbols.check_circle,
+                        color: AppTheme.accent,
+                      )
+                    : null,
+                onTap: () => Navigator.of(context).pop(option),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -253,7 +429,9 @@ class _SubmitButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Symbols.search, color: Colors.white),
+          // Web (phone): round button icon is `arrow_forward`, not a
+          // magnifying glass — `Symbols.search` was the pre-fix mismatch.
+          child: const Icon(Symbols.arrow_forward, color: Colors.white),
         ),
       ),
     );

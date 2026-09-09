@@ -70,7 +70,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             Expanded(
               child: _pendingQuery == null
-                  ? SearchHomeView(onSearch: _submitSearch)
+                  ? SearchHomeView(
+                      onSearch: _submitSearch,
+                      // Web's home hero (`HeroSearch.tsx`) has no "continue
+                      // last search" affordance at all — confirmed by
+                      // reading it. Kept `true` (unchanged) for whoever else
+                      // renders this shared widget with the block on.
+                      showContinueSearch: false,
+                    )
                   : SearchLoadingView(query: _pendingQuery!),
             ),
           ],
