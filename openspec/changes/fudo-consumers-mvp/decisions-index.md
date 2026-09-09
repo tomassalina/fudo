@@ -48,6 +48,8 @@ Nota sobre numeración: `learnings.md` tiene tres números de decisión repetido
 - **15** — El JWT de sesión en web se persiste en `localStorage` (no cookie `httpOnly`), tradeoff aceptado y documentado; en Flutter se usa `flutter_secure_storage`, una postura más fuerte — asimetría intencional entre plataformas. *(`learnings.md`, "Decisión 15")*
 - **16** — Fix: `Consumer#dni` pasa a opcional en el registro, porque el flujo real de carga de DNI es del mozo al cierre de cuenta (implementa `design.md` Decisión 1), no un requisito de autoregistro. *(`learnings.md`, "Decisión 16")*
 - **26** — Fix de bug: `POST /api/v1/search` exigía autenticación por una decisión de diseño previa mal alineada con la regla de negocio real ("la búsqueda es gratis"); se sacó el `before_action` de auth del controller. *(`learnings.md`, "Decisión 26")*
+- **49** — Fix de integridad de datos: `VisitSummary#count`/`#current_tier` dejan de ser client-writable (se computan server-side desde las `Visit` reales), y `Visit#merchant_id`/`#amount` quedan inmutables después de creados — cerraba un hueco real de fraude de fidelización. *(`learnings.md`, "Decisión 49")*
+- **52** — Mobile: la sesión ahora se restaura en cold start desde el token persistido (con confirmación contra el backend, fail-open ante fallas de red), un 401 real desloguea reactivamente en vez de dejar la UI autenticada mostrando errores en silencio, y se limpió el gate de login por-pantalla que quedó inalcanzable tras el gate a nivel `ShellRoute`. *(`learnings.md`, "Decisión 52")*
 
 ## 8. Arquitectura de datos en clientes (mock↔real)
 
@@ -86,6 +88,7 @@ Nota sobre numeración: `learnings.md` tiene tres números de decisión repetido
 - **39 (b)** — Port a Flutter de las Decisiones 35/36: el multi-select en `filters_sheet.dart` ya estaba bien implementado: el bug real era el catálogo de tags (`economico` faltante); se agrega también el badge de conteo por categoría, aunque en web es "solo desktop". *(`learnings.md`, "Decisión 39", segunda aparición — buscar "Port a Flutter de las Decisiones 35/36")*
 - **45** — Wiring de app icon (`flutter_launcher_icons`) y splash screen (`flutter_native_splash`): color de fondo verificado contra el token real del tema, logo pre-escalado manualmente para evitar upscaling, y variante Android 12+ generada. *(`learnings.md`, "Decisión 45")*
 - **46 (a)** — Rebuild del chrome del filter sheet de mobile (título, pill de conteo, tabs con ícono, badge de variante correcta, proporción de botones del footer) para alinearlo con web; el contenido por categoría (lógica de negocio) no se tocó. *(`learnings.md`, "Decisión 46", primera aparición — buscar "Rebuild del filter sheet de mobile")*
+- **50** — 26 de 109 tests de `mobile/` fallando en `main`: 1 bug real de layout (overflow del chip de categoría en `filters_sheet.dart`, fixeado) + 25 fallas que eran la test suite desactualizada contra decisiones de producto ya tomadas (login gate movido a nivel `ShellRoute`, home solo-hero, bottom nav rediseñado), no regresiones nuevas. *(`learnings.md`, "Decisión 50")*
 
 ## 13. Proceso y tooling
 
@@ -98,3 +101,4 @@ Nota sobre numeración: `learnings.md` tiene tres números de decisión repetido
 
 - **44** — Deploy inicial en Dokploy (backend + web + Postgres) vía API real y CI en `.github/workflows/ci.yml`, con 5 aprendizajes específicos de la API de Dokploy (ubicación real de la documentación, validación Zod con campos `nonoptional`, monorepo build path, repo privado en GitHub, y criterio de qué secretos generar vs. dejar como placeholder). *(`learnings.md`, "Decisión 44")*
 - **46 (b)** — CORS del backend deployado: el origen del web permitido se configura vía la env var `CORS_ALLOWED_ORIGINS` (comma-separated), no hardcodeado en `cors.rb`, para no requerir un redeploy de código si el dominio cambia. *(`learnings.md`, "Decisión 46", segunda aparición — buscar "CORS del backend deployado")*
+- **51** — Rack::Attack pasa a usar Solid Cache (modo single-database, sobre el Postgres existente) como store compartido en producción, reemplazando el `Rails.cache` per-proceso no configurado que hacía los throttles de brute-force efectivos solo por proceso, no por flota. *(`learnings.md`, "Decisión 51")*
