@@ -199,23 +199,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Session gate (product-owner request, 2026-09-09): unlike web's
-    // `/buscar` (deliberately public/anonymous, see backend commit
-    // `4dddea0`), Flutter search+filters require a logged-in consumer — a
-    // genuine, intentional cross-platform divergence for this MVP, not a
-    // bug to reconcile with web later (see
-    // `openspec/changes/fudo-consumers-mvp/learnings.md`). Reuses the exact
-    // same mechanism/pattern as `features/gifting/gifting_screen.dart`'s
-    // `_LoginRequiredCard`: watch [isLoggedInProvider], replace the gated
-    // UI with a login prompt whose CTA goes to `AppRoutes.myPlaces` (the
-    // screen with the embedded login form) instead of inventing a new gate.
-    final isLoggedIn = ref.watch(isLoggedInProvider);
-    if (!isLoggedIn) {
-      return _SearchLoginRequiredView(
-        onLoginTap: () => context.go(AppRoutes.myPlaces),
-      );
-    }
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       // `bottom: false` (fix, 2026-09-09, product-reported — third time
@@ -382,86 +365,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ],
           ),
         },
-      ),
-    );
-  }
-}
-
-/// "Iniciá sesión para buscar" gate — shown instead of the whole search UI
-/// while [isLoggedInProvider] is `false` (see the session-gate comment on
-/// [_SearchScreenState.build]). Same visual language and CTA target
-/// (`AppRoutes.myPlaces`, where the embedded login form lives) as
-/// `features/gifting/gifting_screen.dart`'s `_LoginRequiredCard`; unlike
-/// that one, this replaces the *entire* screen body instead of just a
-/// section, because — unlike "Regalar" — there is no logged-out-friendly
-/// content to keep showing on this tab (search+filters are fully gated per
-/// the product owner's explicit request).
-class _SearchLoginRequiredView extends StatelessWidget {
-  const _SearchLoginRequiredView({required this.onLoginTap});
-
-  final VoidCallback onLoginTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                border: Border.all(
-                  color: AppTheme.accent.withValues(alpha: 0.32),
-                ),
-                borderRadius: BorderRadius.circular(AppTheme.radiusHero),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.priceChipBackground,
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: const Icon(
-                        Symbols.lock,
-                        color: AppTheme.accent,
-                        size: 21,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Iniciá sesión para buscar',
-                      style: AppTheme.title.copyWith(fontSize: 17),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Para buscar restaurantes y platos, y usar los '
-                      'filtros, necesitás una cuenta.',
-                      style: AppTheme.bodySecondary,
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        key: const ValueKey('searchLoginRequiredButton'),
-                        onPressed: onLoginTap,
-                        child: const Text('Iniciar sesión'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

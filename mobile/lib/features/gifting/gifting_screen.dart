@@ -7,11 +7,9 @@ import 'package:flutter/material.dart';
 // `features/my_places/my_places_screen.dart` does, even though this file
 // doesn't need the domain model directly (keeps the convention consistent).
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
-import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/formatting/currency_format.dart';
-import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/connection_mode.dart';
 import '../../data/models/gift.dart';
@@ -31,19 +29,14 @@ import '../../data/providers.dart';
 /// flow. On failure, the success overlay is never shown and the form is
 /// never reset.
 ///
-/// Session gate (`docs/flutter-vs-nextjs-gap-report.md`, Tarea 4): anyone
-/// can still browse the tier tiles, but the checkout fields (recipient
-/// phone, message, CTA) are replaced by [_LoginRequiredCard] while
-/// [isLoggedInProvider] is `false` — analogous to
-/// `web/components/features/regalar/LoginRequiredCard.tsx`, which gates the
-/// same way on `useSession().isAuthenticated`.
-///
-/// Decision (documented per the task's explicit "opcional, usá criterio"):
-/// login stays embedded in `MyPlacesScreen` for now instead of getting its
-/// own route — lower risk, smaller scope. So [_LoginRequiredCard]'s CTA
-/// navigates to the "Mis Lugares"/Perfil tab (`AppRoutes.myPlaces`), which
-/// shows that embedded login form, instead of a dedicated `/login` route
-/// the web reference links to (`/perfil`).
+/// Session gate: this screen used to carry its own
+/// `isLoggedInProvider`-based login-required card (`docs/
+/// flutter-vs-nextjs-gap-report.md`, Tarea 4) — removed once confirmed
+/// unreachable now that `core/router/app_router.dart`'s `ShellRoute` gates
+/// the entire shell before this screen can even build while logged out
+/// (see that router's doc comment). A logged-out visitor never reaches
+/// this widget at all anymore; it can safely assume it's always rendered
+/// for a logged-in consumer.
 class GiftingScreen extends ConsumerStatefulWidget {
   const GiftingScreen({super.key});
 
@@ -251,8 +244,6 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = ref.watch(isLoggedInProvider);
-
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -335,120 +326,51 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen>
                   range: _selectedType.customAmountRange!,
                 ),
               ],
-              if (!isLoggedIn) ...[
-                const SizedBox(height: 22),
-                _LoginRequiredCard(
-                  key: const ValueKey('giftLoginRequiredCard'),
-                  onLoginTap: () => context.go(AppRoutes.myPlaces),
+              const SizedBox(height: 28),
+              _SectionLabel('PARA QUIÉN'),
+              const SizedBox(height: 12),
+              TextField(
+                key: const ValueKey('giftPhoneField'),
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                style: AppTheme.body,
+                decoration: const InputDecoration(
+                  labelText: 'Teléfono del destinatario',
+                  hintText: '+54 9 11 1234 5678',
+                  prefixIcon: Icon(Symbols.smartphone),
                 ),
-              ] else ...[
-                const SizedBox(height: 28),
-                _SectionLabel('PARA QUIÉN'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _messageController,
+                minLines: 2,
+                maxLines: 3,
+                style: AppTheme.body,
+                decoration: const InputDecoration(
+                  labelText: 'Mensaje (opcional)',
+                  hintText: 'Escribí una dedicatoria corta…',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 28),
+              _GiftCtaButton(
+                key: const ValueKey('giftCtaButton'),
+                label: _isSubmitting ? 'Enviando…' : _ctaLabel,
+                enabled: _canSubmit,
+                onTap: _handleSubmit,
+                sheen: _sheenController,
+              ),
+              if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
-                TextField(
-                  key: const ValueKey('giftPhoneField'),
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  style: AppTheme.body,
-                  decoration: const InputDecoration(
-                    labelText: 'Teléfono del destinatario',
-                    hintText: '+54 9 11 1234 5678',
-                    prefixIcon: Icon(Symbols.smartphone),
-                  ),
+                Text(
+                  _errorMessage!,
+                  key: const ValueKey('giftErrorMessage'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _messageController,
-                  minLines: 2,
-                  maxLines: 3,
-                  style: AppTheme.body,
-                  decoration: const InputDecoration(
-                    labelText: 'Mensaje (opcional)',
-                    hintText: 'Escribí una dedicatoria corta…',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                _GiftCtaButton(
-                  key: const ValueKey('giftCtaButton'),
-                  label: _isSubmitting ? 'Enviando…' : _ctaLabel,
-                  enabled: _canSubmit,
-                  onTap: _handleSubmit,
-                  sheen: _sheenController,
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _errorMessage!,
-                    key: const ValueKey('giftErrorMessage'),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// "Iniciá sesión para comprar" gate — analogous to
-/// `web/components/features/regalar/LoginRequiredCard.tsx`. Replaces the
-/// checkout fields (phone/message/CTA) while [isLoggedInProvider] is
-/// `false`; the tier tiles above stay visible either way, matching the web
-/// reference's "anyone can browse, buying needs a session" behavior.
-class _LoginRequiredCard extends StatelessWidget {
-  const _LoginRequiredCard({super.key, required this.onLoginTap});
-
-  final VoidCallback onLoginTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.32)),
-        borderRadius: BorderRadius.circular(AppTheme.radiusHero),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.priceChipBackground,
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: const Icon(Symbols.lock, color: AppTheme.accent, size: 21),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Iniciá sesión para comprar',
-              style: AppTheme.title.copyWith(fontSize: 17),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Podés ver todas las tarjetas y sus beneficios. Para enviar '
-              'una gift card necesitás una cuenta.',
-              style: AppTheme.bodySecondary,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const ValueKey('giftLoginRequiredButton'),
-                onPressed: onLoginTap,
-                child: const Text('Iniciar sesión'),
-              ),
-            ),
-          ],
         ),
       ),
     );

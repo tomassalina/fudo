@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../core/auth/token_storage.dart';
@@ -149,24 +151,28 @@ class AuthRepository {
       );
     }
     await _tokenStorage.saveToken(token);
-    _storeConsumerSnapshot(
+    await _storeConsumerSnapshot(
       data?['consumer'] as Map<String, dynamic>?,
       hasDniOnFile: hasDniOnFile,
     );
   }
 
   /// Builds a [Consumer] from the partial `consumer` object embedded in a
-  /// login/register response (missing `has_dni_on_file`, see class doc) and
-  /// stores it on [_consumerSession]. A no-op if [_consumerSession] wasn't
-  /// provided, or if [consumerJson] is somehow missing despite a 2xx
-  /// response (defensive — not expected per the confirmed contract).
-  void _storeConsumerSnapshot(
+  /// login/register response (missing `has_dni_on_file`, see class doc),
+  /// stores it on [_consumerSession] (in-memory, for [RemoteDataSource]'s
+  /// `getCurrentConsumer()` this session), and persists it to
+  /// [_tokenStorage] alongside the token (for [restoreSession] on a future
+  /// cold start). The disk write happens regardless of whether
+  /// [_consumerSession] was provided — the two are independent concerns,
+  /// unlike before this method also persisted to disk. A no-op if
+  /// [consumerJson] is somehow missing despite a 2xx response (defensive —
+  /// not expected per the confirmed contract).
+  Future<void> _storeConsumerSnapshot(
     Map<String, dynamic>? consumerJson, {
     required bool hasDniOnFile,
-  }) {
-    final session = _consumerSession;
-    if (session == null || consumerJson == null) return;
-    session.consumer = Consumer(
+  }) async {
+    if (consumerJson == null) return;
+    final consumer = Consumer(
       id: consumerJson['id'] as String,
       firstName: consumerJson['first_name'] as String,
       lastName: consumerJson['last_name'] as String,
@@ -180,14 +186,66 @@ class AuthRepository {
       // (backend `1cdb20e`) means that assumption no longer holds there.
       hasDniOnFile: hasDniOnFile,
     );
+    _consumerSession?.consumer = consumer;
+    await _tokenStorage.saveConsumerJson(jsonEncode(consumer.toJson()));
   }
 
-  /// Clears the locally stored token and the in-memory consumer snapshot.
+  /// Attempts to restore a session persisted by a previous
+  /// [login]/[register] call — used on cold start so a durable login
+  /// survives an app relaunch instead of forcing the user to log in again
+  /// every time (see `data/providers.dart`'s `sessionRestoreProvider`,
+  /// the only real caller).
+  ///
+  /// This is a purely **local** operation: it loads whatever
+  /// [TokenStorage] has on disk into [_consumerSession] and returns
+  /// whether there was a complete session to restore. It does NOT validate
+  /// the token against the backend — the real API has no dedicated
+  /// "who am I"/token-validation endpoint (see
+  /// `RemoteDataSource.getCurrentConsumer()`'s doc), so callers that need
+  /// that confirmation make a real authenticated request of their own and
+  /// call [logout] if it comes back `401` (`sessionRestoreProvider` does
+  /// exactly this).
+  ///
+  /// Returns `false` (and leaves nothing behind, clearing via
+  /// [TokenStorage.clearSession] if a half-session was found) when:
+  /// - there is no persisted token at all, or
+  /// - a token exists but its consumer snapshot is missing or fails to
+  ///   parse — shouldn't happen, since [_storeConsumerSnapshot] always
+  ///   writes both together, but local storage can end up partially
+  ///   cleared/corrupted, and restoring a token with no profile behind it
+  ///   would crash the first screen that reads `currentConsumerProvider`
+  ///   (see `RemoteDataSource.getCurrentConsumer()`'s `StateError`).
+  Future<bool> restoreSession() async {
+    final token = await _tokenStorage.readToken();
+    if (token == null) return false;
+
+    final consumerJson = await _tokenStorage.readConsumerJson();
+    if (consumerJson == null) {
+      await _tokenStorage.clearSession();
+      return false;
+    }
+
+    try {
+      final consumer = Consumer.fromJson(
+        jsonDecode(consumerJson) as Map<String, dynamic>,
+      );
+      _consumerSession?.consumer = consumer;
+      return true;
+    } catch (_) {
+      // Corrupted/unexpected local data — fail closed (logged out) rather
+      // than crash on a malformed cached snapshot.
+      await _tokenStorage.clearSession();
+      return false;
+    }
+  }
+
+  /// Clears the locally stored token+consumer snapshot
+  /// ([TokenStorage.clearSession]) and the in-memory consumer snapshot.
   /// Does not call any backend endpoint — there is no server-side
   /// session-invalidation endpoint (e.g. `DELETE /sessions`) in the
   /// confirmed API, so this is local-only for now.
   Future<void> logout() async {
-    await _tokenStorage.clearToken();
+    await _tokenStorage.clearSession();
     _consumerSession?.consumer = null;
   }
 }

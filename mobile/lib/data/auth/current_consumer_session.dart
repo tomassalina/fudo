@@ -14,11 +14,13 @@ import '../models/consumer.dart';
 /// [RemoteDataSource.getCurrentConsumer] reads it back instead of hitting a
 /// nonexistent endpoint.
 ///
-/// Deliberately **session-scoped, not persisted**: a fresh app launch (even
-/// with a still-valid token in [TokenStorage]) starts with [consumer] as
-/// `null` until the user logs in again in that process — there is no
-/// "restore session on cold start" flow wired up yet, consistent with there
-/// being no login screen in the app today.
+/// This in-memory field itself always starts `null` on a fresh app launch —
+/// but it doesn't necessarily stay that way: `data/providers.dart`'s
+/// `sessionRestoreProvider` runs once at startup and, if [TokenStorage] has
+/// a durable token+consumer snapshot from a previous run, calls
+/// [AuthRepository.restoreSession] to repopulate [consumer] here before the
+/// UI's first real paint (see that provider's doc, and
+/// `core/router/app_router.dart`'s loading gate while it resolves).
 class CurrentConsumerSession {
   /// The logged-in consumer, or `null` if nobody has logged in yet this app
   /// session.

@@ -66,7 +66,38 @@ final connectionModeProvider = Provider<ConnectionMode>((ref) => connectionMode)
 /// `core/config/dio_client.dart`. Only exercised when [connectionMode] is
 /// [ConnectionMode.remote] — `features/my_places/my_places_screen.dart` is
 /// the real caller of [authRepositoryProvider] in that mode.
-final dioProvider = Provider<Dio>((ref) => DioClient.create());
+///
+/// [DioClient.create]'s `onUnauthorized` hook is wired here (not inside
+/// `dio_client.dart` itself, which stays Riverpod-free) to react to a real
+/// `401` the same way `features/my_places/my_places_screen.dart`'s
+/// "Cerrar sesión" button already does: clear the in-memory
+/// [currentConsumerSessionProvider] snapshot, then flip [isLoggedInProvider]
+/// to `false` so the `ShellRoute`-level auth gate
+/// (`core/router/app_router.dart`) reactively redirects to the login screen
+/// — no direct navigation call needed here, the router is already watching
+/// [isLoggedInProvider]. Clearing the PERSISTED token/consumer snapshot is
+/// `dio_client.dart`'s own job on every `401` regardless of caller (see
+/// [TokenStorage.clearSession]), not repeated here.
+///
+/// Deliberately does NOT call `ref.read(authRepositoryProvider).logout()`
+/// here even though that would look like the more obvious reuse of the
+/// existing "Cerrar sesión" code path: [authRepositoryProvider] itself
+/// `ref.watch`es this provider to build its [Dio], and reading it back from
+/// inside THIS provider's own `onUnauthorized` closure — invoked later,
+/// from inside a request's error interceptor, not during this provider's
+/// build — was confirmed live (a throwaway debug run) to throw Riverpod's
+/// `CircularDependencyError` at that read, not a build-time analyzer
+/// error. Reaching into [currentConsumerSessionProvider] directly instead
+/// avoids the cycle entirely, since that provider has no dependency on this
+/// one.
+final dioProvider = Provider<Dio>((ref) {
+  return DioClient.create(
+    onUnauthorized: () {
+      ref.read(currentConsumerSessionProvider).consumer = null;
+      ref.read(isLoggedInProvider.notifier).logOut();
+    },
+  );
+});
 
 /// Single [CurrentConsumerSession] instance shared between
 /// [authRepositoryProvider] (which writes to it after a successful login)
@@ -333,26 +364,31 @@ final favoriteIdsProvider = NotifierProvider<FavoriteIdsNotifier, Set<int>>(
   FavoriteIdsNotifier.new,
 );
 
-/// Whether the user is "logged in" — the UI flag that switches between the
-/// login form and the profile view.
+/// Whether the user is "logged in" — the UI flag the `ShellRoute`-level auth
+/// gate (`core/router/app_router.dart`) switches the whole shell on, between
+/// the login form ([MyPlacesScreen]'s `_LoggedOutView`) and the real 4-tab
+/// nav.
 ///
 /// Extracted from `features/my_places/my_places_screen.dart` (formerly a
 /// private `_isLoggedInProvider` local to that screen — see
 /// `docs/flutter-vs-nextjs-gap-report.md`, Tarea 4) so any screen can gate
-/// itself on session state, not just `MyPlacesScreen`. `features/gifting/
-/// gifting_screen.dart` is the first other consumer: it shows a "Iniciá
-/// sesión para comprar" block instead of the purchase form while this is
-/// `false`.
+/// itself on session state, not just `MyPlacesScreen`.
 ///
 /// In [ConnectionMode.local] (the default), tapping "Iniciar sesión" flips
 /// this to `true` instantly regardless of what (if anything) was typed into
 /// the email/password fields — there is no backend to validate against,
-/// matching the original prototype's `login()` handler exactly.
+/// matching the original prototype's `login()` handler exactly. There is
+/// also nothing to restore on a cold start in this mode — see
+/// [sessionRestoreProvider].
 ///
 /// In [ConnectionMode.remote], `MyPlacesScreen`'s login form and
 /// `features/auth/register_screen.dart` only call [logIn] after
 /// `AuthRepository.login()`/`.register()` actually succeed against the real
-/// backend.
+/// backend. [build] itself always starts `false` on every provider
+/// (re)build — [sessionRestoreProvider] is what may flip it to `true` again
+/// shortly after, from a durably persisted session, before the gated shell
+/// first paints. [logOut] is also called reactively on a real `401` — see
+/// [dioProvider]'s doc.
 class IsLoggedInNotifier extends Notifier<bool> {
   @override
   bool build() => false;
@@ -366,3 +402,71 @@ class IsLoggedInNotifier extends Notifier<bool> {
 final isLoggedInProvider = NotifierProvider<IsLoggedInNotifier, bool>(
   IsLoggedInNotifier.new,
 );
+
+/// Restores a durably-persisted session on cold start, so a real login
+/// (`AuthRepository.login()`/`.register()`, [ConnectionMode.remote] only)
+/// actually survives an app relaunch instead of silently resetting to
+/// logged-out every time despite the JWT still being valid in
+/// `TokenStorage` — see that class's doc and
+/// `data/auth/current_consumer_session.dart`'s doc for the full picture of
+/// what was missing before this provider existed.
+///
+/// Watched exactly once, at the top of the widget tree
+/// (`core/router/app_router.dart`'s `ShellRoute` builder, before it reads
+/// [isLoggedInProvider] to decide what to show) so the app can render a
+/// loading state while this resolves instead of flashing the logged-out
+/// login screen and then flipping to logged-in a moment later.
+///
+/// A no-op in [ConnectionMode.local] — that mode's fake login
+/// ([IsLoggedInNotifier.logIn], called directly by
+/// `my_places_screen.dart`'s `_onLoginPressed`) never touches
+/// [TokenStorage] at all, so there is nothing durable to restore, and this
+/// resolves immediately without touching secure storage or the network.
+///
+/// In [ConnectionMode.remote]:
+/// 1. [AuthRepository.restoreSession] loads whatever [TokenStorage] has on
+///    disk (token + consumer snapshot) into [currentConsumerSessionProvider]
+///    — a purely local operation, see that method's doc.
+/// 2. If there was nothing to restore, this is done — [isLoggedInProvider]
+///    stays at its default `false`.
+/// 3. Otherwise, the loaded token is confirmed against the real backend
+///    with one authenticated request
+///    (`RemoteDataSource.getConsumerSettings()`, the cheapest existing
+///    authenticated call — there is no dedicated token-validation/"who am
+///    I" endpoint, see `RemoteDataSource.getCurrentConsumer()`'s doc). A
+///    confirmed `401` (the token is genuinely invalid/expired) clears the
+///    whole session via [AuthRepository.logout] and leaves
+///    [isLoggedInProvider] `false` — the same "fail closed" outcome
+///    [dioProvider]'s `onUnauthorized` hook produces for a `401` hit mid
+///    -session, deliberately reusing it here via the same
+///    `getConsumerSettings()` call going through [dioProvider]'s
+///    interceptor rather than duplicating that cleanup.
+/// 4. Any OTHER failure (offline, timeout, 5xx, …) does not actually prove
+///    the token is invalid — this deliberately does NOT log the user out
+///    just because the validation request itself couldn't complete; it
+///    trusts the locally cached session instead. The rest of the app
+///    already handles a real request failing per-screen once further in
+///    (e.g. `my_places_screen.dart`'s `NetworkErrorView` on
+///    `currentConsumerProvider`), so a flaky/offline cold start ends up
+///    showing the cached profile with per-section error states, not a
+///    surprise forced logout.
+final sessionRestoreProvider = FutureProvider<void>((ref) async {
+  if (ref.watch(connectionModeProvider) != ConnectionMode.remote) return;
+
+  final authRepository = ref.watch(authRepositoryProvider);
+  final hasPersistedSession = await authRepository.restoreSession();
+  if (!hasPersistedSession) return;
+
+  try {
+    await ref.read(dataSourceProvider).getConsumerSettings();
+  } on DioException catch (error) {
+    if (error.response?.statusCode == 401) {
+      await authRepository.logout();
+      return;
+    }
+    // Fall through to logIn() below — see point 4 above.
+  } catch (_) {
+    // Same reasoning as the non-401 DioException case above.
+  }
+  ref.read(isLoggedInProvider.notifier).logIn();
+});

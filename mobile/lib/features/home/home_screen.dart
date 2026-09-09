@@ -34,10 +34,11 @@ import 'widgets/home_header.dart';
 /// flow, then hands the resolved filters off to [SearchScreen] via
 /// `go_router`'s `extra` (see `core/router/app_router.dart`). Public call —
 /// no login required to submit it, matching the backend's own public/
-/// unauthenticated rule for `POST /api/v1/search` — the search SCREEN
-/// itself still applies its own existing login gate once we land there
-/// (`features/search/search_screen.dart`'s `isLoggedInProvider` check),
-/// unaffected by this change.
+/// unauthenticated rule for `POST /api/v1/search`. The `ShellRoute`-level
+/// auth gate (`core/router/app_router.dart`) is what actually decides
+/// whether an unauthenticated consumer reaches this screen at all — there
+/// is no separate per-screen login gate here or in
+/// `features/search/search_screen.dart` anymore.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({required this.onOpenMerchant, super.key});
 

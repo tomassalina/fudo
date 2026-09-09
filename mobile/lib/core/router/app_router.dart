@@ -11,6 +11,7 @@ import '../../features/search/restaurant_detail_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../features/search/widgets/search_utils.dart';
 import '../../shared/widgets/main_shell.dart';
+import '../theme/app_theme.dart';
 
 /// Bottom nav tab order: Inicio (0), Buscar (1), Mis Lugares (2), Regalar
 /// (3).
@@ -49,18 +50,33 @@ final GoRouter appRouter = GoRouter(
   routes: [
     ShellRoute(
       // Gate the ENTIRE shell chrome behind auth, not just the routed child
-      // (unlike search's existing per-screen gate, see
-      // `features/search/search_screen.dart` Decisión 37). A logged-out
-      // visitor must see no bottom nav at all — only the login screen — so
-      // this `Consumer` decides, reactively on [isLoggedInProvider], whether
-      // to mount [MainShell] (with the 5-tab nav) or bypass it entirely and
-      // render the login form directly. [MyPlacesScreen] already renders
-      // just that form (via its own `_LoggedOutView`, no [MainShell]
-      // wrapper) when logged out — see commits `129f95b`/`25d2313` — so it's
-      // reused here instead of duplicating the login UI.
+      // (search and gifting used to each have their own redundant
+      // per-screen gate too — see `features/search/search_screen.dart`'s
+      // and `features/gifting/gifting_screen.dart`'s history, removed once
+      // confirmed unreachable through this router). A logged-out visitor
+      // must see no bottom nav at all — only the login
+      // screen — so this `Consumer` decides, reactively on
+      // [isLoggedInProvider], whether to mount [MainShell] (with the 5-tab
+      // nav) or bypass it entirely and render the login form directly.
+      // [MyPlacesScreen] already renders just that form (via its own
+      // `_LoggedOutView`, no [MainShell] wrapper) when logged out — see
+      // commits `129f95b`/`25d2313` — so it's reused here instead of
+      // duplicating the login UI.
+      //
+      // [sessionRestoreProvider] is watched FIRST, before
+      // [isLoggedInProvider]: it may flip that flag to `true` from a
+      // durably persisted session shortly after app launch (see its doc),
+      // and this loading branch is what keeps that from flashing the login
+      // screen for a frame and then flipping to the real shell — the
+      // "don't flash a logged-out UI then flip to logged-in" requirement
+      // from that provider's doc.
       builder: (context, state, child) {
         return Consumer(
           builder: (context, ref, _) {
+            final sessionRestore = ref.watch(sessionRestoreProvider);
+            if (sessionRestore.isLoading) {
+              return const _SessionRestoreSplash();
+            }
             final isLoggedIn = ref.watch(isLoggedInProvider);
             if (!isLoggedIn) {
               return const MyPlacesScreen();
@@ -141,5 +157,25 @@ String _locationForIndex(int index) {
     case 0:
     default:
       return AppRoutes.home;
+  }
+}
+
+/// Shown in place of the whole shell (no bottom nav, matching the
+/// logged-out [MyPlacesScreen] branch) while [sessionRestoreProvider]
+/// resolves — see that provider's doc and this file's `ShellRoute` builder
+/// comment for why this exists. Same loading-state visual language as
+/// `features/my_places/my_places_screen.dart`'s `_ProfileHeader` loading
+/// branch (a centered [CircularProgressIndicator] on [AppTheme.background]).
+class _SessionRestoreSplash extends StatelessWidget {
+  const _SessionRestoreSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Center(
+        child: CircularProgressIndicator(color: AppTheme.accent),
+      ),
+    );
   }
 }
