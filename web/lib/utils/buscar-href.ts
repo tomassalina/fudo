@@ -15,6 +15,12 @@ export interface BuscarParams {
   price: string;
   hood: string;
   dist: string;
+  /** "" (default, no filter) or "now" — the phone filter sheet's
+   * "Disponibilidad" row. Checked against each merchant's real business
+   * hours (see app/buscar/page.tsx's getOpenNowMerchantIds), same
+   * `getOpenStatus` derivation the merchant detail page's "Abierto ahora"
+   * pill already relies on (lib/hooks/use-open-status.ts). */
+  open: string;
   sort: string;
   hideVisited: string;
   /**
@@ -39,6 +45,7 @@ export const DEFAULT_BUSCAR_PARAMS: BuscarParams = {
   price: "",
   hood: "",
   dist: "",
+  open: "",
   sort: "",
   hideVisited: "",
   lat: "",
@@ -54,6 +61,7 @@ const FIELD_ORDER: (keyof BuscarParams)[] = [
   "price",
   "hood",
   "dist",
+  "open",
   "sort",
   "hideVisited",
   "lat",
@@ -95,6 +103,7 @@ export function countActiveFilters(current: BuscarParams): number {
   if (current.price) count += 1;
   if (current.hood) count += 1;
   if (current.dist) count += 1;
+  if (current.open === "now") count += 1;
   if (current.hideVisited === "1") count += 1;
   return count;
 }

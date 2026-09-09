@@ -36,6 +36,11 @@ import { BuscarView } from "@/components/features/buscar/BuscarView";
 import type { ResultMode } from "@/components/features/buscar/ResultModeToggle";
 import { getDishSearchResults } from "@/lib/data/menu-items";
 import { searchMerchants } from "@/lib/data/search";
+import {
+  getBusinessHoursForMerchant,
+  getOpenStatus,
+  groupBusinessHoursByDay,
+} from "@/lib/data/business-hours";
 import { getMockVisitCount } from "@/lib/mock/loyalty";
 import { MERCHANT_TYPES_IN_USE, TAGS_IN_USE } from "@/lib/mock/merchants";
 import type { Merchant, MerchantType } from "@/lib/types";
@@ -125,10 +130,36 @@ function withDistances(
   });
 }
 
-function applyExtraFilters(
+/**
+ * Real-time "abierto ahora" check for the filter sheet's "Disponibilidad"
+ * row — reuses the same business-hours lookup + `getOpenStatus` derivation
+ * the merchant detail page's "Abierto ahora" pill already relies on
+ * (lib/hooks/use-open-status.ts), just run across a whole result set
+ * server-side instead of one merchant at a time client-side. Only ever
+ * called when the filter is actually active (see `applyExtraFilters`) so a
+ * plain /buscar request doesn't pay for N business-hours lookups it doesn't
+ * need.
+ */
+async function getOpenNowMerchantIds(merchants: Merchant[]): Promise<Set<number>> {
+  const now = new Date();
+  const openFlags = await Promise.all(
+    merchants.map(async (merchant) => {
+      const hours = await getBusinessHoursForMerchant(merchant.id);
+      const weekHours = groupBusinessHoursByDay(hours);
+      return getOpenStatus(weekHours, now).isOpen;
+    }),
+  );
+  const ids = new Set<number>();
+  merchants.forEach((merchant, index) => {
+    if (openFlags[index]) ids.add(merchant.id);
+  });
+  return ids;
+}
+
+async function applyExtraFilters(
   merchants: Merchant[],
   params: BuscarParams,
-): Merchant[] {
+): Promise<Merchant[]> {
   let out = merchants;
 
   // Real query param in API mode (see searchMerchants call below, which
@@ -154,6 +185,11 @@ function applyExtraFilters(
     if (Number.isFinite(km)) {
       out = out.filter((merchant) => merchant.distanceKm <= km);
     }
+  }
+
+  if (params.open === "now") {
+    const openIds = await getOpenNowMerchantIds(out);
+    out = out.filter((merchant) => openIds.has(merchant.id));
   }
 
   // Cosmetic-only gate: the checkbox that sets this param is only rendered
@@ -204,6 +240,7 @@ export default async function BuscarPage({
     price: firstString(rawParams.price),
     hood: firstString(rawParams.hood),
     dist: firstString(rawParams.dist),
+    open: firstString(rawParams.open) === "now" ? "now" : "",
     sort: firstString(rawParams.sort),
     hideVisited: firstString(rawParams.hideVisited) === "1" ? "1" : "",
     lat: origin ? rawLat : "",
@@ -220,6 +257,7 @@ export default async function BuscarPage({
     Boolean(current.price) ||
     Boolean(current.hood) ||
     Boolean(current.dist) ||
+    current.open === "now" ||
     current.hideVisited === "1";
 
   // Fetched without `neighborhood` so the hood dropdown always lists every
@@ -245,7 +283,7 @@ export default async function BuscarPage({
     : availabilityResults;
 
   const baseResults = withDistances(scopedResults, origin);
-  const merchants = applyExtraFilters(baseResults, current);
+  const merchants = await applyExtraFilters(baseResults, current);
   const availableHoods = Array.from(
     new Set(
       availabilityResults
@@ -306,6 +344,7 @@ export default async function BuscarPage({
           price: null,
           hood: null,
           dist: null,
+          open: null,
           hideVisited: null,
         })}
       />

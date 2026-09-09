@@ -54,6 +54,7 @@ export function FilterSidebar({
           price: null,
           hood: null,
           dist: null,
+          open: null,
           hideVisited: null,
         })}
         scroll={false}

@@ -27,6 +27,7 @@ export {
   DAY_LABELS_SHORT,
   buildOpeningHoursSpecification,
   formatDayHours,
+  getOpenStatus,
   groupBusinessHoursByDay,
 } from "@/lib/mock/business-hours";
-export type { DayHours } from "@/lib/mock/business-hours";
+export type { DayHours, OpenStatus } from "@/lib/mock/business-hours";
