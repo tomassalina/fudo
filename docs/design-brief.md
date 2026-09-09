@@ -1,6 +1,6 @@
 # Design Brief — Fudo Consumers Mobile
 
-Fuente: `docs/design-reference/Fudo App.dc.html` (canvas interactivo tipo Claude Design) + `docs/design-reference/support.js`, contrastado contra el scaffold real en `mobile/lib/`, `PRD.md`, `PLAN.md`, `RAMBLING.md` y el schema real en `backend/db/structure.sql`.
+Fuente: `docs/design-reference/Fudo App.dc.html` (canvas interactivo tipo Claude Design) + `docs/design-reference/support.js`, contrastado contra el scaffold real en `mobile/lib/`, `PRD.md`, `PLAN.md` y el schema real en `backend/db/structure.sql`.
 
 > Nota de ruta: la exploración original de este brief se hizo sobre una carpeta `design-reference/` en la raíz del repo. Durante la tarea, un merge (`git merge --ff-only main`) trajo la ubicación definitiva de estos archivos bajo `docs/design-reference/` (contenido idéntico en `Fudo App.dc.html` y `support.js`) y eliminó el duplicado de la raíz. Todas las referencias de este documento usan ya la ruta definitiva. El merge también trajo dos archivos más en esa carpeta que **no son parte del diseño visual** (`deck-stage.js` y `fudo-design-seed.json`) — ver sección 1.5 para el segundo, que sí es relevante para el backlog de datos.
 
@@ -141,7 +141,7 @@ Gap adicional detectado acá: `merchant_type_enum` tiene un 8vo valor, `other`, 
 
 ### 2.1 Home / landing de búsqueda (`view: home`, `tab: inicio`)
 - Fondo con glow radial naranja + partículas decorativas, status bar simulada, logo Fudo + botón de ubicación.
-- Headline: **"Encontrá dónde comer."** / **"Ganá descuentos por cada visita."** (segunda línea con "Ganá descuentos" en itálica naranja) — coincide textual con la frase ya definida en `RAMBLING.md`.
+- Headline: **"Encontrá dónde comer."** / **"Ganá descuentos por cada visita."** (segunda línea con "Ganá descuentos" en itálica naranja) — es la frase principal ya definida para el producto.
 - Card de búsqueda flotante con placeholder animado tipo typewriter que rota por `HINTS`: *"Algo picante y barato cerca mío"*, *"Café tranquilo para laburar en Palermo"*, *"Parrilla para ir con amigos esta noche"*, *"Opción sin TACC para almorzar"*, *"Sushi que no sea carísimo"*.
 - Selector de tipo de búsqueda + botón circular de submit.
 - Bloque opcional **"CONTINUAR BÚSQUEDA"** con la última query, si existe.
@@ -172,7 +172,7 @@ Gap adicional detectado acá: `merchant_type_enum` tiene un 8vo valor, `other`, 
 ### 2.5 Detalle de restaurante (`view: detail`, `tab: buscar`)
 - Header con foto full-width, overlay gradiente, botones volver/favorito flotantes.
 - Nombre, meta, dirección, acordeón de horarios (**"Abierto ahora"/"Cerrado"**, detalle día por día).
-- Botones de acción: **WhatsApp** y **Delivery** (deep-link a WhatsApp/delivery del local — consistente con lo que dice `RAMBLING.md` sobre el mapa de locales).
+- Botones de acción: **WhatsApp** y **Delivery** (deep-link a WhatsApp/delivery del local — consistente con el mapa de locales descripto en la sección 1 de este documento).
 - Sub-tabs internos (`mTab`): **Mis visitas** (fidelización) / **Menú**.
   - **Mis visitas**: card hero con gradiente de nivel, círculo de progreso de visitas, timeline **"TU CAMINO EN {NIVEL}"** con pasos numerados, premios, badges **"ESTÁS ACÁ"** / **"PRÓXIMO"**; nota final invitando a escanear el QR. Copy de estado: *"Sos cliente fijo"*, *"Arrancá tu camino"*, *"Falta 1 visita para tu próximo premio"* / *"Faltan {n} visitas para tu próximo premio"*.
   - **Menú**: agrupado por categoría, cards de plato con imagen, tags de dieta, precio en Barlow + "ARS".
@@ -232,7 +232,7 @@ Gap adicional detectado acá: `merchant_type_enum` tiene un 8vo valor, `other`, 
 
 ### Gap de estructura de navegación (a decidir con producto)
 
-El diseño modela **4 destinos** de bottom nav (`inicio`, `buscar`, `regalar`, `perfil`) más un botón central de QR, mientras que el PRD y `RAMBLING.md` son explícitos en **3 tabs**: Buscar / Mis Lugares / Regalar. Lectura más probable (asumida para el backlog, a confirmar): el `inicio` del diseño es el estado inicial de la tab **Buscar** (antes de ejecutar una búsqueda) y el `perfil` del diseño es el contenido de la tab **Mis Lugares** (perfil + fidelización, tal como pide el PRD). El botón central de QR sería una acción rápida transversal, no una tab nueva. Esto **no está resuelto en el PRD** y conviene confirmarlo antes de fijar el árbol de rutas definitivo.
+El diseño modela **4 destinos** de bottom nav (`inicio`, `buscar`, `regalar`, `perfil`) más un botón central de QR, mientras que el PRD es explícito en **3 tabs**: Buscar / Mis Lugares / Regalar. Lectura más probable (asumida para el backlog, a confirmar): el `inicio` del diseño es el estado inicial de la tab **Buscar** (antes de ejecutar una búsqueda) y el `perfil` del diseño es el contenido de la tab **Mis Lugares** (perfil + fidelización, tal como pide el PRD). El botón central de QR sería una acción rápida transversal, no una tab nueva. Esto **no está resuelto en el PRD** y conviene confirmarlo antes de fijar el árbol de rutas definitivo.
 
 ### Pantalla por pantalla
 
