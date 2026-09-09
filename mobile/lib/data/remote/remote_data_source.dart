@@ -112,6 +112,16 @@ class RemoteDataSource implements DataSource {
     );
   }
 
+  /// Same `GET /menu_items` route as [getMenuItems], just without the
+  /// `merchant_id` filter — confirmed live that the endpoint lists every
+  /// merchant's items when it's omitted (150 items across 30 seeded
+  /// merchants at the time of writing), so this is one paginated fetch, not
+  /// an N+1 fan-out per merchant.
+  @override
+  Future<List<MenuItem>> getAllMenuItems() {
+    return _getAllPages('/menu_items', MenuItem.fromJson);
+  }
+
   @override
   Future<List<BusinessHour>> getBusinessHours(int merchantId) {
     return _getAllPages(

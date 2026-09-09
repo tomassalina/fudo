@@ -90,6 +90,9 @@ class LocalDataSource implements DataSource {
     return items.where((item) => item.merchantId == merchantId).toList();
   }
 
+  @override
+  Future<List<MenuItem>> getAllMenuItems() => _allMenuItems();
+
   Future<List<BusinessHour>> _allBusinessHours() async {
     final cached = _businessHours;
     if (cached != null) return cached;

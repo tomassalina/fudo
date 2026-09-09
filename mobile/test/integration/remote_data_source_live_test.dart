@@ -166,6 +166,17 @@ void main() {
         final favorites = await remoteDataSource.getFavorites();
         expect(favorites, isNotEmpty);
 
+        // 3b. getAllMenuItems() (the "Platos" result mode's data source)
+        // returns real cross-merchant menu items, not mock/fixture data —
+        // every item's merchantId must belong to a real seeded merchant.
+        final allMenuItems = await remoteDataSource.getAllMenuItems();
+        expect(allMenuItems, isNotEmpty);
+        final merchantIds = merchants.map((m) => m.id).toSet();
+        expect(
+          allMenuItems.every((item) => merchantIds.contains(item.merchantId)),
+          isTrue,
+        );
+
         // 4. getCurrentConsumer() reads the session snapshot set by login().
         final consumer = await remoteDataSource.getCurrentConsumer();
         expect(consumer.firstName, 'Tomas');

@@ -120,6 +120,13 @@ final menuItemsProvider = FutureProvider.family<List<MenuItem>, int>((
   return dataSource.getMenuItems(merchantId);
 });
 
+/// Every menu item across every merchant (the "Buscar" tab's "Platos" result
+/// mode — `features/search/widgets/dish_results_list.dart`).
+final allMenuItemsProvider = FutureProvider<List<MenuItem>>((ref) {
+  final dataSource = ref.watch(dataSourceProvider);
+  return dataSource.getAllMenuItems();
+});
+
 /// Business hours for a given merchant.
 final businessHoursProvider = FutureProvider.family<List<BusinessHour>, int>((
   ref,

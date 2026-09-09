@@ -36,6 +36,15 @@ abstract class DataSource {
   /// Menu items for a given merchant (detail screen's "Menú" sub-tab).
   Future<List<MenuItem>> getMenuItems(int merchantId);
 
+  /// Every menu item across every merchant (the "Buscar" tab's "Platos"
+  /// result mode — design brief §2.9/backlog item 5, cross-merchant dish
+  /// search). Unlike [getMerchantTagIdsByMerchant]/[getTagsForMerchant],
+  /// this doesn't require an N+1 per-merchant fetch: `GET
+  /// /api/v1/menu_items` (confirmed live) already supports listing every
+  /// item with no `merchant_id` filter, so [RemoteDataSource] just fetches
+  /// every page of that same endpoint.
+  Future<List<MenuItem>> getAllMenuItems();
+
   /// Business hours for a given merchant. May contain more than one row for
   /// the same [BusinessHour.dayOfWeek] (double shift) — see the model doc.
   Future<List<BusinessHour>> getBusinessHours(int merchantId);
