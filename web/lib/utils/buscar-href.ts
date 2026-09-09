@@ -23,6 +23,11 @@ export interface BuscarParams {
   open: string;
   sort: string;
   hideVisited: string;
+  /** "" (default) or "1" — the filter sheet/sidebar's "Premios" row: only
+   * merchants with a `rewardTeaser` (see lib/types' doc comment on that
+   * field). See filter-rows.ts's file header for why this naturally has no
+   * matches in real-API mode yet. */
+  reward: string;
   /**
    * Visitor's live coordinates (fixed to 3 decimals, ~110m — "city-scale"
    * precision, same rationale as use-location.ts's GEOLOCATION_OPTIONS
@@ -48,6 +53,7 @@ export const DEFAULT_BUSCAR_PARAMS: BuscarParams = {
   open: "",
   sort: "",
   hideVisited: "",
+  reward: "",
   lat: "",
   lng: "",
 };
@@ -64,6 +70,7 @@ const FIELD_ORDER: (keyof BuscarParams)[] = [
   "open",
   "sort",
   "hideVisited",
+  "reward",
   "lat",
   "lng",
 ];
@@ -105,5 +112,6 @@ export function countActiveFilters(current: BuscarParams): number {
   if (current.dist) count += 1;
   if (current.open === "now") count += 1;
   if (current.hideVisited === "1") count += 1;
+  if (current.reward === "1") count += 1;
   return count;
 }

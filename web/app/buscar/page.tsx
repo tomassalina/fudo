@@ -33,6 +33,7 @@ import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import { FluidContainer } from "@/components/ui/FluidContainer";
 import { Header } from "@/components/layout/Header";
 import { BuscarView } from "@/components/features/buscar/BuscarView";
+import { AiSearchResolver } from "@/components/features/buscar/AiSearchResolver";
 import type { ResultMode } from "@/components/features/buscar/ResultModeToggle";
 import { getDishSearchResults } from "@/lib/data/menu-items";
 import { searchMerchants } from "@/lib/data/search";
@@ -204,6 +205,17 @@ async function applyExtraFilters(
     out = out.filter((merchant) => getMockVisitCount(merchant) === 0);
   }
 
+  // "Premios" filter row (filter-rows.ts's "premios" category) — narrows to
+  // merchants with a loyalty teaser. Same UI-only-field situation as
+  // `price` above: `rewardTeaser` has no backend column yet (see lib/types'
+  // doc comment on it and lib/api/merchants.ts), so this is a real filter
+  // against MOCK_MERCHANTS today and naturally returns nothing once
+  // real-API mode is active, until the backend grows a loyalty_rules join
+  // for `parseMerchant` to read instead of always defaulting to `undefined`.
+  if (params.reward === "1") {
+    out = out.filter((merchant) => merchant.rewardTeaser != null);
+  }
+
   if (params.sort === "distancia") {
     out = [...out].sort((a, b) => a.distanceKm - b.distanceKm);
   } else if (params.sort === "precio") {
@@ -221,6 +233,28 @@ export default async function BuscarPage({
   searchParams,
 }: PageProps<"/buscar">) {
   const rawParams = await searchParams;
+
+  // The home hero's "IA" search (HeroSearch.tsx) lands here with `?ai=<free
+  // text>` instead of the usual filter params — resolving that prompt into
+  // real filters needs a client-side call carrying the visitor's auth token
+  // (POST /api/v1/search is protected, and this Server Component has no
+  // access to the browser's localStorage-held JWT — see
+  // lib/auth/token-storage.ts), so this branch skips the normal SSR
+  // merchant fetch entirely and hands off to AiSearchResolver, which shows
+  // the same skeleton this page's own loading.tsx uses while it resolves
+  // client-side and then replaces the URL with plain `type`/`hood`/`tags`/
+  // `price` params — a normal SSR render of this same page, just one
+  // navigation later.
+  const aiQuery = firstString(rawParams.ai);
+  if (aiQuery) {
+    return (
+      <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
+        <Header />
+        <AiSearchResolver query={aiQuery} presetType={firstString(rawParams.type)} />
+      </FluidContainer>
+    );
+  }
+
   const rawLat = firstString(rawParams.lat);
   const rawLng = firstString(rawParams.lng);
   const parsedLat = parseCoordinateParam(rawLat, -90, 90);
@@ -243,6 +277,7 @@ export default async function BuscarPage({
     open: firstString(rawParams.open) === "now" ? "now" : "",
     sort: firstString(rawParams.sort),
     hideVisited: firstString(rawParams.hideVisited) === "1" ? "1" : "",
+    reward: firstString(rawParams.reward) === "1" ? "1" : "",
     lat: origin ? rawLat : "",
     lng: origin ? rawLng : "",
   };
@@ -258,7 +293,8 @@ export default async function BuscarPage({
     Boolean(current.hood) ||
     Boolean(current.dist) ||
     current.open === "now" ||
-    current.hideVisited === "1";
+    current.hideVisited === "1" ||
+    current.reward === "1";
 
   // Fetched without `neighborhood` so the hood dropdown always lists every
   // neighborhood available under the current type/tags/query, even while a
@@ -346,6 +382,7 @@ export default async function BuscarPage({
           dist: null,
           open: null,
           hideVisited: null,
+          reward: null,
         })}
       />
     </FluidContainer>

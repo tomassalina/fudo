@@ -1,21 +1,38 @@
 import type { MerchantType } from "@/lib/types";
 import { MERCHANT_TYPE_LABELS, TAG_LABELS } from "@/lib/mock/merchants";
 import type { BuscarParams } from "@/lib/utils/buscar-href";
+import { PRICE_BANDS } from "@/lib/utils/price-bands";
 
-// Row/category model for the mobile filters sheet (PhoneFilterSheet) —
-// mirrors `FCATS`/`FDEF` in `docs/design-reference/Fudo App.dc.html`, mapped
+// Row/category model for the /buscar filters — shared, unmodified, by both
+// PhoneFilterSheet (bottom sheet chrome) and FilterSidebar (always-visible
+// wide-layout column, `docs/design-reference/Fudo Customers.dc.html`'s
+// isList branch), per the explicit instruction to keep one filter
+// state/data model and only let chrome differ between the two surfaces.
+// Mirrors `FCATS`/`FDEF` in `docs/design-reference/Fudo App.dc.html`, mapped
 // onto this app's real `BuscarParams` dimensions instead of the reference's
 // mock `f`/`fDraft` state. Every option's `value` of `""` means "no filter"
 // (rendered as "Cualquiera", same as the reference's own default string) —
 // kept out of the emitted URL by `buscarHref`, same convention every other
 // /buscar control already uses.
 //
-// Deliberately 4 categories, not the reference's 5: "premios" is gated on a
-// signed-in visitor with real loyalty data there, which this app doesn't
-// have wired into /buscar — the task's reference screenshot itself only
-// ever shows the 4 that ship here.
+// 5 categories, matching the reference's own count: "premios" filters by
+// `merchant.rewardTeaser` (see lib/types' doc comment on that field) — a
+// UI-only derived value, same honest "no real backend column yet" situation
+// `hideVisited` and `price` are already in (see their comments in
+// app/buscar/page.tsx). It's a real, working filter today against
+// MOCK_MERCHANTS; once real-API mode is active it naturally returns zero
+// matches (every real merchant's `rewardTeaser` parses to `undefined` — see
+// lib/api/merchants.ts) until the backend grows a loyalty_rules join for
+// this UI to read instead of deriving it — nothing here needs to change
+// when that lands, since the filter already reads the shared `Merchant`
+// field, not a mock-only shortcut.
 
-export type FilterCategoryKey = "basico" | "precio" | "platos" | "ubicacion";
+export type FilterCategoryKey =
+  | "basico"
+  | "precio"
+  | "platos"
+  | "ubicacion"
+  | "premios";
 
 export interface FilterCategoryDef {
   key: FilterCategoryKey;
@@ -28,6 +45,7 @@ export const FILTER_CATEGORIES: FilterCategoryDef[] = [
   { key: "precio", label: "Precio", icon: "payments" },
   { key: "platos", label: "Platos", icon: "restaurant_menu" },
   { key: "ubicacion", label: "Ubicación", icon: "location_on" },
+  { key: "premios", label: "Premios", icon: "redeem" },
 ];
 
 export interface FilterOptionDef {
@@ -56,11 +74,15 @@ const OPEN_OPTIONS: FilterOptionDef[] = [
   { value: "now", label: "Abierto ahora" },
 ];
 
+// Options derived from the shared band definitions (lib/utils/price-bands.ts)
+// instead of a second hardcoded copy of the same three thresholds — that
+// file is also where the home hero's AI search resolver maps Gemini's point
+// price estimate onto one of these same bands (see
+// lib/search/resolve-ai-search.ts), so there's exactly one source of truth
+// for what a "price band" is in this app.
 const PRICE_OPTIONS: FilterOptionDef[] = [
   { value: "", label: "Cualquiera" },
-  { value: "0-20000", label: "Hasta $20.000" },
-  { value: "20000-40000", label: "$20.000 – $40.000" },
-  { value: "40000-999999999", label: "Más de $40.000" },
+  ...PRICE_BANDS.map(({ value, label }) => ({ value, label })),
 ];
 
 const DISTANCE_OPTIONS: FilterOptionDef[] = [
@@ -85,12 +107,17 @@ function dietOptions(): FilterOptionDef[] {
   ];
 }
 
+const REWARD_OPTIONS: FilterOptionDef[] = [
+  { value: "", label: "Cualquiera" },
+  { value: "1", label: "Con premio por visitas" },
+];
+
 function simpleRow(
   id: string,
   cat: FilterCategoryKey,
   icon: string,
   label: string,
-  paramKey: "sort" | "type" | "open" | "price" | "hood" | "dist",
+  paramKey: "sort" | "type" | "open" | "price" | "hood" | "dist" | "reward",
   options: FilterOptionDef[],
 ): FilterRowDef {
   return {
@@ -161,6 +188,9 @@ export function buildFilterRows(
         : []),
       simpleRow("dist", "ubicacion", "near_me", "Distancia", "dist", DISTANCE_OPTIONS),
     ],
+    premios: [
+      simpleRow("reward", "premios", "redeem", "Premio por visitas", "reward", REWARD_OPTIONS),
+    ],
   };
 }
 
@@ -178,5 +208,6 @@ export function clearedDraft(draft: BuscarParams): BuscarParams {
     dist: "",
     open: "",
     hideVisited: "",
+    reward: "",
   };
 }
