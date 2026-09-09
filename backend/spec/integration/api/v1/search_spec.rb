@@ -7,6 +7,16 @@ require "swagger_helper"
 # than exercised end to end — the real integration is already covered by
 # spec/requests/api/v1/search_spec.rb, which makes genuine Gemini calls.
 RSpec.describe "Search", type: :request do
+  # Documentation-only literal, NOT a re-hardcoding of the production
+  # constraint: SearchQueryParser.response_schema itself sources this
+  # dynamically from `Tag.order(:name).pluck(:name)` (see its own doc
+  # comment) so it can never go stale after a live tag change — but a query
+  # against the live tags table isn't usable here, since this file's `schema`
+  # blocks run at RSpec's example-tree-build time, before any `before` hook
+  # seeds test data, against whatever the (likely empty) test DB happens to
+  # hold at that moment. Kept in sync with db/seeds.rb's TAG_NAMES by hand.
+  seeded_tag_names = %w[sin_tacc vegano vegetariano picante economico].freeze
+
   merchant_list_item = {
     type: :object,
     properties: {
@@ -47,14 +57,17 @@ RSpec.describe "Search", type: :request do
               type: :object,
               description: "The structured filters Gemini derived from the free-text query " \
                 "(same shape as SearchHistory#structured_output) — lets a client build a " \
-                "shareable /buscar?type=...&hood=... URL out of a natural-language search.",
+                "shareable /buscar?type=...&hood=...&open=now&reward=1 URL out of a " \
+                "natural-language search.",
               properties: {
                 neighborhood: { type: :string, nullable: true },
                 type: { type: :string, nullable: true, enum: Merchant.types.keys },
-                tags: { type: :array, items: { type: :string } },
-                price_per_person: { type: :number, nullable: true }
+                tags: { type: :array, items: { type: :string, enum: seeded_tag_names } },
+                price_per_person: { type: :number, nullable: true },
+                open: { type: :boolean, nullable: true, description: "\"Abierto ahora\" — maps onto /buscar's open=now param." },
+                reward: { type: :boolean, nullable: true, description: "\"Premio por visitas\" — maps onto /buscar's reward=1 param." }
               },
-              required: %w[neighborhood type tags price_per_person]
+              required: %w[neighborhood type tags price_per_person open reward]
             }
           },
           required: %w[data meta filters]
@@ -65,7 +78,10 @@ RSpec.describe "Search", type: :request do
         before do
           create_merchant(neighborhood: "Palermo")
           allow(SearchQueryParser).to receive(:call).and_return(
-            { "neighborhood" => "Palermo", "type" => nil, "tags" => [], "price_per_person" => nil }
+            {
+              "neighborhood" => "Palermo", "type" => nil, "tags" => [], "price_per_person" => nil,
+              "open" => nil, "reward" => nil
+            }
           )
         end
         run_test!

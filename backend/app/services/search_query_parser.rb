@@ -1,10 +1,20 @@
 # Parses a free-text search query (e.g. "algo picante y barato en Palermo")
 # into structured merchant filters by asking the Gemini API for JSON output
-# constrained by a response schema. The returned shape matches the filters
-# already supported by Merchant.search (see app/models/merchant.rb):
+# constrained by a response schema. The returned shape covers every /buscar
+# filter that can plausibly be derived from free text — neighborhood, type,
+# tags, and price (all fed straight into Merchant.search, see
+# app/models/merchant.rb) plus "open now" and "has a loyalty reward", which
+# have no Merchant.search-side filtering yet (see the doc comments on
+# `open`/`reward` below) and instead flow straight through to /buscar's own
+# client-side `open`/`reward` params (see web/lib/search/resolve-ai-search.ts):
 #
 #   { "neighborhood" => String|nil, "type" => String|nil,
-#     "tags" => Array<String>, "price_per_person" => Numeric|nil }
+#     "tags" => Array<String>, "price_per_person" => Numeric|nil,
+#     "open" => true|false|nil, "reward" => true|false|nil }
+#
+# Deliberately NOT covered: `dist` (needs the visitor's live geolocation,
+# not derivable from text — unlike neighborhood/type/price), `sort`, and
+# `mode` (display/UX choices, not filter constraints).
 #
 # Gemini REST API shape verified on 2026-09-08 against:
 #   - https://ai.google.dev/api/generate-content
@@ -45,16 +55,41 @@ class SearchQueryParser
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 15
 
-  RESPONSE_SCHEMA = {
-    type: "OBJECT",
-    properties: {
-      neighborhood: { type: "STRING", nullable: true },
-      type: { type: "STRING", nullable: true, enum: Merchant.types.keys },
-      tags: { type: "ARRAY", items: { type: "STRING" } },
-      price_per_person: { type: "NUMBER", nullable: true }
-    },
-    required: %w[neighborhood type tags price_per_person]
-  }.freeze
+  # A method (not a frozen constant computed once at class-load) so the
+  # `tags` enum below always reflects the live `tags` table — this table is
+  # tiny (a handful of rows, see db/seeds.rb's TAG_NAMES), so a plain query
+  # per search request is cheap insurance against the enum silently going
+  # stale after a tag is added/removed, the same failure mode that produced
+  # the orphan-tag drift this schema is meant to prevent from recurring.
+  def self.response_schema
+    {
+      type: "OBJECT",
+      properties: {
+        neighborhood: { type: "STRING", nullable: true },
+        type: { type: "STRING", nullable: true, enum: Merchant.types.keys },
+        tags: { type: "ARRAY", items: { type: "STRING", enum: available_tag_names } },
+        price_per_person: { type: "NUMBER", nullable: true },
+        # "Abierto ahora" — /buscar's `open=now` param. No Merchant.search-side
+        # filter exists for this yet (it's computed client-side from real
+        # business hours, see app/buscar/page.tsx's getOpenNowMerchantIds), so
+        # this value isn't consumed by Merchant.search either — it's returned
+        # in `filters` purely for the client to forward onto that existing
+        # client-side "open now" filter (see resolve-ai-search.ts).
+        open: { type: "BOOLEAN", nullable: true },
+        # "Premio por visitas" — /buscar's `reward=1` param. Same situation as
+        # `open`: no backend column/filter exists yet (rewardTeaser is a
+        # client-only derived field, see app/buscar/page.tsx's own comment on
+        # it), so this also just flows through to the client's existing
+        # client-side reward filter.
+        reward: { type: "BOOLEAN", nullable: true }
+      },
+      required: %w[neighborhood type tags price_per_person open reward]
+    }
+  end
+
+  def self.available_tag_names
+    Tag.order(:name).pluck(:name)
+  end
 
   SYSTEM_INSTRUCTION = <<~PROMPT.freeze
     You are a search query parser for a restaurant/bar/cafe discovery app.
@@ -68,13 +103,20 @@ class SearchQueryParser
     - "type": the kind of venue implied by the query, or null if unclear or
       not mentioned. Must be one of the allowed enum values.
     - "tags": short lowercase keywords describing cuisine, mood, dietary
-      restrictions, or other descriptive attributes mentioned in the query
-      (e.g. "picante", "vegetariano", "tranquilo"). Use an empty array if
-      none apply.
+      restrictions, or other descriptive attributes mentioned in the query,
+      restricted to the allowed enum values. Use an empty array if none
+      apply.
     - "price_per_person": a numeric price-per-person estimate if the user
       gives one or implies a budget level (e.g. "barato" implies a low
       number), or null if price is not mentioned or explicitly irrelevant
       (e.g. "sin importar el precio").
+    - "open": true if the user asks for a place that's open right now (e.g.
+      "abierto ahora", "que esté abierto"), false if they explicitly ask for
+      the opposite, or null if availability isn't mentioned.
+    - "reward": true if the user asks for a place with a loyalty
+      reward/perk for visiting (e.g. "que tenga premio por visitas",
+      "con recompensas"), false if they explicitly say they don't care
+      about that, or null if not mentioned at all.
   PROMPT
 
   def self.call(query_text)
@@ -134,7 +176,7 @@ class SearchQueryParser
       system_instruction: { parts: [ { text: SYSTEM_INSTRUCTION } ] },
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA
+        responseSchema: self.class.response_schema
       }
     }
   end
@@ -157,9 +199,22 @@ class SearchQueryParser
 
     structured = JSON.parse(text)
     validate_shape!(structured)
+    sanitize_tags!(structured)
     structured
   rescue JSON::ParserError
     raise GeminiError, "Search parsing service returned an unexpected response"
+  end
+
+  # The schema's `enum` constraint on `tags` (see .response_schema) is a
+  # strong hint, not a hard guarantee — Gemini occasionally still emits a
+  # value outside it (e.g. an English synonym like "spicy" instead of
+  # "picante"). Silently DROPPING those instead of failing the whole search
+  # keeps the orphan-tag guarantee (a client's `filters.tags` never contains
+  # anything outside the real vocabulary) without turning an imperfect but
+  # recoverable LLM response into a hard 502 for the visitor.
+  def sanitize_tags!(structured)
+    allowed = self.class.available_tag_names.map(&:downcase)
+    structured["tags"] = Array(structured["tags"]).select { |tag| allowed.include?(tag.to_s.downcase) }
   end
 
   def validate_shape!(structured)
@@ -178,7 +233,9 @@ class SearchQueryParser
       valid_optional_string?(structured["neighborhood"]) &&
       valid_type?(structured["type"]) &&
       valid_tags?(structured["tags"]) &&
-      valid_optional_number?(structured["price_per_person"])
+      valid_optional_number?(structured["price_per_person"]) &&
+      valid_optional_boolean?(structured["open"]) &&
+      valid_optional_boolean?(structured["reward"])
   end
 
   def valid_optional_string?(value)
@@ -189,11 +246,20 @@ class SearchQueryParser
     value.nil? || (value.is_a?(String) && Merchant.types.key?(value))
   end
 
+  # Shape-only check (array of strings) — membership in the real tag
+  # vocabulary is enforced separately by #sanitize_tags!, which drops rather
+  # than hard-fails on an out-of-vocabulary value (see its own doc comment
+  # for why: the schema's `enum` constraint is a strong hint to Gemini, not a
+  # guarantee).
   def valid_tags?(value)
     value.is_a?(Array) && value.all? { |tag| tag.is_a?(String) }
   end
 
   def valid_optional_number?(value)
     value.nil? || value.is_a?(Numeric)
+  end
+
+  def valid_optional_boolean?(value)
+    value.nil? || value.is_a?(TrueClass) || value.is_a?(FalseClass)
   end
 end

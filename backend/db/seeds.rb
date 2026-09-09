@@ -44,8 +44,7 @@ puts "Clearing previously seeded data..."
 # ----------------------------------------------------------------------------
 puts "Creating tags..."
 TAG_NAMES = %w[
-  sin_tacc vegano vegetariano apto_celiacos con_delivery pet_friendly con_terraza wifi_gratis
-  picante economico
+  sin_tacc vegano vegetariano picante economico
 ].freeze
 
 tags = TAG_NAMES.index_with do |name|
@@ -257,34 +256,37 @@ end
 # ----------------------------------------------------------------------------
 puts "Tagging merchants..."
 
+# restaurant/cafe/bar/pizzeria/brewery have no type-level tag of their own
+# (their earlier con_terraza/wifi_gratis/pet_friendly/con_delivery entries
+# were removed — those 5 tags are amenity tags with no /buscar filter slot,
+# out of scope; see EXTRA_DIETARY_TAGS_MERCHANT_NAMES below for the real,
+# filterable dietary tags those merchants still carry).
 MERCHANT_TAGS_BY_TYPE = {
-  "restaurant" => %w[con_terraza],
-  "cafe" => %w[wifi_gratis pet_friendly],
-  "bar" => %w[con_terraza pet_friendly],
-  "pizzeria" => %w[con_delivery],
   # dark_kitchen's own dish pool already leans spicy (e.g. "Ramen picante
   # para llevar", "Tacos de carnitas (x3)") — "picante" here is a coherent
   # merchant-level tag, not a random pick. Covers the /buscar "Apto para"
   # row's hardcoded picante option (filter-rows.ts DIET_TAG_KEYS), which
   # otherwise had zero matching tags in the DB (no seed merchant/menu_item
   # carried "picante" before this).
-  "dark_kitchen" => %w[con_delivery vegano picante],
-  "brewery" => %w[con_delivery con_terraza],
+  "dark_kitchen" => %w[vegano picante],
   # food_truck is the seed's cheapest price band by a wide margin (Food
   # Truck El Zaguán: $7.000-$12.500 vs. the next-cheapest cafe at
   # $8.500-$14.000+) — "economico" here is the natural real merchant for
   # that tag, covering the /buscar AI-chips "Económico" option, which
   # otherwise had zero matching tags in the DB.
-  "food_truck" => %w[con_delivery economico]
+  "food_truck" => %w[economico]
 }.freeze
 
 # A handful of merchants (regardless of type) additionally cater to
-# dietary-restriction diners, to exercise sin_tacc / apto_celiacos / vegano.
+# dietary-restriction diners, to exercise sin_tacc / vegetariano / vegano —
+# "vegetariano" here is what covers the /buscar "Apto para" row's
+# vegetariano option (filter-rows.ts DIET_TAG_KEYS), same rationale as
+# picante/economico above: without at least one real merchant carrying it,
+# that filter option would be a guaranteed 0-result dead end.
 EXTRA_DIETARY_TAGS_MERCHANT_NAMES = {
-  "La Cocina de Mateo" => %w[sin_tacc apto_celiacos],
+  "La Cocina de Mateo" => %w[sin_tacc],
   "Cocina Serrana" => %w[vegetariano],
   "Café Niceto" => %w[sin_tacc],
-  "Medialuna Club" => %w[apto_celiacos],
   "Poke & Go Palermo" => %w[vegetariano],
   "Cocina Oculta Soho" => %w[sin_tacc vegano],
   "Vermutería Guatemala" => %w[vegetariano]
@@ -347,7 +349,6 @@ DISH_TAG_RULES = {
   "vegano" => [ "vegana", "quinoa", "garbanzos", "vegetales" ],
   "vegetariano" => [ "vegetariano", "acelga", "quinoa" ],
   "sin_tacc" => [ "provoleta", "rabas", "milanesa" ],
-  "apto_celiacos" => [ "ensalada césar", "papas fritas artesanales" ],
   # Matches dishes whose own name says "picante" ("Ramen picante para
   # llevar", "Alitas picantes") — real dishes, not a random pick, and the
   # menu_item-level complement to the dark_kitchen merchant-level tag above.

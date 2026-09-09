@@ -4,8 +4,8 @@ require "rails_helper"
 # SearchQueryParser/Gemini) to exercise the actual natural-language parsing
 # integration end to end. Because Gemini's output is non-deterministic, the
 # assertions below check the SHAPE and types of the structured output
-# (neighborhood/type/tags/price_per_person keys and types), not exact
-# content values.
+# (neighborhood/type/tags/price_per_person/open/reward keys and types), not
+# exact content values.
 #
 # Requires a valid GEMINI_API_KEY with available quota in this environment.
 RSpec.describe "Api::V1::Search", type: :request do
@@ -13,7 +13,8 @@ RSpec.describe "Api::V1::Search", type: :request do
     "algo picante y barato en Palermo",
     "un café tranquilo en Recoleta",
     "pizza vegetariana en Belgrano sin importar el precio",
-    "un bar con buena onda"
+    "un bar con buena onda",
+    "un bar abierto ahora que tenga premio por visitas"
   ].freeze
 
   describe "POST /api/v1/search" do
@@ -37,7 +38,9 @@ RSpec.describe "Api::V1::Search", type: :request do
 
         structured_output = search_history.structured_output
         expect(structured_output).to be_a(Hash).or be_a(ActiveSupport::HashWithIndifferentAccess)
-        expect(structured_output.keys).to include("neighborhood", "type", "tags", "price_per_person")
+        expect(structured_output.keys).to include(
+          "neighborhood", "type", "tags", "price_per_person", "open", "reward"
+        )
         expect(structured_output["neighborhood"]).to be_a(String).or be_nil
         expect(structured_output["type"]).to be_a(String).or be_nil
         expect(structured_output["type"]).to satisfy("be a valid merchant type or nil") do |type|
@@ -45,7 +48,14 @@ RSpec.describe "Api::V1::Search", type: :request do
         end
         expect(structured_output["tags"]).to be_a(Array)
         expect(structured_output["tags"]).to all(be_a(String))
+        # Every tag Gemini returns must be one of the real, currently-seeded
+        # tags — the whole point of the dynamic enum in
+        # SearchQueryParser.response_schema (see its own doc comment).
+        allowed_tags = Tag.order(:name).pluck(:name).map(&:downcase)
+        expect(structured_output["tags"].map(&:downcase)).to all(be_in(allowed_tags))
         expect(structured_output["price_per_person"]).to be_a(Numeric).or be_nil
+        expect(structured_output["open"]).to be_in([ true, false, nil ])
+        expect(structured_output["reward"]).to be_in([ true, false, nil ])
 
         # The response's `filters` must be the exact same structured output
         # persisted to search_history — a client builds the shareable

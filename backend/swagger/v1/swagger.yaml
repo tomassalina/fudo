@@ -2834,8 +2834,8 @@ paths:
                     type: object
                     description: The structured filters Gemini derived from the free-text
                       query (same shape as SearchHistory#structured_output) — lets
-                      a client build a shareable /buscar?type=...&hood=... URL out
-                      of a natural-language search.
+                      a client build a shareable /buscar?type=...&hood=...&open=now&reward=1
+                      URL out of a natural-language search.
                     properties:
                       neighborhood:
                         type: string
@@ -2856,14 +2856,32 @@ paths:
                         type: array
                         items:
                           type: string
+                          enum:
+                          - sin_tacc
+                          - vegano
+                          - vegetariano
+                          - picante
+                          - economico
                       price_per_person:
                         type: number
                         nullable: true
+                      open:
+                        type: boolean
+                        nullable: true
+                        description: '"Abierto ahora" — maps onto /buscar''s open=now
+                          param.'
+                      reward:
+                        type: boolean
+                        nullable: true
+                        description: '"Premio por visitas" — maps onto /buscar''s
+                          reward=1 param.'
                     required:
                     - neighborhood
                     - type
                     - tags
                     - price_per_person
+                    - open
+                    - reward
                 required:
                 - data
                 - meta
