@@ -293,7 +293,7 @@
             <mxRectangle height="30" width="200" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="ryUmupm0z4xlRhidjWCe-57" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="merchant_types_enum" vertex="1">
+        <mxCell id="ryUmupm0z4xlRhidjWCe-57" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="merchant_type_enum" vertex="1">
           <mxGeometry height="266" width="160" x="-75" y="-646" as="geometry" />
         </mxCell>
         <mxCell id="ryUmupm0z4xlRhidjWCe-58" parent="ryUmupm0z4xlRhidjWCe-57" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="restaurant" vertex="1">
@@ -1093,7 +1093,7 @@
             <mxRectangle height="30" width="180" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="ryUmupm0z4xlRhidjWCe-399" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="reward_types_enum" vertex="1">
+        <mxCell id="ryUmupm0z4xlRhidjWCe-399" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="reward_type_enum" vertex="1">
           <mxGeometry height="146" width="160" x="920" y="310" as="geometry" />
         </mxCell>
         <mxCell id="ryUmupm0z4xlRhidjWCe-400" parent="ryUmupm0z4xlRhidjWCe-399" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="discount_percent" vertex="1">
@@ -1108,7 +1108,7 @@
         <mxCell id="ryUmupm0z4xlRhidjWCe-408" parent="ryUmupm0z4xlRhidjWCe-399" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="other" vertex="1">
           <mxGeometry height="30" width="160" y="116" as="geometry" />
         </mxCell>
-        <mxCell id="ryUmupm0z4xlRhidjWCe-412" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="currencies_enum" vertex="1">
+        <mxCell id="ryUmupm0z4xlRhidjWCe-412" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="currency_enum" vertex="1">
           <mxGeometry height="86" width="160" x="890" y="-260" as="geometry" />
         </mxCell>
         <mxCell id="ryUmupm0z4xlRhidjWCe-413" parent="ryUmupm0z4xlRhidjWCe-412" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="usd" vertex="1">
@@ -1729,7 +1729,7 @@
             <mxRectangle height="30" width="220" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="ryUmupm0z4xlRhidjWCe-646" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="gift_types_enum" vertex="1">
+        <mxCell id="ryUmupm0z4xlRhidjWCe-646" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="gift_type_enum" vertex="1">
           <mxGeometry height="146" width="160" x="-1090" y="-260" as="geometry" />
         </mxCell>
         <mxCell id="ryUmupm0z4xlRhidjWCe-647" parent="ryUmupm0z4xlRhidjWCe-646" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="classic" vertex="1">
@@ -1750,7 +1750,7 @@
             <mxPoint x="-870" y="-50" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="ryUmupm0z4xlRhidjWCe-659" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="gift_statuses_enum" vertex="1">
+        <mxCell id="ryUmupm0z4xlRhidjWCe-659" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="gift_status_enum" vertex="1">
           <mxGeometry height="146" width="160" x="-1090" y="-60" as="geometry" />
         </mxCell>
         <mxCell id="ryUmupm0z4xlRhidjWCe-660" parent="ryUmupm0z4xlRhidjWCe-659" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="pending" vertex="1">
@@ -1864,7 +1864,7 @@
             <mxRectangle height="30" width="180" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="phIjjKtQGRX3nt18d09x-35" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="days_of_week_enum" vertex="1">
+        <mxCell id="phIjjKtQGRX3nt18d09x-35" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="day_of_week_enum" vertex="1">
           <mxGeometry height="236" width="160" x="920" y="660" as="geometry" />
         </mxCell>
         <mxCell id="phIjjKtQGRX3nt18d09x-36" parent="phIjjKtQGRX3nt18d09x-35" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="monday" vertex="1">
@@ -1900,7 +1900,7 @@
             <mxPoint x="970" y="630" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="phIjjKtQGRX3nt18d09x-78" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="themes_enum" vertex="1">
+        <mxCell id="phIjjKtQGRX3nt18d09x-78" parent="1" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;align=center;fontSize=14;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;" value="theme_enum" vertex="1">
           <mxGeometry height="116" width="160" x="-1090" y="280" as="geometry" />
         </mxCell>
         <mxCell id="phIjjKtQGRX3nt18d09x-79" parent="phIjjKtQGRX3nt18d09x-78" style="text;strokeColor=none;fillColor=none;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;html=1;" value="light" vertex="1">
