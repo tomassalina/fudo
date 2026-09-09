@@ -1861,3 +1861,83 @@ export function buildOpeningHoursSpecification(
 export function getBusinessHoursForMerchant(merchantId: number): BusinessHours[] {
   return MOCK_BUSINESS_HOURS.filter((row) => row.merchant_id === merchantId);
 }
+
+function toMinutes(hms: string): number {
+  const [hours, minutes] = hms.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/** Whether `shift` (today's own row) covers `nowMinutes` — including the
+ * case where it's still running past midnight into tomorrow's early hours
+ * (closesAt <= opensAt, e.g. "19:00–03:00"). */
+function shiftCoversNow(shift: DayShift, nowMinutes: number): boolean {
+  const opens = toMinutes(shift.opensAt);
+  const closes = toMinutes(shift.closesAt);
+  if (closes > opens) return nowMinutes >= opens && nowMinutes < closes;
+  return nowMinutes >= opens;
+}
+
+/** Whether `shift` (yesterday's row) is still running into today's early
+ * hours — only possible for a shift that crossed midnight (closes <=
+ * opens); a same-day shift (closes > opens) never spills into the next
+ * day by definition. */
+function shiftSpillsFromYesterday(shift: DayShift, nowMinutes: number): boolean {
+  const opens = toMinutes(shift.opensAt);
+  const closes = toMinutes(shift.closesAt);
+  if (closes > opens) return false;
+  return nowMinutes < closes;
+}
+
+/** `date`'s local day of week as a DAY_ORDER index (0 = Monday .. 6 =
+ * Sunday) — `Date#getDay()` is 0 = Sunday, so this rotates it by one. */
+function dayIndexOf(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
+export interface OpenStatus {
+  isOpen: boolean;
+  /** "Abierto ahora" / "Cerrado" — same copy and green/red-orange status
+   * treatment as `Fudo App.dc.html`'s hours pill (`hours.status`). */
+  label: string;
+  /** "hoy 18:00–02:00" / "hoy cerrado" / "hoy horario no disponible" —
+   * today's own row, formatted with the same `formatDayHours` the always-
+   * expanded weekly table below already uses, just lowercased and prefixed
+   * (mirrors the reference's `hours.today`, e.g. "hoy 12:00 – 00:30"). */
+  todayLabel: string;
+}
+
+/**
+ * Real "is this merchant open right now" status for the detail page's
+ * "Abierto ahora" pill (docs/visual-qa-report.md, section 3, hallazgo #1).
+ * Reuses the exact `DayHours`/`DayShift` shape `groupBusinessHoursByDay`
+ * already produces for the weekly hours table, comparing the visitor's
+ * current wall-clock time against *both* today's row (a shift may still be
+ * running, e.g. mid-afternoon on a "12:00–00:30" day) and yesterday's row
+ * (a shift that crossed midnight, e.g. "19:00–03:00", is still open in
+ * today's small hours even though today's own row hasn't started yet).
+ *
+ * There is no per-merchant timezone in the schema (`backend/db/structure.sql`
+ * stores `opens_at`/`closes_at` as `time without time zone`, i.e. plain local
+ * wall-clock digits — see the parsing note in `lib/api/merchants.ts`), so
+ * `now` is read as the visitor's own local time. Fine for this MVP: every
+ * merchant in the product is in Argentina, same as every visitor.
+ */
+export function getOpenStatus(weekHours: DayHours[], now: Date = new Date()): OpenStatus {
+  const todayIndex = dayIndexOf(now);
+  const yesterdayIndex = (todayIndex + 6) % 7;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const today = weekHours[todayIndex];
+  const yesterday = weekHours[yesterdayIndex];
+
+  const isOpen =
+    (!today.closed && today.shifts.some((shift) => shiftCoversNow(shift, nowMinutes))) ||
+    (!yesterday.closed &&
+      yesterday.shifts.some((shift) => shiftSpillsFromYesterday(shift, nowMinutes)));
+
+  return {
+    isOpen,
+    label: isOpen ? "Abierto ahora" : "Cerrado",
+    todayLabel: `hoy ${formatDayHours(today).toLowerCase()}`,
+  };
+}

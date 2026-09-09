@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
+import { useOpenStatus } from "@/lib/hooks/use-open-status";
 import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
 import { FavoriteButton } from "@/components/features/buscar/FavoriteButton";
 import { FluidContainer } from "@/components/ui/FluidContainer";
@@ -70,6 +72,21 @@ export function MerchantDetailView({
   // for real API data — see lib/api/merchants.ts) until they do.
   const liveDistanceKm = useMerchantDistanceKm(merchant);
   const distanceKm = liveDistanceKm ?? merchant.distanceKm;
+  // `null` until the browser supplies real "now" (see the hook's doc
+  // comment) — the pill below simply isn't rendered until then.
+  const openStatus = useOpenStatus(weekHours);
+  // Target for the pill's chevron: the "Horarios" section already rendered
+  // further down the page (fully expanded, see this component's top doc
+  // comment). The reference's chevron toggles an accordion that doesn't
+  // exist here — this project already made the deliberate call to always
+  // render the full week instead of an accordion, so re-introducing a
+  // second, separately-toggled copy of the same table right under the pill
+  // would just duplicate it. Scrolling to the existing table keeps a single
+  // source of truth and still gives the chevron a real affordance.
+  const hoursSectionRef = useRef<HTMLElement>(null);
+  function scrollToHours() {
+    hoursSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   // Item cards themselves are identical between layouts; only the group's
   // wrapping grid differs — a single column on phone (`display: flex;
@@ -169,6 +186,43 @@ export function MerchantDetailView({
       ))}
     </div>
   );
+
+  // "Abierto ahora" / "Cerrado" pill — mirrors `Fudo App.dc.html`'s hours
+  // pill (clock icon + colored status + today's hours + chevron) between
+  // the address and the price/distance row. Green/success for open, the
+  // same accent-light/soft treatment the price pill already uses for
+  // closed — both are existing design tokens (see app/globals.css), not new
+  // colors introduced for this.
+  const openNowPill = openStatus ? (
+    <button
+      type="button"
+      onClick={scrollToHours}
+      className="flex w-full items-center gap-2.5 rounded-2xl border border-border bg-surface px-3.5 py-3 text-left shadow-inner shadow-white/5"
+    >
+      <span
+        className={cn(
+          "material-symbols text-[18px]",
+          openStatus.isOpen ? "text-success" : "text-accent-light",
+        )}
+      >
+        schedule
+      </span>
+      <span
+        className={cn(
+          "text-[13.5px] font-semibold",
+          openStatus.isOpen ? "text-success" : "text-accent-light",
+        )}
+      >
+        {openStatus.label}
+      </span>
+      <span className="flex-1 truncate text-[12.5px] text-foreground-faint">
+        {openStatus.todayLabel}
+      </span>
+      <span className="material-symbols text-[18px] text-foreground-faint">
+        expand_more
+      </span>
+    </button>
+  ) : null;
 
   // `fullWidth` matches the wide reference's `flex: 1` buttons (share the
   // card's width evenly); the phone reference lets them hug their content —
@@ -271,12 +325,13 @@ export function MerchantDetailView({
           style={{ gridTemplateColumns: "minmax(280px, 340px) minmax(0, 1fr)" }}
         >
           <div className="sticky top-24 flex min-w-0 flex-col gap-3.5">
-            <div>
+            {openNowPill}
+            <section ref={hoursSectionRef}>
               <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
                 Horarios
               </h2>
               {hoursCard}
-            </div>
+            </section>
 
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-inner shadow-white/5">
               {priceRange ? (
@@ -360,6 +415,8 @@ export function MerchantDetailView({
           </p>
         </div>
 
+        {openNowPill}
+
         <div className="flex flex-wrap items-center gap-2.5">
           {priceRange ? (
             <span className="rounded-full bg-accent-soft px-3 py-1 text-[13px] font-bold text-accent-light">
@@ -374,7 +431,7 @@ export function MerchantDetailView({
 
         {contactButtons(false)}
 
-        <section>
+        <section ref={hoursSectionRef}>
           <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
             Horarios
           </h2>

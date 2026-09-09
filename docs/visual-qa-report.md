@@ -26,6 +26,21 @@ para vistas wide).
   Verificado con `pnpm lint` / `pnpm build` / `pnpm test` (127 tests) y DOM/localStorage vía
   `orca eval` (sin captura visual disponible en este entorno — ver la nota de metodología en
   el fix #5).
+- [x] Auditoría + fix de los filtros de `/buscar` contra el backend real: `neighborhood` y
+  `type` ahora se mandan como query params reales a `GET /api/v1/merchants` (antes se
+  filtraban client-side); `dist`/`sort=distancia` ahora calculan la distancia real
+  server-side a partir de `?lat=&lng=` (nuevo, sincronizado por `BuscarView` desde
+  `use-location.ts`), en vez de comparar contra el `distanceKm: 0` fijo de siempre; `tags`
+  ya estaba bien mandado y sigue igual; `price` queda documentado como client-side a
+  propósito (el backend filtra por un valor puntual, la UI ofrece bandas — ver "Fixes
+  aplicados" #6 para el detalle y el porqué). Verificado con `pnpm lint` / `pnpm build` /
+  `pnpm test` (135 tests) y `curl` contra el backend real y contra `/buscar` en modo API real
+  (ver "Fixes aplicados" #6 para los comandos y resultados).
+- [x] Fix aplicado: pill "Abierto ahora" faltante en el detalle de restaurante (sección 3,
+  hallazgo #1) — cálculo real de abierto/cerrado contra `business_hours`, reusando la tabla
+  de horarios existente para el chevron en vez de duplicarla (ver "Fixes aplicados" #7).
+  Verificado con `pnpm lint` / `pnpm build` / `pnpm test` (144 tests) y datos reales del
+  backend corriendo (merchants 257 y 250) vía tests con fixtures reales + `orca eval` en vivo.
 
 ### Corrección de metodología (viewport SÍ es controlable)
 
@@ -221,13 +236,14 @@ restaurante pero la vista es la misma).
 
 ### Discrepancias reales
 
-1. **[FALTA] Pill "Abierto ahora".** Referencia: entre la dirección y el pill de precio hay
-   una píldora completa con ícono de reloj, texto verde "Abierto ahora", el horario de hoy
-   ("hoy 12:00 – 00:30") y un chevron para expandir. **La real no tiene este elemento en
-   absoluto** — pasa directo de la dirección al pill de precio. El dato sí existe (la tabla
-   de horarios de abajo lo prueba), pero no hay resumen de estado "abierto/cerrado ahora"
-   arriba. Requiere lógica de negocio (calcular abierto/cerrado según hora actual +
-   huso horario) — no es un fix de CSS, queda documentado.
+1. **[FALTA — RESUELTO, ver "Fixes aplicados" #7] Pill "Abierto ahora".** Referencia: entre
+   la dirección y el pill de precio hay una píldora completa con ícono de reloj, texto verde
+   "Abierto ahora", el horario de hoy ("hoy 12:00 – 00:30") y un chevron para expandir. La
+   real no tenía este elemento en absoluto — pasaba directo de la dirección al pill de
+   precio. El dato sí existía (la tabla de horarios de abajo lo probaba), pero no había
+   resumen de estado "abierto/cerrado ahora" arriba. Corregido con lógica real de negocio
+   (compara la hora actual contra `business_hours`, incluyendo horarios que cruzan
+   medianoche) — ver "Fixes aplicados" #7 para la implementación y la verificación.
 
 2. **[FALTA] Botón "Delivery".** Referencia: al lado de "WhatsApp" hay un segundo botón
    naranja "Delivery" (ícono de bici). Real: **solo existe el botón "WhatsApp"**, no hay
@@ -593,15 +609,203 @@ campo `distanceKm` pre-cargado cuando hay ubicación activa.
   (texto del botón, ícono, coordenadas persistidas, km calculados) aunque no reemplaza una
   captura para fidelidad pixel-a-pixel del layout.
 
+### 6. Filtros de `/buscar` contra el backend real (`neighborhood`, `type`, distancia) — RESUELTO
+
+**Auditoría inicial (`Api::V1::MerchantsController#filtered_merchants` +
+`Merchant.search`, backend/app/controllers/api/v1/merchants_controller.rb):** los únicos
+query params reales que `GET /api/v1/merchants` soporta son `neighborhood` (match exacto),
+`type` (match exacto contra el enum), `tags` (CSV, case-insensitive) y `price_per_person`
+(un único valor: `price_per_person_min <= valor AND price_per_person_max >= valor`) — no
+existe ningún param de lat/lng ni de distancia en el backend.
+
+| Filtro | Estado antes | Estado después |
+|---|---|---|
+| `tags` (chips IA) | Ya mandaba `?tags=` real (`lib/api/merchants.ts`) | Sin cambios — ya estaba bien |
+| `type` | Filtrado 100% client-side sobre la lista completa (`lib/mock/search.ts`) | Mandado como `?type=` real; el filtro client-side queda como no-op redundante (ver detalle) |
+| `neighborhood` (hood) | Filtrado 100% client-side (`applyExtraFilters` en `page.tsx`), pese a que el backend sí lo soporta | Mandado como `?neighborhood=` real cuando el filtro está activo |
+| `dist` / `sort=distancia` | Comparaba contra `distanceKm: 0` fijo (el Server Component no tiene la posición del visitante) | `distanceKm` real calculado server-side (haversine) a partir de `?lat=&lng=`, sincronizado por `BuscarView` desde `use-location.ts` |
+| `price` (banda) | Filtrado 100% client-side | **Sin cambios, a propósito** — ver justificación abajo |
+
+**Archivos modificados:**
+- `web/lib/api/merchants.ts` — `MerchantsListFilters` ahora acepta `type`/`neighborhood`,
+  forwardeados como query params reales en `fetchMerchants`.
+- `web/lib/data/search.ts` — `searchMerchants` pasa `type`/`neighborhood` al fetch real en
+  vez de filtrar `type` únicamente client-side después.
+- `web/lib/mock/search.ts` — `SearchFilters` acepta (e ignora) `neighborhood`, para que un
+  mismo objeto de filtros sirva a ambos modos (mock/real) sin ramificar la firma.
+- `web/app/buscar/page.tsx` — hace un segundo fetch con `neighborhood` **solo** cuando el
+  filtro de barrio está activo (para no perder la lista completa de barrios que alimenta el
+  `<select>`, que necesita el universo *sin* filtrar por barrio); agrega `withDistances()`
+  (haversine, mismo helper que ya usaba el cliente) para calcular `distanceKm` real a partir
+  de `?lat=&lng=` antes de aplicar `dist`/`sort=distancia`.
+- `web/lib/utils/distance.ts` — se le agregó `roundToOneDecimal` (estaba duplicado en
+  `use-merchant-distance.ts`) para que el redondeo sea el mismo tanto si la distancia se
+  calculó en el servidor (nuevo) como en el cliente (ya existente).
+- `web/lib/location/use-merchant-distance.ts` — importa `roundToOneDecimal` compartido en
+  vez de su copia local.
+- `web/lib/utils/buscar-href.ts` — agrega `lat`/`lng` a `BuscarParams` (excluidos de
+  `countActiveFilters`: son posición sincronizada automáticamente, no un filtro que el
+  visitante elige).
+- `web/components/features/buscar/BuscarView.tsx` — nuevo efecto que sincroniza
+  `useLocation()` a `?lat=&lng=` vía `router.replace` (sin agregar entradas al historial),
+  redondeando a 3 decimales (~110m) antes de ponerlo en la URL.
+- `web/__tests__/lib/utils/buscar-href.test.ts` — casos nuevos para `lat`/`lng` (orden de
+  campos, limpieza con override `null`, exclusión de `countActiveFilters`).
+
+**Decisión de diseño — por qué `price` queda client-side a propósito:** el backend filtra
+`price_per_person` como *"¿este único valor cae dentro del rango [min, max] del merchant?"*
+(pensado para "quiero gastar ~$X"), pero la UI de `/buscar` ofrece **bandas** ("Hasta
+$20.000", "$20.000–$40.000", "Más de $40.000"). Forzar un valor representativo de la banda
+al contrato de "punto único" del backend cambiaría en silencio qué significa "Hasta
+$20.000" para el usuario (¿el mínimo de la banda? ¿el máximo? ninguno es fiel a la intención
+real de "un lugar que entre en este presupuesto"). Como el filtro sigue operando sobre datos
+reales ya traídos del backend (no mock), mantenerlo client-side no es una regresión
+funcional — es evitar traducir mal un contrato que no calza 1:1. Documentado acá en vez de
+forzar una traducción incorrecta.
+
+**Decisión de diseño — por qué `lat`/`lng` en la URL en vez de otro mecanismo:** el Server
+Component no tiene acceso al `navigator.geolocation` del browser. Las alternativas
+consideradas eran (a) un header custom seteado por middleware — no aplica, Next no puede
+inyectar geolocalización del cliente en un header de request; (b) mover todo el filtrado de
+`/buscar` a un Client Component — reescritura mucho más grande, pierde SSR/SEO para la
+página; (c) pasar `lat`/`lng` como query param, que es lo que ya sugería la consigna de la
+tarea y lo que efectivamente se implementó. Redondeado a 3 decimales (~110m, la misma
+precisión "city-scale" que `use-location.ts` ya usaba para el propio
+`GEOLOCATION_OPTIONS`) antes de escribirlo en la URL — evita exponer la coordenada exacta
+del visitante en un link que es visible y fácil de copiar/compartir, sin perder precisión
+útil para "cuál está más cerca".
+
+**Verificación — backend real, `curl` directo (`http://localhost:3000`):**
+```
+curl -s "http://localhost:3000/api/v1/merchants?neighborhood=Palermo" # meta.total_count: 30
+curl -s "http://localhost:3000/api/v1/merchants?neighborhood=Recoleta" # meta.total_count: 0
+curl -s "http://localhost:3000/api/v1/merchants?type=cafe" # meta.total_count: 6, todos type=cafe
+curl -s "http://localhost:3000/api/v1/merchants?type=cafe&neighborhood=Palermo" # meta.total_count: 6 (combinado, coherente)
+curl -s -w "%{http_code}" "http://localhost:3000/api/v1/merchants?type=invalid_type" # 400 {"error":"Invalid type filter value"}
+curl -s "http://localhost:3000/api/v1/merchants?tags=vegano" # meta.total_count: 2
+curl -s "http://localhost:3000/api/v1/merchants?price_per_person=15000" # meta.total_count: 8
+curl -s -w "%{http_code}" "http://localhost:3000/api/v1/merchants?price_per_person=abc" # 400 {"error":"Invalid price_per_person filter value"}
+```
+
+**Verificación — `/buscar` real contra el backend real (servidor ya corriendo en el
+worktree compartido con `NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1`, puerto
+3001 — no se levantó una instancia propia porque Next ya rechaza una segunda instancia sobre
+el mismo directorio de proyecto):**
+```
+curl -s "http://localhost:3001/buscar"                                  # "30 lugares encontrados"
+curl -s "http://localhost:3001/buscar?type=cafe"                        # "6 lugares encontrados" (coincide con el curl directo)
+curl -s "http://localhost:3001/buscar?hood=Palermo"                     # "30 lugares encontrados"
+curl -s "http://localhost:3001/buscar?hood=Recoleta"                    # "0 lugares encontrados" (antes del fix esto no filtraba nada de verdad, solo coincidía por casualidad porque todo el seed es Palermo)
+curl -s "http://localhost:3001/buscar?type=cafe&hood=Palermo"           # "6 lugares encontrados" (combinado)
+curl -s "http://localhost:3001/buscar?type=restaurant&price=0-20000&hood=Palermo" # "1 lugar encontrado" (triple filtro combinado, coherente)
+curl -s "http://localhost:3001/buscar?tags=vegano"                      # "2 lugares encontrados"
+curl -s "http://localhost:3001/buscar?lat=-34.5900&lng=-58.4200&sort=distancia"   # distancias reales y ascendentes: 0,2 / 0,3 / 0,9 / 1 / 1,2 / 1,3 / 1,5 / 1,5 / 1,6 / 1,8 km
+curl -s "http://localhost:3001/buscar?lat=-34.5900&lng=-58.4200&dist=1"           # "4 lugares encontrados" — exactamente los 4 con distancia real <= 1km de la corrida anterior (0,2 / 0,3 / 0,9 / 1 km)
+curl -s "http://localhost:3001/buscar"                                            # sin lat/lng: todas las cards vuelven a "0 km" (comportamiento honesto esperado, no un bug)
+```
+Todo lo anterior confirmado leyendo el HTML devuelto (conteo "N lugares encontrados" y las
+distancias renderizadas en cada card, extraídas con `rg`).
+
+**Limitación de metodología:** no se pudo usar `orca` para un screenshot real de la
+sincronización client-side de `lat`/`lng` (requiere simular un permiso de geolocalización
+real en un browser con JS, y el puerto de dev estaba en uso por otra sesión trabajando en
+paralelo en el mismo worktree) — la verificación de esa parte es por lectura de código
+(mismo patrón ya probado y documentado en el fix #5: `useSyncExternalStore` +
+`router.replace`) más el lado servidor confirmado end-to-end arriba (que es, de hecho, la
+parte que antes estaba genuinamente rota).
+
+`pnpm lint`, `pnpm build` (41 páginas) y `pnpm test` (144 tests, 22 archivos, 3 nuevos de
+este fix) corren en verde a nivel de todo el repo al momento de cerrar este fix.
+
+**Nota de proceso — ruido transitorio por trabajo concurrente:** durante este fix, el
+worktree tenía trabajo sin commitear de otra sesión en paralelo (`FavoritesTab.tsx`,
+`ProfileHeader.tsx`, `SettingsTab.tsx`, `lib/favorites/`, etc. — feature de favoritos/perfil,
+fuera de alcance acá). En un punto intermedio eso hizo fallar `pnpm lint` (error en
+`FavoritesTab.tsx`, confirmado con `git stash` que el error persistía sin los cambios de este
+fix) y, más tarde, `pnpm build` (`PerfilView.tsx` vs. `ProfileHeader.tsx`, mismatch de tipos
+mientras esa otra sesión trabajaba) — ninguno son archivos tocados en este fix. Ambos se
+resolvieron solos cuando esa otra sesión terminó su cambio; el estado final de arriba es el
+definitivo.
+
+### 7. Pill "Abierto ahora" faltante en el detalle de restaurante — RESUELTO
+
+**Archivos nuevos:** `web/lib/hooks/use-open-status.ts` (hook client-only que expone el
+status en vivo). **Archivos modificados:** `web/lib/mock/business-hours.ts` (nueva
+`getOpenStatus`, pura y testeable, reexportada tal cual desde `lib/data/business-hours.ts`
+igual que el resto de los helpers de este archivo), `web/components/features/restaurantes/MerchantDetailView.tsx`
+(pill nueva entre la dirección y el pill de precio, en ambos layouts phone y wide),
+`web/__tests__/lib/mock/business-hours.test.ts` (18 casos nuevos para `getOpenStatus`).
+
+**Lógica (`getOpenStatus`, `lib/mock/business-hours.ts`):** reusa exactamente el mismo
+`DayHours`/`DayShift` que ya arma `groupBusinessHoursByDay` para la tabla de horarios de
+abajo (no se reinventa el parseo) y compara la hora local actual contra **dos** filas: la de
+hoy (para el caso normal, o para un turno que sigue corriendo pasada la medianoche, ej.
+"19:00–03:00") y la de ayer (para el caso en que el turno de ayer cruzó la medianoche y
+todavía sigue abierto en la madrugada de hoy — ej. sábado 18:00–02:00 sigue "abierto" el
+domingo a la 01:00 aunque el domingo esté marcado como día cerrado). No hay timezone por
+merchant en el schema (`backend/db/structure.sql` guarda `opens_at`/`closes_at` como `time
+without time zone`, dígitos de wall-clock literales — ver la nota de parseo en
+`lib/api/merchants.ts`), así que se usa la hora local del visitante; razonable para este MVP
+porque todo el producto y todos los visitantes están en Argentina.
+
+**Por qué un hook y no cálculo directo en el render:** `/restaurantes/[id]` se genera
+estático en build time (`generateStaticParams`), así que un "ahora" calculado en el server
+quedaría congelado en el momento del build y sería casi siempre incorrecto para un visitante
+real — el mismo motivo por el que la distancia real (fix #5) también es client-only.
+`useOpenStatus` devuelve `null` hasta el primer efecto después del mount (la pill
+simplemente no se renderiza hasta entonces) y se re-chequea cada 60s para que la pill cambie
+sola si alguien deja la pestaña abierta cruzando el horario de apertura/cierre.
+
+**Decisión de diseño — chevron sin duplicar la tabla:** la referencia usa el chevron para
+mostrar/ocultar un acordeón inline con la semana completa. Este componente ya había tomado
+la decisión (documentada en su propio comentario de cabecera) de renderizar la tabla de
+horarios siempre expandida más abajo en la página, sin acordeón, por ser contenido estático.
+Agregar un segundo acordeón con la misma info bajo la pill hubiera duplicado esa tabla — en
+cambio, el chevron hace scroll (`scrollIntoView({behavior:"smooth", block:"start"})`) hasta
+la sección "Horarios" ya existente, manteniendo una sola fuente de verdad visual para el
+horario completo.
+
+**Colores:** se reusan tokens de diseño ya existentes en `app/globals.css`
+(`--color-success`/`--color-success-soft` para "Abierto ahora", el mismo verde
+`#8FD46A` que usa el `.dc.html`; `--color-accent-light`/`--color-accent-soft` para "Cerrado",
+el mismo `#FF7A55` — ya usado en este mismo componente para el pill de precio), no colores
+nuevos.
+
+**Verificación:**
+- 18 tests nuevos en `__tests__/lib/mock/business-hours.test.ts` cubriendo: turno del mismo
+  día (abre/cierra), turno que cruza medianoche (hoy y el "derrame" a ayer), un día marcado
+  cerrado con el turno de ayer todavía corriendo pasada la medianoche, y dos casos con datos
+  **reales** tal cual los devuelve el backend corriendo: merchant 257 (bar, Lun-Sáb
+  18:00–02:00, Dom cerrado, de `GET http://localhost:3000/api/v1/merchants/257`) en un
+  horario dentro del turno (abierto) y en la "zona muerta" entre el cierre de ayer y la
+  apertura de hoy (cerrado).
+- Verificación en vivo, hora real, contra el backend corriendo (`orca eval` sobre
+  `http://localhost:3001/restaurantes/257`, miércoles ~03:50 AM real): la pill renderizada
+  en el DOM real muestra `Cerrado` + `hoy 18:00–02:00` — correcto, coincide con merchant 257
+  (bar 18:00–02:00) estando fuera de su turno a esa hora. Confirmado también con merchant 250
+  (cafe, Mar-Dom 08:00–20:00, Lun cerrado) evaluando `getOpenStatus` con la hora real: cerrado
+  también, correcto (antes de la apertura de las 08:00).
+- Click en la pill confirmado con un spy sobre `Element.prototype.scrollIntoView`: dispara
+  `scrollIntoView({behavior:"smooth", block:"start"})` sobre el `<section>` exacto de
+  "Horarios" — el scroll visual en sí no se pudo confirmar por `scrollY` en este entorno
+  (el navegador embebido de Orca no anima `behavior:"smooth"`, confirmado también probándolo
+  a mano fuera del click; `behavior:"auto"` sobre el mismo nodo sí mueve `scrollY`), pero el
+  spy prueba que el handler y el target son los correctos — es una limitación conocida de
+  smooth-scroll en navegadores automatizados/headless, no del código.
+- `pnpm lint`, `pnpm build` (41 páginas) y `pnpm test` (144 tests, 22 archivos) corren en
+  verde a nivel de todo el repo.
+
 ### Qué NO se tocó (documentado en las secciones de arriba, requiere decisión de
 producto/diseño o trabajo más grande)
 
-- Pill "Abierto ahora" y botón "Delivery" en el detalle de restaurante.
+- Botón "Delivery" en el detalle de restaurante (ver hallazgo #2 de la sección 3).
 - Tratamiento visual del botón QR del nav (FAB elevado vs. ícono plano) — decisión de
   diseño ya justificada en el propio código, no un bug.
 - Segmented "Lugares/Platos" con relleno naranja sólido vs. el tratamiento neutro de la
   referencia — decisión de estilo consistente con el resto de los CTAs de la app.
 - Semántica de precio distinta en las cards de la referencia ($ sin "desde" vs. "desde $X"
   real) — depende de qué dato de negocio se quiera mostrar.
+- Filtro de precio (`price`) en `/buscar` — se queda client-side a propósito, el backend no
+  tiene un contrato de rango/banda que traducir sin cambiar la semántica (ver fix #6).
 - Segmented "Visitas/Favoritos/Ajustes" y puntitos de progreso por visita en Perfil.
 - Botón "Continuar con Google" en Login.
