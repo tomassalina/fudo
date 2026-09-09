@@ -99,7 +99,12 @@ void main() {
     (tester) async {
       await _pumpSheet(tester);
 
-      expect(find.text('Sin filtros activos'), findsOneWidget);
+      // `_ActiveCountPill` always renders the numeral count now (matching
+      // web's `PhoneFilterSheet.tsx` exactly), including "0 filtros
+      // activos" — the old bottom-of-sheet "Sin filtros activos" special
+      // case for 0 this test used to check doesn't exist anymore (see the
+      // doc comment on `_ActiveCountPill`).
+      expect(find.text('0 filtros activos'), findsOneWidget);
       expect(find.text('ORDENAR POR'), findsOneWidget);
       expect(find.text('TIPO DE LOCAL'), findsOneWidget);
       expect(find.text('Abierto ahora'), findsOneWidget);
@@ -169,7 +174,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('1 filtro activo'), findsOneWidget);
-      expect(find.text('Sin filtros activos'), findsNothing);
+      expect(find.text('0 filtros activos'), findsNothing);
     },
   );
 
@@ -185,7 +190,7 @@ void main() {
 
     await _tapText(tester, cafeLabel);
     await tester.pump();
-    expect(find.text('Sin filtros activos'), findsOneWidget);
+    expect(find.text('0 filtros activos'), findsOneWidget);
   });
 
   testWidgets(
@@ -203,7 +208,7 @@ void main() {
       await _tapText(tester, 'Limpiar');
       await tester.pump();
 
-      expect(find.text('Sin filtros activos'), findsOneWidget);
+      expect(find.text('0 filtros activos'), findsOneWidget);
     },
   );
 

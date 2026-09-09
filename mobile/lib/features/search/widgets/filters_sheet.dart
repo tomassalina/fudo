@@ -297,6 +297,23 @@ class _CategoryTab extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       category.label,
+                      // Web's equivalent (`FilterCategoryTabs.tsx`'s "sheet"
+                      // variant) forces `whitespace-nowrap` on this label —
+                      // single line, always, never wraps — and just lets a
+                      // couple of characters bleed past the 78px pill on the
+                      // two longest labels ("Ubicación", "Premios"), which a
+                      // browser tolerates with no layout error. Flutter has
+                      // no such free pass: a `Text` with no line limit wraps
+                      // those two labels onto a second line instead, which
+                      // is what actually overflowed this pill's fixed-height
+                      // box vertically (`RenderFlex overflowed by 9.0
+                      // pixels`) — not the icon or padding. `maxLines: 1` +
+                      // `ellipsis` reproduces the same "always one line"
+                      // intent as `whitespace-nowrap` while staying inside
+                      // Flutter's real layout constraints instead of
+                      // bleeding outside the pill.
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTheme.body.copyWith(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
