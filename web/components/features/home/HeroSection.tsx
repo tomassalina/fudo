@@ -9,6 +9,18 @@
 // component, same pattern as components/layout/nav/AppNav.tsx, so the switch
 // reads the real viewport instead of a CSS media query that doesn't line up
 // with the app's structural breakpoint.
+//
+// Home has no content below the hero, so this section is sized to fill the
+// *entire* space left over after chrome — not just a minimum — and centers
+// its children in it, so the search card is always dead-center of the
+// available viewport rather than pinned near the top:
+//   - phone: 100vh minus Header's own height (~52px, the same offset the
+//     wide branch below applies for its sticky nav) minus 112px (`pb-28`,
+//     the same bottom-nav clearance used everywhere else in this app — see
+//     e.g. app/buscar/page.tsx — reserved here so the centered content never
+//     sits under PhoneNav's floating pill, which overlays rather than
+//     reserving layout space).
+//   - wide: 100vh minus WideNav's sticky height (68px, its `h-17`).
 
 import type { ReactNode } from "react";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
@@ -21,9 +33,7 @@ export function HeroSection({ children }: { children: ReactNode }) {
     <section
       className={cn(
         "relative flex items-center justify-center overflow-hidden py-10",
-        isPhone
-          ? "min-h-[min(660px,calc(100vh-52px))]"
-          : "min-h-[calc(100vh-68px)]",
+        isPhone ? "min-h-[calc(100vh-164px)]" : "min-h-[calc(100vh-68px)]",
       )}
     >
       {/* Single soft radial glow behind the hero, per the reference's

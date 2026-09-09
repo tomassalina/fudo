@@ -4,22 +4,22 @@
 //   docs/design-reference/Fudo App.dc.html        (phone, vw < 900)
 //   docs/design-reference/Fudo Customers.dc.html  (wide, vw >= 900)
 // The hero (headline + typewriter search card) is the one client island —
-// see components/features/home/HeroSearch.tsx — everything else, including
-// the featured-places fetch, stays server-rendered.
+// see components/features/home/HeroSearch.tsx — everything else stays
+// server-rendered.
+//
+// Home is intentionally just the hero: no featured-merchants section below
+// it (see FeaturedGrid, still used nowhere but kept around in case it's
+// reused elsewhere — this page just doesn't render it). HeroSection itself
+// is sized to the full viewport minus header/nav chrome and centers its
+// children within that space, so the search card always sits dead-center of
+// the screen instead of pinned to the top.
 
 import { FluidContainer } from "@/components/ui/FluidContainer";
 import { Header } from "@/components/layout/Header";
 import { HeroSection } from "@/components/features/home/HeroSection";
 import { HeroSearch } from "@/components/features/home/HeroSearch";
-import { FeaturedGrid } from "@/components/features/home/FeaturedGrid";
-import { getMerchants } from "@/lib/data/merchants";
 
-const FEATURED_COUNT = 6;
-
-export default async function MarketingLandingPage() {
-  const merchants = await getMerchants();
-  const featured = merchants.slice(0, FEATURED_COUNT);
-
+export default function MarketingLandingPage() {
   return (
     <main className="flex flex-1 flex-col">
       <Header />
@@ -28,15 +28,6 @@ export default async function MarketingLandingPage() {
           <HeroSearch />
         </FluidContainer>
       </HeroSection>
-
-      {featured.length > 0 ? (
-        <FluidContainer as="section" className="flex flex-col gap-4 pb-28">
-          <h2 className="font-heading text-title-fluid font-black text-foreground">
-            Lugares destacados
-          </h2>
-          <FeaturedGrid merchants={featured} />
-        </FluidContainer>
-      ) : null}
     </main>
   );
 }
