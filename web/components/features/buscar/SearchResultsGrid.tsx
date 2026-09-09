@@ -65,8 +65,35 @@ export function SearchResultsGrid({
   const [visibleCount, setVisibleCount] = useState(Math.min(PAGE_SIZE, total));
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(1);
 
   const canLoadMore = visibleCount < total && !loadingMore;
+
+  /** Desktop's grid is `repeat(auto-fit, minmax(260px, 1fr))` — the real
+   * column count depends on viewport width and isn't knowable from CSS
+   * alone. `getComputedStyle(...).gridTemplateColumns` returns the
+   * browser's post-layout resolved track list (one length per actual
+   * column), so reading and counting that is the only way to know the true
+   * column count without duplicating the browser's own auto-fit sizing math
+   * in JS. A `ResizeObserver` on the grid keeps it correct across live
+   * viewport/container resizes (not just a resize *event*, which wouldn't
+   * fire for container-driven layout changes e.g. a sidebar toggling). */
+  useEffect(() => {
+    if (isPhone) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const updateColumns = () => {
+      const count = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length;
+      setColumns(count > 0 ? count : 1);
+    };
+
+    updateColumns();
+    const observer = new ResizeObserver(updateColumns);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [isPhone]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -115,9 +142,17 @@ export function SearchResultsGrid({
     ? "flex flex-col gap-[11px]"
     : "grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-[18px]";
 
+  /** Fill only the missing slots in the current (possibly partial) last row
+   * — not a fixed count. Rendered as siblings of the real cards inside the
+   * SAME grid container (see below) so CSS grid auto-placement continues
+   * the incomplete last row before wrapping, instead of us computing row
+   * boundaries manually. */
+  const remainder = visibleCount % columns;
+  const desktopSkeletonCount = remainder === 0 ? columns : columns - remainder;
+
   return (
     <div>
-      <div className={containerClass}>
+      <div ref={gridRef} className={containerClass}>
         {mode === "platos"
           ? dishes
               .slice(0, visibleCount)
@@ -129,21 +164,23 @@ export function SearchResultsGrid({
               .map((merchant) => (
                 <MerchantCard key={merchant.id} merchant={merchant} layout={layout} />
               ))}
+
+        {!isPhone && loadingMore
+          ? Array.from({ length: desktopSkeletonCount }, (_, i) => (
+              <div
+                key={i}
+                aria-hidden
+                className="h-[240px] w-full animate-pulse rounded-card border border-border bg-surface"
+              />
+            ))
+          : null}
       </div>
 
-      {loadingMore ? (
-        <div
-          aria-hidden
-          className={isPhone ? "flex flex-col gap-[11px] pt-[11px]" : `${containerClass} pt-[18px]`}
-        >
-          {isPhone
-            ? [0, 1, 2].map((i) => <RowSkeleton key={i} />)
-            : [0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="h-[240px] w-full animate-pulse rounded-card border border-border bg-surface"
-                />
-              ))}
+      {isPhone && loadingMore ? (
+        <div aria-hidden className="flex flex-col gap-[11px] pt-[11px]">
+          {[0, 1, 2].map((i) => (
+            <RowSkeleton key={i} />
+          ))}
         </div>
       ) : null}
 
