@@ -51,7 +51,8 @@ class GiftingScreen extends ConsumerStatefulWidget {
   ConsumerState<GiftingScreen> createState() => _GiftingScreenState();
 }
 
-class _GiftingScreenState extends ConsumerState<GiftingScreen> {
+class _GiftingScreenState extends ConsumerState<GiftingScreen>
+    with SingleTickerProviderStateMixin {
   // Card + inter-card spacing, used to center a tapped card programmatically
   // (see [_selectTier]).
   static const _cardWidth = 250.0;
@@ -62,6 +63,13 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+
+  /// Drives the idle shimmer/sheen sweep shared by the 4 tier cards and the
+  /// CTA button — a single controller (instead of one per widget) keeps
+  /// every sweep in lockstep, matching the web reference's shared
+  /// `[animation-duration:3.6s]` override on `animate-fudo-sheen`
+  /// (`GiftTierPicker.tsx`, `GiftCheckoutForm.tsx`).
+  late final AnimationController _sheenController;
 
   int _selectedIndex = 0;
 
@@ -80,6 +88,10 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen> {
     super.initState();
     _amountController.addListener(_onFieldChanged);
     _phoneController.addListener(_onFieldChanged);
+    _sheenController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3600),
+    )..repeat();
   }
 
   @override
@@ -90,6 +102,7 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen> {
     _amountController.dispose();
     _phoneController.dispose();
     _messageController.dispose();
+    _sheenController.dispose();
     super.dispose();
   }
 
@@ -284,6 +297,7 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen> {
                               child: _GiftTierCard(
                                 type: GiftType.values[index],
                                 selected: index == _selectedIndex,
+                                sheen: _sheenController,
                               ),
                             ),
                           ),
@@ -360,6 +374,7 @@ class _GiftingScreenState extends ConsumerState<GiftingScreen> {
                   label: _isSubmitting ? 'Enviando…' : _ctaLabel,
                   enabled: _canSubmit,
                   onTap: _handleSubmit,
+                  sheen: _sheenController,
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
@@ -464,10 +479,18 @@ class _SectionLabel extends StatelessWidget {
 /// One gift card tier in the carousel, painted with its
 /// [GiftTypePresentation.gradient]/[GiftTypePresentation.textColor].
 class _GiftTierCard extends StatelessWidget {
-  const _GiftTierCard({required this.type, required this.selected});
+  const _GiftTierCard({
+    required this.type,
+    required this.selected,
+    required this.sheen,
+  });
 
   final GiftType type;
   final bool selected;
+
+  /// Shared 3.6s repeating controller driving the idle sheen sweep — see
+  /// `_GiftingScreenState._sheenController`.
+  final Animation<double> sheen;
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +500,6 @@ class _GiftTierCard extends StatelessWidget {
     return Container(
       width: 250,
       height: 190,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: type.gradient,
         borderRadius: BorderRadius.circular(AppTheme.radiusHeroLarge),
@@ -492,40 +514,60 @@ class _GiftTierCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                type.name.toUpperCase(),
-                style: AppTheme.title.copyWith(
-                  color: textColor,
-                  letterSpacing: 1.5,
-                  fontSize: 15,
-                ),
-              ),
-              if (selected)
-                Icon(Symbols.check_circle, color: textColor, size: 22),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            amount != null ? formatCurrency(amount) : 'Monto libre',
-            style: AppTheme.headline.copyWith(color: textColor, fontSize: 28),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            type.perk,
-            style: AppTheme.body.copyWith(
-              color: textColor.withValues(alpha: textColor.a * 0.85),
-              fontSize: 12,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.radiusHeroLarge),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: _SheenSweep(animation: sheen, widthFraction: 70 / 250),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        type.name.toUpperCase(),
+                        style: AppTheme.title.copyWith(
+                          color: textColor,
+                          letterSpacing: 1.5,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (selected)
+                        Icon(
+                          Symbols.check_circle,
+                          color: textColor,
+                          size: 22,
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    amount != null ? formatCurrency(amount) : 'Monto libre',
+                    style: AppTheme.headline.copyWith(
+                      color: textColor,
+                      fontSize: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    type.perk,
+                    style: AppTheme.body.copyWith(
+                      color: textColor.withValues(alpha: textColor.a * 0.85),
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -585,11 +627,21 @@ class _GiftCtaButton extends StatelessWidget {
     required this.label,
     required this.enabled,
     required this.onTap,
+    required this.sheen,
   });
 
   final String label;
   final bool enabled;
   final VoidCallback onTap;
+
+  /// Shared 3.6s repeating controller driving the idle sheen sweep — only
+  /// shown while [enabled], matching the web reference's `canPay ? ... :
+  /// null` gate on the sweep (`GiftCheckoutForm.tsx`). The sweep band is
+  /// sized to a third of the button (same as the web reference's `w-1/3`
+  /// strip) but its translateX range still carries it edge to edge, so the
+  /// visible sweep reaches the full width of the button rather than
+  /// stopping partway across.
+  final Animation<double> sheen;
 
   @override
   Widget build(BuildContext context) {
@@ -609,24 +661,99 @@ class _GiftCtaButton extends StatelessWidget {
                 ]
               : null,
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-            onTap: enabled ? onTap : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              child: Center(
-                child: Text(
-                  label,
-                  style: AppTheme.button.copyWith(color: Colors.white),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          child: Stack(
+            children: [
+              if (enabled)
+                Positioned.fill(
+                  child: _SheenSweep(animation: sheen, widthFraction: 1 / 3),
+                ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  onTap: enabled ? onTap : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: AppTheme.button.copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// The idle shimmer/sheen sweep used on the gift tier cards and the CTA
+/// button — a straight port of the web reference's `fudoSheen` keyframe
+/// (`web/app/globals.css`): translateX(-120% -> 320%) of the sweep band's
+/// own width over the first 60% of the loop, with opacity fading in over
+/// 0-15% and back out over 55-60% so the loop restart never reads as an
+/// abrupt jump, then staying invisible for the remaining 40% of the cycle.
+/// Driven by a shared [Animation] (`_GiftingScreenState._sheenController`,
+/// 3.6s repeating) so every card and the button sweep in lockstep, matching
+/// the web reference's shared `[animation-duration:3.6s]` override.
+class _SheenSweep extends StatelessWidget {
+  const _SheenSweep({required this.animation, required this.widthFraction});
+
+  final Animation<double> animation;
+
+  /// Width of the sweep band as a fraction of the parent's width — 70px of
+  /// a 250px card in the web reference, or a third of the button.
+  final double widthFraction;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final t = animation.value;
+          final opacity = _opacityAt(t);
+          if (opacity <= 0) return const SizedBox.shrink();
+          final progress = (t / 0.6).clamp(0.0, 1.0);
+          return FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: widthFraction,
+            child: FractionalTranslation(
+              // -120% at progress 0 to 320% at progress 1, relative to the
+              // sweep band's own width — same as the CSS keyframe.
+              translation: Offset(-1.2 + progress * 4.4, 0),
+              child: Opacity(
+                opacity: opacity,
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Color(0x52FFFFFF),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  double _opacityAt(double t) {
+    if (t < 0.15) return t / 0.15;
+    if (t <= 0.55) return 1;
+    if (t <= 0.60) return 1 - (t - 0.55) / 0.05;
+    return 0;
   }
 }
 
