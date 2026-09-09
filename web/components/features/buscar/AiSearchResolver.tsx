@@ -20,16 +20,41 @@
 // Once resolved, replaces the URL with the plain filter params
 // (`type`/`hood`/`tags`/`price`/`open`/`reward`) this app's other filters
 // already use — a shareable link, same convention as
-// `?sort=distancia`/`?open=now` (see lib/utils/buscar-href.ts). On failure
-// (network error, Gemini unavailable,
-// mock/local mode with no real backend, or the visitor isn't logged in —
-// this endpoint requires `authenticate_consumer!`, see search_controller.rb)
-// it degrades to a plain name-only search with the same text instead of
-// leaving the visitor stuck on a skeleton forever.
+// `?sort=distancia`/`?open=now` (see lib/utils/buscar-href.ts). On ANY
+// failure — network error, Gemini itself erroring/timing out (bounded by
+// apiFetch's own REQUEST_TIMEOUT_MS, see lib/api/client.ts, so this never
+// hangs waiting on the network past ~5s), or mock/local mode with no real
+// backend — it degrades to a plain name-only search with the same text
+// instead of leaving the visitor stuck on a skeleton. There is no separate
+// dedicated "AI search failed" error screen: a plain-text /buscar result for
+// the same query is itself a complete, useful result, not a dead end (and
+// there is no such error-state pattern in the design reference either).
+//
+// GOTCHA (found live while fixing a real "stuck on skeleton forever"
+// report, see openspec learnings for the full incident): StrictMode/dev
+// double-invokes this effect (mount -> synchronous cleanup -> mount again).
+// `startedRef` below is correct to guard the actual `resolveAiSearchFilters`
+// call itself (it's a non-idempotent, billed Gemini call and must fire
+// exactly once), but it must NOT also gate attaching the `.then`/`.catch`
+// handlers — an earlier version returned early on the bailed-out second
+// effect run before those were attached, so the surviving effect instance
+// never registered a live (non-cancelled) handler at all: the FIRST effect
+// run's cleanup fires immediately (StrictMode's synthetic unmount) and sets
+// ITS `cancelled` closure to true; the fetch it kicked off resolves later
+// against that same now-`cancelled` closure and silently no-ops instead of
+// navigating. Net effect: the real network call visibly succeeds (200 in
+// the Network tab) but the page never leaves the skeleton. The fix is to
+// cache the in-flight promise itself in a ref (so the API call still only
+// fires once) while still letting EVERY effect invocation — including the
+// one that survives StrictMode's double-invoke — attach its own `cancelled`
+// handlers to that shared promise.
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { resolveAiSearchFilters } from "@/lib/search/resolve-ai-search";
+import {
+  resolveAiSearchFilters,
+  type ResolvedAiFilters,
+} from "@/lib/search/resolve-ai-search";
 import { buscarHref, DEFAULT_BUSCAR_PARAMS } from "@/lib/utils/buscar-href";
 import { BuscarSkeleton } from "./BuscarSkeleton";
 
@@ -46,16 +71,22 @@ export function AiSearchResolver({
   presetType: string;
 }) {
   const router = useRouter();
-  // StrictMode/dev double-invokes effects — this guards against firing the
-  // (non-idempotent, billed) Gemini call twice for one submission.
+  // Guards the actual (non-idempotent, billed) Gemini call so it only fires
+  // once despite StrictMode/dev's double-invoke — see the gotcha above for
+  // why this must be separate from the per-effect-instance `cancelled` flag
+  // below, and must not gate attaching `.then`/`.catch` at all.
   const startedRef = useRef(false);
+  const resultPromiseRef = useRef<Promise<ResolvedAiFilters> | null>(null);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
     let cancelled = false;
 
-    resolveAiSearchFilters(query)
+    if (!startedRef.current) {
+      startedRef.current = true;
+      resultPromiseRef.current = resolveAiSearchFilters(query);
+    }
+
+    resultPromiseRef.current!
       .then((filters) => {
         if (cancelled) return;
         router.replace(

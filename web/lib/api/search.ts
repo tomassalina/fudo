@@ -1,9 +1,12 @@
 // Real fetch for `POST /api/v1/search` — the Gemini-backed natural-language
 // search parser (see backend/app/services/search_query_parser.rb and
-// backend/app/controllers/api/v1/search_controller.rb). Protected
-// (`authenticate_consumer!`, confirmed in the controller source and its
-// spec's "returns 401 without authentication" case), so every call carries
-// the `Authorization` header the same way visits.ts/favorites.ts do.
+// backend/app/controllers/api/v1/search_controller.rb). Public/unauthenticated
+// by product rule (AI search and /buscar are free, no account required — see
+// the controller's own doc comment), so this works fully logged out. It
+// still forwards `authHeader()` (a no-op `{}` when there's no token) so that
+// an already-logged-in consumer's queries keep getting attributed to their
+// search history server-side, same as visits.ts/favorites.ts do for their
+// own (auth-required) endpoints.
 //
 // This is the ONLY caller of this endpoint anywhere in the app —
 // lib/search/resolve-ai-search.ts, used exclusively by the home hero's "IA"
@@ -54,11 +57,10 @@ interface RawSearchResponse {
 
 /**
  * Sends the visitor's free-text query to the real Gemini-backed parser and
- * returns the structured filters it derived. Throws `ApiError` (see
- * ./client.ts) on any non-2xx response — in particular a 401 when there is
- * no signed-in consumer (this endpoint has no anonymous/public mode) and a
- * 502 when Gemini itself is unavailable — both left for the caller to
- * degrade gracefully rather than handled here.
+ * returns the structured filters it derived. Works fully logged out — no
+ * account required. Throws `ApiError` (see ./client.ts) on any non-2xx
+ * response — in particular a 502 when Gemini itself is unavailable — left
+ * for the caller to degrade gracefully rather than handled here.
  */
 export async function parseSearchQuery(
   query: string,
