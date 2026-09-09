@@ -94,8 +94,6 @@ export function FilterSidebar({
           </span>
         </div>
 
-        <FilterCategoryTabs active={cat} onChange={setCat} variant="sidebar" />
-
         {isAuthenticated ? (
           <button
             type="button"
@@ -114,6 +112,8 @@ export function FilterSidebar({
             Ocultar visitados
           </button>
         ) : null}
+
+        <FilterCategoryTabs active={cat} onChange={setCat} variant="sidebar" />
 
         <div className="flex flex-col">
           {rows.map((row) => {

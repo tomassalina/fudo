@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Merchant } from "@/lib/types";
 import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
+import { useMerchantVisitProgress } from "@/lib/visits/use-merchant-visit-progress";
 import { formatDistanceLabel } from "@/lib/utils/distance";
 import { MERCHANT_TYPE_BADGE, MERCHANT_TYPE_LABELS } from "@/lib/mock/merchants";
 import { Card } from "@/components/ui/Card";
@@ -47,6 +48,14 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
   // for real API data — see lib/api/merchants.ts) until they do.
   const liveDistanceKm = useMerchantDistanceKm(merchant);
   const distanceKm = liveDistanceKm ?? merchant.distanceKm;
+  // Real progress ("4/5 visitas") once authenticated and this merchant has a
+  // real loyalty ladder; `null` (falls back to the generic `rewardTeaser`
+  // copy below) while logged out, still loading, or with no rules at all —
+  // see the hook's own doc comment.
+  const visitProgress = useMerchantVisitProgress(merchant);
+  const rewardBadgeLabel = visitProgress
+    ? `${visitProgress.visits}/${visitProgress.target} visitas`
+    : merchant.rewardTeaser;
 
   if (layout === "card") {
     return (
@@ -85,12 +94,12 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
               {MERCHANT_TYPE_LABELS[merchant.type]}
             </span>
           </span>
-          {merchant.rewardTeaser ? (
+          {rewardBadgeLabel ? (
             <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-success px-2.5 py-1 text-[11.5px] font-bold text-[#10240A]">
               <span aria-hidden className="material-symbols text-[14px]">
                 redeem
               </span>
-              {merchant.rewardTeaser}
+              {rewardBadgeLabel}
             </span>
           ) : null}
         </Link>
@@ -206,12 +215,12 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
             </span>
             {formatDistanceLabel(distanceKm)}
           </span>
-          {merchant.rewardTeaser ? (
+          {rewardBadgeLabel ? (
             <span className="flex min-w-0 items-center gap-[3px] truncate text-[12px] font-semibold text-success">
               <span aria-hidden className="material-symbols flex-none text-[14px]">
                 redeem
               </span>
-              <span className="truncate">{merchant.rewardTeaser}</span>
+              <span className="truncate">{rewardBadgeLabel}</span>
             </span>
           ) : null}
         </div>
