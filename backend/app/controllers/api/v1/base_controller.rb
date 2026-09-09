@@ -48,8 +48,13 @@ module Api
       # value, but ArgumentError is a generic Ruby exception that could in
       # principle be raised from deeper in the stack with an internal
       # message never meant for API clients (same reasoning as
-      # render_invalid_filter below for StatementInvalid).
-      def render_unprocessable_argument(_exception)
+      # render_invalid_filter below for StatementInvalid). Logged
+      # server-side (never in the response) so a genuine application bug
+      # that happens to raise ArgumentError doesn't silently disappear
+      # behind a generic 400 — see search_controller.rb for the same
+      # logging pattern.
+      def render_unprocessable_argument(exception)
+        Rails.logger.error("#{exception.class}: #{exception.message}\n#{exception.backtrace&.join("\n")}")
         render json: { errors: { base: [ "Invalid request parameters" ] } }, status: :unprocessable_entity
       end
 
@@ -64,8 +69,12 @@ module Api
       # Deliberately does NOT expose exception.message (see the rescue_from
       # comment above) — a malformed filter value (e.g. a non-UUID
       # consumer_id, an out-of-range numeric) must not leak raw SQL/schema
-      # details to the client.
-      def render_invalid_filter
+      # details to the client. Logged server-side (never in the response)
+      # so a genuine application bug that happens to raise
+      # StatementInvalid doesn't silently disappear behind a generic 400 —
+      # see search_controller.rb for the same logging pattern.
+      def render_invalid_filter(exception)
+        Rails.logger.error("#{exception.class}: #{exception.message}\n#{exception.backtrace&.join("\n")}")
         render json: { error: "Invalid request parameters" }, status: :bad_request
       end
 

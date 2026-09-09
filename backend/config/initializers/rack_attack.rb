@@ -1,12 +1,11 @@
 # Rate limiting / basic abuse protection for the public API.
 class Rack::Attack
   # Uses Rails' default cache store to track request counts. In production,
-  # if the app runs more than one process/dyno, each process's Rails.cache
-  # is independent (in-memory/file-based) unless it's explicitly backed by
-  # a shared store (e.g. Redis, or Solid Cache against the shared DB) — a
-  # non-shared store makes this throttle effective only PER PROCESS, not
-  # across the whole fleet. Configure a shared cache store in production
-  # for these limits to hold globally.
+  # Rails.cache is Solid Cache (config.cache_store = :solid_cache_store,
+  # see config/environments/production.rb), backed by the app's primary
+  # Postgres database (config/cache.yml) — a shared store every app
+  # process/dyno reads and writes through, so these throttle counts hold
+  # globally across the whole fleet, not just per process.
   self.cache.store = Rails.cache
 
   # Aggressive throttle on the auth endpoints to slow down credential

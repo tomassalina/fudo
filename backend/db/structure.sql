@@ -530,6 +530,39 @@ ALTER SEQUENCE public.search_history_id_seq OWNED BY public.search_history.id;
 
 
 --
+-- Name: solid_cache_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.solid_cache_entries (
+    id bigint NOT NULL,
+    key bytea NOT NULL,
+    value bytea NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    key_hash bigint NOT NULL,
+    byte_size integer NOT NULL
+);
+
+
+--
+-- Name: solid_cache_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.solid_cache_entries_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: solid_cache_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.solid_cache_entries_id_seq OWNED BY public.solid_cache_entries.id;
+
+
+--
 -- Name: tags; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -708,6 +741,13 @@ ALTER TABLE ONLY public.search_history ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: solid_cache_entries id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.solid_cache_entries ALTER COLUMN id SET DEFAULT nextval('public.solid_cache_entries_id_seq'::regclass);
+
+
+--
 -- Name: tags id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -833,6 +873,14 @@ ALTER TABLE ONLY public.search_history
 
 
 --
+-- Name: solid_cache_entries solid_cache_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.solid_cache_entries
+    ADD CONSTRAINT solid_cache_entries_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tags tags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -868,6 +916,20 @@ CREATE INDEX idx_business_hours_merchant_id ON public.business_hours USING btree
 --
 
 CREATE UNIQUE INDEX idx_consumers_dni_bidx ON public.consumers USING btree (dni_bidx);
+
+
+--
+-- Name: idx_gifts_recipient_consumer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gifts_recipient_consumer_id ON public.gifts USING btree (recipient_consumer_id);
+
+
+--
+-- Name: idx_gifts_sender_consumer_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gifts_sender_consumer_id ON public.gifts USING btree (sender_consumer_id);
 
 
 --
@@ -952,6 +1014,27 @@ CREATE UNIQUE INDEX index_menu_items_tags_on_menu_item_id_and_tag_id ON public.m
 --
 
 CREATE UNIQUE INDEX index_merchants_tags_on_merchant_id_and_tag_id ON public.merchants_tags USING btree (merchant_id, tag_id);
+
+
+--
+-- Name: index_solid_cache_entries_on_byte_size; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_solid_cache_entries_on_byte_size ON public.solid_cache_entries USING btree (byte_size);
+
+
+--
+-- Name: index_solid_cache_entries_on_key_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_solid_cache_entries_on_key_hash ON public.solid_cache_entries USING btree (key_hash);
+
+
+--
+-- Name: index_solid_cache_entries_on_key_hash_and_byte_size; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_solid_cache_entries_on_key_hash_and_byte_size ON public.solid_cache_entries USING btree (key_hash, byte_size);
 
 
 --
@@ -1104,6 +1187,8 @@ ALTER TABLE ONLY public.merchants_tags
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260909080100'),
+('20260909080000'),
 ('20260909071702'),
 ('20260908122100'),
 ('20260908122000'),

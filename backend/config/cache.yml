@@ -1,0 +1,22 @@
+# No `database:` key on purpose: this app has a single Postgres database
+# per environment (see config/database.yml, no primary/cache split), so
+# Solid Cache connects through SolidCache::Record's default (the app's
+# primary AR connection) rather than a separate physical database — the
+# solid_cache_entries table lives alongside every other table in
+# db/structure.sql, migrated the same way as the rest of the schema. See
+# the "single database" setup in the solid_cache gem's README.
+default: &default
+  store_options:
+    # Cap age of oldest cache entry to fulfill retention policies
+    # max_age: <%= 60.days.to_i %>
+    max_size: <%= 256.megabytes %>
+    namespace: <%= Rails.env %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
