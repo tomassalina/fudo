@@ -51,12 +51,38 @@ class Merchant < ApplicationRecord
   # already be an array of tag names, not a comma-separated string.
   def self.search(neighborhood: nil, type: nil, tags: [], price_per_person: nil)
     scope = all
-    scope = scope.where(neighborhood: neighborhood) if neighborhood.present?
+    scope = filter_by_neighborhood(scope, neighborhood)
+    # `type` is intentionally an exact match, unlike neighborhood/tags: it's a
+    # Rails enum constrained to a fixed set of lowercase keys (see the `enum`
+    # declaration above), and both callers (Api::V1::MerchantsController and
+    # SearchQueryParser's response_schema, which restricts Gemini's output to
+    # Merchant.types.keys) already guarantee it arrives pre-normalized. There
+    # is no untrusted-casing source for it the way there is for
+    # neighborhood/tags free text.
     scope = scope.where(type: type) if type.present?
     scope = filter_by_tags(scope, tags)
     scope = filter_by_price_per_person(scope, price_per_person)
     scope
   end
+
+  def self.filter_by_neighborhood(scope, neighborhood)
+    return scope if neighborhood.blank?
+
+    # Case-insensitive on purpose, same rationale as filter_by_tags below:
+    # neighborhood can come from Gemini's parsed output (prompted to copy the
+    # user's text "exactly as written", casing included — see
+    # SearchQueryParser::SYSTEM_INSTRUCTION), a manually-typed URL param
+    # (/buscar?hood=palermo), or any future seed data using a different
+    # casing convention. An exact `where(neighborhood: ...)` match silently
+    # returned zero results whenever the caller's casing didn't match the
+    # DB's stored casing exactly (confirmed live: `hood=palermo` returned
+    # nothing while `hood=Palermo` worked, for the same seeded "Palermo"
+    # rows) — this is an architectural gotcha, not a one-off input error, so
+    # the fix belongs at the query level rather than expecting every caller
+    # to normalize first.
+    scope.where("LOWER(neighborhood) = ?", neighborhood.downcase)
+  end
+  private_class_method :filter_by_neighborhood
 
   def self.filter_by_tags(scope, tags)
     tag_names = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?)

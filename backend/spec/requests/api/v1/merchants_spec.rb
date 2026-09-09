@@ -49,6 +49,22 @@ RSpec.describe "Api::V1::Merchants", type: :request do
       expect(ids).to eq([ matching.id ])
     end
 
+    # Regression: `/buscar?tags=sin_tacc&hood=palermo&...` returned ZERO
+    # results while `?hood=Palermo` worked, because neighborhood used an
+    # exact case-sensitive match. `hood`/`neighborhood` casing isn't
+    # guaranteed here either — same rationale as the tags case below, plus
+    # a manually-typed URL param.
+    it "matches neighborhood case-insensitively" do
+      matching = create_merchant(neighborhood: "Palermo")
+      create_merchant(neighborhood: "Belgrano")
+
+      get "/api/v1/merchants", params: { neighborhood: "palermo", per_page: 5 }
+
+      expect(response).to have_http_status(:ok)
+      ids = json_response["data"].map { |m| m["id"] }
+      expect(ids).to include(matching.id)
+    end
+
     # Gemini (SearchQueryParser) is prompted to return lowercase tags but
     # never guaranteed to — this filter must not silently drop matches just
     # because casing differs from what's stored.
