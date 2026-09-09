@@ -65,7 +65,7 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
       >
         <Link
           href={`/restaurantes/${merchant.id}`}
-          className="relative block aspect-[16/10] w-full bg-surface-2"
+          className="relative block aspect-[16/10] w-full overflow-hidden bg-surface-2"
         >
           {merchant.cover_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element -- external mock photos, not worth Image config for this low-priority pass
