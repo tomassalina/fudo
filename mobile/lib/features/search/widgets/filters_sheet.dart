@@ -40,6 +40,17 @@ extension on _FilterCategory {
     _FilterCategory.ubicacion => 'Ubicación',
     _FilterCategory.premios => 'Premios',
   };
+
+  /// Per-category icon shown above the label on each tab pill — mirrors
+  /// `FILTER_CATEGORIES` in web's `filter-rows.ts` (`tune`/`payments`/
+  /// `restaurant_menu`/`location_on`/`redeem`).
+  IconData get icon => switch (this) {
+    _FilterCategory.basico => Symbols.tune,
+    _FilterCategory.precio => Symbols.payments,
+    _FilterCategory.platos => Symbols.restaurant_menu,
+    _FilterCategory.ubicacion => Symbols.location_on,
+    _FilterCategory.premios => Symbols.redeem,
+  };
 }
 
 class _FiltersSheetState extends ConsumerState<FiltersSheet> {
@@ -120,9 +131,7 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text('Filtros avanzados', style: AppTheme.title),
-                    ),
+                    Expanded(child: Text('Filtros', style: AppTheme.title)),
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(
@@ -133,7 +142,16 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    _ActiveCountPill(activeCount: _draft.activeCount),
+                    const SizedBox(width: 8),
+                    _HideVisitedPill(filters: _draft, onChanged: _update),
+                  ],
+                ),
+              ),
               _CategoryTabs(
                 selected: _category,
                 onSelect: (category) => setState(() => _category = category),
@@ -165,18 +183,7 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
                 ),
               ),
               const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                child: _HideVisitedToggle(filters: _draft, onChanged: _update),
-              ),
-              _BottomActions(
-                activeCount: _draft.activeCount,
-                onClear: _clear,
-                onApply: _apply,
-              ),
+              _BottomActions(onClear: _clear, onApply: _apply),
               const SizedBox(height: 8),
             ],
           ),
@@ -186,6 +193,14 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
   }
 }
 
+/// Category pill row — mirrors web's `FilterCategoryTabs.tsx` "sheet"
+/// variant: a horizontally-scrollable row of fixed-width (78px), icon-
+/// above-label pills (not `FilterSidebar`'s 2-column icon-then-label grid,
+/// which this phone sheet has no use for). The active pill uses the same
+/// accent-gradient/shadow convention as the app's other gradient pills
+/// (e.g. the nav's gradient pill, commit `6857654`) instead of a flat
+/// `ChoiceChip` fill, and carries a small numeral badge overlapping its
+/// top-right corner for that category's active-filter count.
 class _CategoryTabs extends StatelessWidget {
   const _CategoryTabs({
     required this.selected,
@@ -196,14 +211,15 @@ class _CategoryTabs extends StatelessWidget {
   final _FilterCategory selected;
   final ValueChanged<_FilterCategory> onSelect;
 
-  /// Active-filter count per category, shown as a small numeral badge next
-  /// to the tab label (omitted when 0) — see `_FiltersSheetState._categoryCounts`.
+  /// Active-filter count per category, shown as a small numeral badge
+  /// overlapping the tab's top-right corner (omitted when 0) — see
+  /// `_FiltersSheetState._categoryCounts`.
   final Map<_FilterCategory, int> counts;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 74,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -213,29 +229,92 @@ class _CategoryTabs extends StatelessWidget {
           final category = _FilterCategory.values[index];
           final isSelected = category == selected;
           final count = counts[category] ?? 0;
-          return ChoiceChip(
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(category.label),
-                if (count > 0) ...[
-                  const SizedBox(width: 6),
-                  _CategoryCountBadge(isSelected: isSelected, count: count),
-                ],
-              ],
-            ),
-            selected: isSelected,
-            onSelected: (_) => onSelect(category),
-            selectedColor: AppTheme.accent,
-            labelStyle: AppTheme.body.copyWith(
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-            side: BorderSide(
-              color: isSelected ? Colors.transparent : AppTheme.border,
-            ),
+          return _CategoryTab(
+            category: category,
+            isSelected: isSelected,
+            count: count,
+            onTap: () => onSelect(category),
           );
         },
+      ),
+    );
+  }
+}
+
+class _CategoryTab extends StatelessWidget {
+  const _CategoryTab({
+    required this.category,
+    required this.isSelected,
+    required this.count,
+    required this.onTap,
+  });
+
+  final _FilterCategory category;
+  final bool isSelected;
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 78,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: isSelected ? AppTheme.ctaGradient : null,
+                  color: isSelected ? null : AppTheme.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                  border: Border.all(
+                    color: isSelected ? Colors.transparent : AppTheme.border,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.accent.withValues(alpha: 0.3),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      category.icon,
+                      size: 19,
+                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      category.label,
+                      style: AppTheme.body.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (count > 0)
+            Positioned(
+              top: -6,
+              right: -6,
+              child: _CategoryCountBadge(isSelected: isSelected, count: count),
+            ),
+        ],
       ),
     );
   }
@@ -244,11 +323,12 @@ class _CategoryTabs extends StatelessWidget {
 /// Small rounded-full numeral badge for a category tab's active-filter
 /// count — same accent-background/white-text convention as the design's
 /// other small count badges, distinct from the bigger "N filtros activos"
-/// pill in [_BottomActions]. When the tab itself is selected (already
-/// accent-filled), the badge switches to a translucent white fill so it
-/// stays legible against the same-color background, mirroring web's
-/// `FilterCategoryTabs.tsx` (`isActive ? "bg-white/25 text-white" :
-/// "bg-accent text-white"`).
+/// pill in [_ActiveCountPill]. Mirrors web's `FilterCategoryTabs.tsx`
+/// **sheet** variant specifically (`isActive ? "bg-white text-accent" :
+/// "bg-accent text-white"`) — solid white/accent-text on the selected
+/// tab, not the sidebar variant's translucent `white/25` treatment (that
+/// variant is for `FilterSidebar`'s wide-layout grid, which this phone
+/// sheet doesn't use).
 class _CategoryCountBadge extends StatelessWidget {
   const _CategoryCountBadge({required this.isSelected, required this.count});
 
@@ -263,9 +343,7 @@ class _CategoryCountBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isSelected
-            ? Colors.white.withValues(alpha: 0.25)
-            : AppTheme.accent,
+        color: isSelected ? Colors.white : AppTheme.accent,
         borderRadius: BorderRadius.circular(AppTheme.radiusPill),
       ),
       child: Text(
@@ -273,7 +351,7 @@ class _CategoryCountBadge extends StatelessWidget {
         style: AppTheme.body.copyWith(
           fontSize: 9.5,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: isSelected ? AppTheme.accent : Colors.white,
           height: 1,
         ),
       ),
@@ -707,18 +785,101 @@ class _PremiosCategory extends StatelessWidget {
   }
 }
 
-class _HideVisitedToggle extends StatelessWidget {
-  const _HideVisitedToggle({required this.filters, required this.onChanged});
+/// Active-filter-count pill shown in the header row, next to
+/// [_HideVisitedPill] — mirrors web's `PhoneFilterSheet.tsx` `headerExtra`
+/// count `<span>`: accent-gradient fill once at least one filter is active,
+/// neutral surface/border otherwise. Always renders the count (including
+/// "0 filtros activos"), matching web exactly — unlike the old bottom-of-
+/// sheet text this replaces, which special-cased 0 as "Sin filtros activos".
+class _ActiveCountPill extends StatelessWidget {
+  const _ActiveCountPill({required this.activeCount});
+
+  final int activeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = activeCount > 0;
+    final label = activeCount == 1
+        ? '1 filtro activo'
+        : '$activeCount filtros activos';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: isActive ? AppTheme.ctaGradient : null,
+        color: isActive ? null : AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        border: Border.all(
+          color: isActive ? Colors.transparent : AppTheme.border,
+        ),
+      ),
+      child: Text(
+        label,
+        style: AppTheme.body.copyWith(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isActive ? Colors.white : AppTheme.textTertiary,
+        ),
+      ),
+    );
+  }
+}
+
+/// "Ocultar visitados" toggle pill shown in the header row, next to
+/// [_ActiveCountPill] — mirrors web's `PhoneFilterSheet.tsx` `headerExtra`
+/// toggle button (icon + label, `accent-soft`/`accent-light` tint when
+/// active) rather than a `Switch` row between the body and footer, which is
+/// where this control used to live.
+class _HideVisitedPill extends StatelessWidget {
+  const _HideVisitedPill({required this.filters, required this.onChanged});
 
   final SearchFilters filters;
   final ValueChanged<SearchFilters> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return _ToggleRow(
-      label: 'Ocultar visitados',
-      value: filters.hideVisited,
-      onChanged: (value) => onChanged(filters.copyWith(hideVisited: value)),
+    final isActive = filters.hideVisited;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      child: InkWell(
+        onTap: () => onChanged(filters.copyWith(hideVisited: !isActive)),
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? AppTheme.priceChipBackground : AppTheme.surface,
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            border: Border.all(
+              color: isActive
+                  ? AppTheme.accent.withValues(alpha: 0.4)
+                  : AppTheme.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Symbols.visibility_off,
+                size: 17,
+                color: isActive ? AppTheme.priceChipText : AppTheme.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Ocultar visitados',
+                style: AppTheme.body.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isActive
+                      ? AppTheme.priceChipText
+                      : AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -781,42 +942,31 @@ class _FilterChoiceChip extends StatelessWidget {
   }
 }
 
+/// Pinned footer: "Limpiar" (secondary, narrower) + "Aplicar" (primary,
+/// wider) side by side — mirrors web's `PhoneFilterSheet.tsx` footer
+/// (`flex-1` / `flex-[1.4]`). The active-filter count now lives in
+/// [_ActiveCountPill] in the header instead of as text here.
 class _BottomActions extends StatelessWidget {
-  const _BottomActions({
-    required this.activeCount,
-    required this.onClear,
-    required this.onApply,
-  });
+  const _BottomActions({required this.onClear, required this.onApply});
 
-  final int activeCount;
   final VoidCallback onClear;
   final VoidCallback onApply;
 
   @override
   Widget build(BuildContext context) {
-    final countLabel = activeCount == 0
-        ? 'Sin filtros activos'
-        : activeCount == 1
-        ? '1 filtro activo'
-        : '$activeCount filtros activos';
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
         children: [
-          Text(countLabel, style: AppTheme.bodySecondary),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              OutlinedButton(
-                onPressed: onClear,
-                child: const Text('Limpiar'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: _ApplyButton(onTap: onApply)),
-            ],
+          Expanded(
+            flex: 5,
+            child: OutlinedButton(
+              onPressed: onClear,
+              child: const Text('Limpiar'),
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(flex: 7, child: _ApplyButton(onTap: onApply)),
         ],
       ),
     );
