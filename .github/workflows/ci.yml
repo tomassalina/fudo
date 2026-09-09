@@ -56,7 +56,13 @@ jobs:
         run: bin/rails db:schema:load
 
       - name: Run RSpec
-        run: bundle exec rspec
+        # spec/requests/api/v1/search_spec.rb is excluded on purpose: its own
+        # header comment says it makes REAL, unmocked calls to the Gemini API
+        # and needs a valid GEMINI_API_KEY with quota. That's an external,
+        # paid/quota-limited dependency — not appropriate for a fast/basic
+        # gate on every push. Once GEMINI_API_KEY is set as a repo secret (or
+        # the spec gets VCR cassettes), drop this exclusion.
+        run: bundle exec rspec --exclude-pattern "spec/requests/api/v1/search_spec.rb"
 
   web:
     name: Web (lint, typecheck, test)
@@ -80,6 +86,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm lint
+
+      # Next.js 15+ generates ambient types (PageProps, LayoutProps, etc.)
+      # for app/ routes under .next/types/ — `next typegen` produces just
+      # that, without a full build, so tsc can see them.
+      - run: pnpm exec next typegen
 
       - run: pnpm exec tsc --noEmit
 
