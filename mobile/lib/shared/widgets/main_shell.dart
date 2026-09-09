@@ -209,10 +209,12 @@ class _FloatingBottomNav extends StatelessWidget {
                     color: AppTheme.navBackground,
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: AppTheme.border),
+                    // `--shadow-nav: 0 14px 34px var(--shadow)`
+                    // (web/app/globals.css).
                     boxShadow: const [
                       BoxShadow(
                         color: AppTheme.shadow,
-                        blurRadius: 30,
+                        blurRadius: 34,
                         offset: Offset(0, 14),
                       ),
                     ],
@@ -275,6 +277,13 @@ class _FloatingBottomNav extends StatelessWidget {
 /// icon, animating width and opacity together via [AnimatedAlign] +
 /// [AnimatedOpacity] on the same always-mounted [Text], so the transition
 /// interpolates smoothly instead of popping in/out.
+///
+/// Selected styling matches `PhoneNav.tsx`'s `TabLink` active state exactly:
+/// a `bg-gradient-to-b from-cta-from to-cta-to` pill ([AppTheme.ctaGradient]
+/// — its stops are the same `#ff6337`/`#e8431a` as the web tokens in
+/// `web/app/globals.css`) with `shadow-cta`'s warm glow and white
+/// icon+label text, vs. the flat/borderless muted `text-foreground-faint`
+/// ([AppTheme.textTertiary]) treatment when inactive.
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
@@ -292,13 +301,33 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppTheme.accent : AppTheme.textTertiary;
+    final color = selected ? Colors.white : AppTheme.textTertiary;
 
     return InkWell(
       onTap: onTap,
       customBorder: const StadiumBorder(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+      child: AnimatedContainer(
+        duration: _duration,
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 12),
+        decoration: BoxDecoration(
+          gradient: selected ? AppTheme.ctaGradient : null,
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          // `--shadow-cta: 0 8px 20px rgba(255, 80, 35, 0.34), inset 0 1px 0
+          // rgba(255, 255, 255, 0.26)` (web/app/globals.css) — the outer
+          // warm glow only; Flutter's BoxShadow has no inset variant, so the
+          // inner highlight isn't reproduced.
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.accent.withValues(alpha: 0.34),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
@@ -321,7 +350,7 @@ class _NavItem extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.clip,
                       style: AppTheme.body.copyWith(
-                        color: AppTheme.accent,
+                        color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
