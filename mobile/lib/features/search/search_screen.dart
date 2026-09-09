@@ -149,7 +149,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: switch (_view) {
           _SearchView.home => SearchHomeView(onSearch: _startSearch),
           _SearchView.loading => SearchLoadingView(query: _query),
-          _SearchView.list || _SearchView.map => Column(
+          _SearchView.list => Column(
             children: [
               _ResultsHeader(
                 controller: _resultsSearchController,
@@ -157,26 +157,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 onClear: _clearQuery,
                 resultMode: _resultMode,
                 onResultModeChanged: _setResultMode,
-                showingMap: _view == _SearchView.map,
+                showingMap: false,
                 onToggleMode: _toggleResultsMode,
                 activeFilterCount: _filters.activeCount,
                 onOpenFilters: _openFiltersSheet,
               ),
               Expanded(
-                child: switch ((_resultMode, _view)) {
-                  (_ResultMode.platos, _) => DishResultsList(
+                child: switch (_resultMode) {
+                  _ResultMode.platos => DishResultsList(
                     query: _query,
                     filters: _filters,
                     onClearSearch: _clearQuery,
                     onClearFilters: _clearFilters,
                     onOpenMerchant: _openMerchant,
                   ),
-                  (_ResultMode.lugares, _SearchView.map) => SearchMapView(
-                    query: _query,
-                    onOpenMerchant: _openMerchant,
-                    onBackToList: _toggleResultsMode,
-                  ),
-                  (_ResultMode.lugares, _) => SearchResultsList(
+                  _ResultMode.lugares => SearchResultsList(
                     query: _query,
                     filters: _filters,
                     onClearSearch: _clearQuery,
@@ -184,6 +179,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     onOpenMerchant: _openMerchant,
                   ),
                 },
+              ),
+            ],
+          ),
+          // Full-height map (matches web's `966b371` fix): the map fills the
+          // whole body edge-to-edge instead of sitting below the header in
+          // normal Column flow, with the search bar / mode toggle floating
+          // on top as an overlay. `_ResultsHeader` has no opaque wrapper of
+          // its own — only its individual pills/fields (TextField, filters
+          // button, mode toggles) paint a background — so it already reads
+          // as a floating overlay with the map visible through the gaps,
+          // same as the web overlay row; no extra scrim/blur needed.
+          _SearchView.map => Stack(
+            children: [
+              Positioned.fill(
+                child: SearchMapView(
+                  query: _query,
+                  onOpenMerchant: _openMerchant,
+                  onBackToList: _toggleResultsMode,
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: _ResultsHeader(
+                  controller: _resultsSearchController,
+                  onChanged: _updateQueryLive,
+                  onClear: _clearQuery,
+                  resultMode: _resultMode,
+                  onResultModeChanged: _setResultMode,
+                  showingMap: true,
+                  onToggleMode: _toggleResultsMode,
+                  activeFilterCount: _filters.activeCount,
+                  onOpenFilters: _openFiltersSheet,
+                ),
               ),
             ],
           ),
