@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import type { Merchant } from "@/lib/types";
 import type { Coordinates } from "@/lib/location/use-location";
 import { MapPanel } from "./MapPanel";
@@ -17,17 +17,6 @@ export interface DesktopMapSplitProps {
    * applies here too. See `LeafletMap`'s own doc comment for why this is a
    * dedicated prop rather than a synthetic `Merchant`. */
   userLocation?: Coordinates | null;
-  /**
-   * Search bar + filter-trigger button, floated on top of the map column
-   * only — per product's explicit correction, the left compact-list column
-   * stays exactly as described above (count + "Ver lista" + list, nothing
-   * else); the search bar belongs over the map, not over the list, matching
-   * the phone full-screen map view's floating search+filter overlay
-   * (MapToggleSection's `overlay` prop). Threaded straight through to
-   * `MapPanel`'s own `overlay` prop rather than laid out here, since
-   * DesktopMapSplit shouldn't need to know it's specifically a search bar.
-   */
-  mapOverlay?: ReactNode;
 }
 
 /**
@@ -47,7 +36,6 @@ export function DesktopMapSplit({
   countLabel,
   onExit,
   userLocation,
-  mapOverlay,
 }: DesktopMapSplitProps) {
   // Mirrors, one level up, the narrowed-to-viewport set LeafletMap already
   // computes for its own pins (see its `onVisibleMerchantsChange` doc
@@ -62,7 +50,16 @@ export function DesktopMapSplit({
   const [visibleMerchants, setVisibleMerchants] = useState(merchants);
 
   return (
-    <div className="grid h-[calc(100vh-220px)] min-h-[520px] grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-stretch gap-4">
+    // `h-full` (not a hardcoded `calc(100vh-...)`) — this now depends on
+    // BuscarView actually giving its ancestor chain a real height via
+    // flexbox (`flex-1 min-h-0` on the wrappers above, only while this view
+    // is showing — see BuscarView's own comment on that) instead of
+    // guessing the page's total chrome (header + main's own top/bottom
+    // padding + this new search-bar row) as one brittle magic number. That
+    // number silently went stale the moment the search bar row above this
+    // component was added/removed a few times in the same session — a real
+    // height chain can't go stale the same way.
+    <div className="grid h-full min-h-[520px] grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-stretch gap-4">
       <div className="flex min-h-0 flex-col gap-3">
         <div className="flex items-center justify-between px-0.5">
           <span className="text-[13px] text-foreground-muted">{countLabel}</span>
@@ -96,7 +93,6 @@ export function DesktopMapSplit({
         merchants={merchants}
         userLocation={userLocation}
         onVisibleMerchantsChange={setVisibleMerchants}
-        overlay={mapOverlay}
       />
     </div>
   );

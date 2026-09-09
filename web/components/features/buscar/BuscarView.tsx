@@ -7,6 +7,7 @@ import { useLocation } from "@/lib/location/use-location";
 import { useSession } from "@/lib/session/use-session";
 import type { DishSearchResult, Merchant, MerchantType } from "@/lib/types";
 import { buscarHref, type BuscarParams } from "@/lib/utils/buscar-href";
+import { cn } from "@/lib/utils/cn";
 import { SearchBar } from "./SearchBar";
 import { AiChips } from "./AiChips";
 import { ResultModeToggle, type ResultMode } from "./ResultModeToggle";
@@ -155,10 +156,12 @@ export function BuscarView({
   // above the [FilterSidebar | content] grid. Kept as its own JSX chunk
   // (rather than inlined twice) so the exact same chunk can be handed to
   // MapToggleSection as its floating `overlay` while the phone map is open
-  // (`mapOverlay` below), AND to DesktopMapSplit as its own map-column
-  // `mapOverlay` prop while the desktop map view is open (passed inline
-  // below, same chunk, no separate variable needed), instead of sitting in
-  // normal flow above either.
+  // (`mapOverlay` below), AND reused as its own in-flow row directly above
+  // DesktopMapSplit while the desktop map view is open (below, in the main
+  // return) — desktop-only, and deliberately NOT floating over the map:
+  // product's final call after a couple of rounds of live feedback was its
+  // own section, pushing the map down, not overlapping it (mobile's
+  // floating overlay stays exactly as-is, untouched by this).
   //
   // The filter TRIGGER (not the search input itself) only renders on phone
   // OR while the desktop map view is showing: FilterSidebar (the always
@@ -197,9 +200,53 @@ export function BuscarView({
   const mapOverlay = hidePhoneListWhileMapping ? <>{searchBar}</> : null;
 
   return (
-    <div className="flex flex-col gap-4">
+    // Anchored to a real `100vh` calc, only while the desktop map view is
+    // showing — NOT `flex-1`: `<main>`'s own ancestors (`body`) use
+    // `min-h-full`, not a hard `height`, specifically so normal pages can
+    // grow past one viewport and scroll. That means a `flex-1`/`h-full`
+    // chain rooted here has no real ceiling to stop at — tried it, it
+    // produced a page that grew to ~4000px instead of filling one screen
+    // (confirmed live). `calc(100vh-101px)` is the one genuinely fixed
+    // quantity available: WideNav's own `h-17` + its 1px border (69px,
+    // confirmed against WideNav.tsx) plus `<main>`'s `pt-8` (32px) — both
+    // real, non-viewport-dependent constants, not a guess. `-mb-28` cancels
+    // out `<main>`'s own `pb-28` (mobile bottom-nav clearance, irrelevant on
+    // desktop — see the identical `pb-28` doc comment in
+    // components/features/home/HeroSection.tsx) for exactly this branch, so
+    // the map genuinely reaches the real bottom of the viewport instead of
+    // stopping ~112px short of it: negative margin overflows *into* that
+    // trailing padding rather than being clipped by it (`<main>` has no
+    // `overflow-hidden` of its own), while `<main>`'s own computed height
+    // still comes out exactly right (pt-8 + (height-112) + pb-28 == height)
+    // so this doesn't reintroduce page-level scroll either. Every other case
+    // (normal list, phone) keeps sizing off content height exactly as
+    // before.
+    <div
+      className={cn(
+        "flex flex-col gap-4",
+        showDesktopMapSplit && "h-[calc(100vh-101px)] -mb-28",
+      )}
+    >
+      {showDesktopMapSplit ? (
+        // Desktop-only, in-flow row directly above the split — NOT floating
+        // over the map (see `searchBar`'s own doc comment above for why).
+        <div className="flex flex-col gap-4">{searchBar}</div>
+      ) : null}
+
       <div
-        className="grid items-start gap-7"
+        className={cn(
+          "grid gap-7",
+          // `items-stretch` (not `items-start`) specifically for the
+          // desktop map split: it's the single item in this implicit grid
+          // row, and with `items-start` a grid item never stretches to fill
+          // a tall row — it just sizes to its own content and sits at the
+          // top, which would starve DesktopMapSplit's `h-full` of any real
+          // height to inherit (a `flex-1` row height on the container alone
+          // isn't enough). Every other case keeps `items-start` — the normal
+          // [FilterSidebar | grid] layout deliberately does NOT want its
+          // columns force-stretched to match each other's height.
+          showDesktopMapSplit ? "min-h-0 flex-1 items-stretch" : "items-start",
+        )}
         style={
           isPhone || showDesktopMapSplit
             ? undefined
@@ -217,7 +264,6 @@ export function BuscarView({
             countLabel={countLabel}
             onExit={() => handleToggleMap(false)}
             userLocation={coords}
-            mapOverlay={searchBar}
           />
         ) : (
           <>

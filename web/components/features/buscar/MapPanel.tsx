@@ -9,7 +9,6 @@
 // next/dynamic in Server Components"), hence this thin 'use client'
 // wrapper.
 import dynamic from "next/dynamic";
-import type { ReactNode } from "react";
 import type { Merchant } from "@/lib/types";
 import type { Coordinates } from "@/lib/location/use-location";
 import { cn } from "@/lib/utils/cn";
@@ -48,16 +47,6 @@ export interface MapPanelProps {
   /** See LeafletMap's own doc comment on `onVisibleMerchantsChange` — only
    * wired up by the desktop split view's compact list. */
   onVisibleMerchantsChange?: (visible: Merchant[]) => void;
-  /**
-   * Floats on top of the map itself (search bar + filter trigger, in
-   * practice) instead of sitting in normal document flow above it — the
-   * desktop split view's own equivalent of MapToggleSection's phone
-   * `overlay` prop (same reasoning: this panel, not some ancestor's normal
-   * flow, is what should visually own the row that sits on top of it).
-   * `undefined`/`null` renders no overlay row, same as today for every
-   * existing caller.
-   */
-  overlay?: ReactNode;
 }
 
 export function MapPanel({
@@ -67,7 +56,6 @@ export function MapPanel({
   onPopupOpenChange,
   userLocation,
   onVisibleMerchantsChange,
-  overlay,
 }: MapPanelProps) {
   return (
     <div
@@ -83,15 +71,6 @@ export function MapPanel({
         userLocation={userLocation}
         onVisibleMerchantsChange={onVisibleMerchantsChange}
       />
-
-      {overlay ? (
-        // z-[1001]: same reasoning as MapToggleSection's identical overlay
-        // row — above Leaflet's own panes/zoom control (cap ~700) and the
-        // "Buscando en la zona…" chip (z-[1000]).
-        <div className="absolute inset-x-3 top-3 z-[1001] flex flex-col gap-2.5">
-          {overlay}
-        </div>
-      ) : null}
     </div>
   );
 }
