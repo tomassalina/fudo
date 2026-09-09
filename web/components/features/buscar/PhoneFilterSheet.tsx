@@ -13,6 +13,7 @@ import { FilterToggleRow } from "./FilterToggleRow";
 import {
   buildFilterRows,
   clearedDraft,
+  countActiveFiltersByCategory,
   type FilterCategoryKey,
   type FilterSelectRowDef,
 } from "./filter-rows";
@@ -55,6 +56,11 @@ export function PhoneFilterSheet({
   const activeCount = countActiveFilters(current);
   const rowsByCategory = buildFilterRows(availableTypes, availableHoods);
   const rows = rowsByCategory[cat];
+  // Same per-category counts FilterSidebar shows (draft-based, so the badge
+  // updates live as the visitor edits filters in this sheet, before hitting
+  // "Aplicar") — see FilterCategoryTabs' doc comment for why this now
+  // renders on both surfaces.
+  const categoryCounts = countActiveFiltersByCategory(rowsByCategory, draft);
   const activeRow = optionRowId
     ? Object.values(rowsByCategory)
         .flat()
@@ -162,7 +168,7 @@ export function PhoneFilterSheet({
         }
       >
         <div className="flex flex-col gap-4 pb-2">
-          <FilterCategoryTabs active={cat} onChange={setCat} />
+          <FilterCategoryTabs active={cat} onChange={setCat} counts={categoryCounts} />
 
           <div className="flex flex-col">
             {rows.map((row) => {
