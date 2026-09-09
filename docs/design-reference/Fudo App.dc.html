@@ -140,9 +140,9 @@
 
 <template id="__bundler_thumbnail" data-bg-color="#14151F"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#14151F"/><circle cx="200" cy="150" r="52" fill="none" stroke="#FF5023" stroke-width="6"/><text x="200" y="168" font-family="Helvetica, Arial, sans-serif" font-size="52" font-weight="700" fill="#FF5023" text-anchor="middle">F</text></svg></template>
 
-<div style="min-height: 100vh; background: radial-gradient(circle at 50% 0%, #23253A, #0E0F16 60%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 40px 20px; font-family: Inter, sans-serif;">
+<div style="{{ shellStyle }}">
 
-  <div style="{{ themeVars }} width: 390px; height: 844px; border-radius: 46px; overflow: hidden; position: relative; box-shadow: 0 30px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; background: var(--bg);">
+  <div style="{{ frameStyle }}">
 
     <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
       <div style="position: absolute; inset: 0; pointer-events: none;">
@@ -155,13 +155,18 @@
       </div>
     </sc-if>
 
-    <div style="position: relative; z-index: 3; height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 13px; font-weight: 600; color: var(--ink);">
-      <span>9:41</span>
-      <div style="position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 104px; height: 30px; border-radius: 999px; background: #000000;"></div>
-      <div style="display: flex; align-items: center; gap: 6px; font-family: 'Material Symbols Outlined'; font-size: 17px; font-variation-settings: 'wght' 300;">
-        <span>signal_cellular_alt</span><span>wifi</span><span>battery_full</span>
+    <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; z-index: 3; height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 13px; font-weight: 600; color: var(--ink);">
+        <span>9:41</span>
+        <div style="position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 104px; height: 30px; border-radius: 999px; background: #000000;"></div>
+        <div style="display: flex; align-items: center; gap: 6px; font-family: 'Material Symbols Outlined'; font-size: 17px; font-variation-settings: 'wght' 300;">
+          <span>signal_cellular_alt</span><span>wifi</span><span>battery_full</span>
+        </div>
       </div>
-    </div>
+    </sc-if>
+    <sc-if value="{{ frameless }}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; height: env(safe-area-inset-top, 12px); min-height: 12px;"></div>
+    </sc-if>
 
     <div style="position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column;">
 
@@ -180,16 +185,15 @@
             </button>
           </div>
 
-          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 24px 40px;">
-            <h2 style="margin: 0; font-family: Barlow, sans-serif; font-weight: 900; font-size: 34px; line-height: 1.06; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap;">Encontrá dónde comer.</h2>
-            <h2 style="margin: 6px 0 0; font-family: Barlow, sans-serif; font-weight: 900; font-size: 34px; line-height: 1.06; letter-spacing: -0.02em; color: var(--ink); max-width: 8.5em;"><em style="font-style: italic; color: #FF5023;">Ganá descuentos</em> por cada visita.</h2>
+          <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 24px 40px; text-align: var(--heroText, left);">
+            <h2 style="margin: 0; font-family: Barlow, sans-serif; font-weight: 900; font-size: var(--hero); line-height: 1.1; letter-spacing: -0.025em; color: var(--ink); text-wrap: balance;">Encontrá dónde comer.<br><em style="font-style: italic; color: #FF5023;">Ganá descuentos</em> por cada visita.</h2>
 
             <div style="position: relative; margin-top: 28px; background: var(--surf); border: 1px solid var(--line); border-radius: 26px; padding: 20px 18px 14px; box-shadow: 0 24px 50px var(--shadow), inset 0 1px 0 var(--hi);">
               <span style="position: absolute; top: -1px; left: 26px; right: 26px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,80,35,0.55), transparent);"></span>
               <div style="position: relative; min-height: 46px;">
                 <input value="{{ query }}" onChange="{{ onQuery }}" onKeyDown="{{ onKey }}" style="position: relative; z-index: 2; width: 100%; background: transparent; border: 0; outline: none; color: var(--ink); font-size: 17px; padding: 0; line-height: 1.35;">
                 <sc-if value="{{ empty }}" hint-placeholder-val="{{ true }}">
-                  <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 1; font-size: 17px; color: var(--ink2); line-height: 1.35; pointer-events: none;">{{ typed }}<span style="animation: fudoCaret 1s step-end infinite; color: #FF5023;">|</span></div>
+                  <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 1; font-size: 17px; color: var(--ink2); line-height: 1.35; pointer-events: none; text-align: left;">{{ typed }}<span style="animation: fudoCaret 1s step-end infinite; color: #FF5023;">|</span></div>
                 </sc-if>
               </div>
               <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 14px;">
@@ -312,7 +316,7 @@
                       </span>
                       <sc-if value="{{ p.hasReward }}" hint-placeholder-val="{{ false }}">
                         <span style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #8FD46A;">
-                          <span style="font-family: 'Material Symbols Outlined'; font-size: 14px; font-variation-settings: 'wght' 250;">redeem</span>{{ p.reward }}
+                          <span style="font-family: 'Material Symbols Outlined'; font-size: 14px; font-variation-settings: 'wght' 250;">redeem</span>{{ p.rewardLabel }}
                         </span>
                       </sc-if>
                     </div>
@@ -504,7 +508,7 @@
                 </div>
 
                 <div>
-                  <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink3); padding-bottom: 14px;">TU CAMINO EN {{ loyal.upper }}</div>
+                  <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink3); padding-bottom: 14px;">{{ loyal.pathLabel }}</div>
                   <div style="display: flex; flex-direction: column;">
                     <sc-for list="{{ loyal.steps }}" as="s" hint-placeholder-count="10">
                       <div style="display: flex; gap: 14px; min-height: 48px;">
@@ -617,6 +621,18 @@
             </div>
           </sc-if>
 
+          <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+            <div style="margin: 22px 20px 0; background: var(--surf); border: 1px solid rgba(255,80,35,0.32); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: inset 0 1px 0 var(--hi);">
+              <span style="width: 40px; height: 40px; border-radius: 13px; background: rgba(255,80,35,0.14); display: flex; align-items: center; justify-content: center;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 21px; color: #FF5023; font-variation-settings: 'wght' 250;">lock</span>
+              </span>
+              <div style="font-family: Barlow, sans-serif; font-weight: 800; font-size: 18px; color: var(--ink);">Iniciá sesión para comprar</div>
+              <div style="font-size: 13px; color: var(--ink2); line-height: 1.45;">Podés ver todas las tarjetas y sus beneficios. Para enviar una gift card necesitás una cuenta.</div>
+              <button onClick="{{ goLogin }}" style="border: 0; background: linear-gradient(180deg, #FF6337, #E8431A); border-radius: 999px; padding: 14px 0; font-family: Inter, sans-serif; font-size: 14.5px; font-weight: 600; color: #FFFFFF; cursor: pointer; box-shadow: 0 10px 24px rgba(255,80,35,0.34), inset 0 1px 0 rgba(255,255,255,0.26);">Iniciar sesión</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
           <div style="padding: 22px 20px 0; display: flex; flex-direction: column; gap: 10px;">
             <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink3);">PARA QUIÉN</div>
             <input value="{{ giftPhone }}" onChange="{{ onGiftPhone }}" placeholder="Teléfono del destinatario" style="background: var(--surf); border: 1px solid var(--line); border-radius: 14px; padding: 14px; color: var(--ink); font-size: 14px; outline: none; box-shadow: inset 0 1px 0 var(--hi);">
@@ -626,6 +642,7 @@
               <span style="position: relative;">{{ buyLabel }}</span>
             </button>
           </div>
+          </sc-if>
         </div>
       </sc-if>
 
@@ -829,10 +846,10 @@
 
           <div style="display: flex; gap: 9px; padding: 0 20px 14px;">
             <div style="display: flex; align-items: center; border-radius: 999px; padding: 10px 16px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: {{ activeBg }}; border-color: {{ activeBc }}; color: {{ activeInk }}; box-shadow: {{ activeSh }};">{{ activeFiltersLabel }}</div>
-            <button onClick="{{ toggleHideVisited }}" style="display: flex; align-items: center; gap: 7px; border-radius: 999px; padding: 10px 15px; cursor: pointer; font-family: Inter, sans-serif; border: 1px solid var(--line); background: {{ hvBg }}; border-color: {{ hvBc }}; color: {{ hvInk }};">
+            <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toggleHideVisited }}" style="display: flex; align-items: center; gap: 7px; border-radius: 999px; padding: 10px 15px; cursor: pointer; font-family: Inter, sans-serif; border: 1px solid var(--line); background: {{ hvBg }}; border-color: {{ hvBc }}; color: {{ hvInk }};">
               <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; font-variation-settings: 'wght' 250;">visibility_off</span>
               <span style="font-size: 13px; font-weight: 600; white-space: nowrap;">Ocultar visitados</span>
-            </button>
+            </button></sc-if>
           </div>
 
           <div class="sx" style="display: flex; gap: 8px; padding: 0 20px 16px; overflow-x: auto;">
@@ -1032,7 +1049,9 @@
     </div>
   </div>
 
-  <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #6A6A6A;">prototipo interactivo — buscá, tocá resultados, pines y el perfil</div>
+  <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+    <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #6A6A6A;">prototipo interactivo — buscá, tocá resultados, pines y el perfil</div>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:470,&quot;height&quot;:940},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Apariencia&quot;}}">
@@ -1350,9 +1369,11 @@ class Component extends DCLogic {
     if (f.diet !== "Cualquiera") out = out.filter(p => p.tags.includes(dietMap[f.diet]));
     if (f.hood !== "Cualquiera") out = out.filter(p => p.hood.startsWith(f.hood));
     if (f.dist !== "Cualquiera") { const km = parseInt(f.dist.replace(/\D/g, ""), 10); out = out.filter(p => p.d <= km); }
-    if (f.reward === "Con premio cerca") out = out.filter(p => p.need - p.visits <= 2);
-    if (f.reward === "Premio disponible") out = out.filter(p => p.visits >= p.need);
-    if (f.tier !== "Cualquiera") out = out.filter(p => this.tierOf(p) === f.tier);
+    if (st.user) {
+      if (f.reward === "Con premio cerca") out = out.filter(p => p.need - p.visits <= 2);
+      if (f.reward === "Premio disponible") out = out.filter(p => p.visits >= p.need);
+      if (f.tier !== "Cualquiera") out = out.filter(p => this.tierOf(p) === f.tier);
+    }
     if (st.hideVisited) out = out.filter(p => p.visits === 0);
     const s = f.sort;
     if (s === "Distancia") out.sort((a, b) => a.d - b.d);
@@ -1407,7 +1428,9 @@ class Component extends DCLogic {
 
   loyaltyOf(p) {
     const rules = LADDER[LGROUP[p.type]];
-    const v = Math.min(p.visits, 10);
+    const authed = !!this.state.user;
+    const visits = authed ? p.visits : 0;
+    const v = Math.min(visits, 10);
     const tier = TIERS_L.find(t => v >= t.min);
     const next = rules.find(r => v < r[0]);
     const full = !next;
@@ -1435,18 +1458,25 @@ class Component extends DCLogic {
       };
     });
     return {
-      visits: p.visits, steps, upper: p.name.toUpperCase(),
-      tierLabel: tier.label, tierInk: tier.ink, heroBg: tier.bg, heroBorder: tier.border, ringBg: tier.ring,
-      headline: full ? "Sos cliente fijo"
-        : p.visits === 0 ? "Arrancá tu camino"
+      visits: visits, steps, upper: p.name.toUpperCase(),
+      pathLabel: authed ? `TU CAMINO EN ${p.name.toUpperCase()}` : `RECOMPENSAS EN ${p.name.toUpperCase()}`,
+      tierLabel: authed ? tier.label : "PROGRAMA DE FIDELIZACIÓN",
+      tierInk: tier.ink, heroBg: tier.bg, heroBorder: tier.border, ringBg: tier.ring,
+      headline: !authed ? "Así funcionan los premios"
+        : full ? "Sos cliente fijo"
+        : visits === 0 ? "Arrancá tu camino"
         : next[0] - v === 1 ? "Falta 1 visita para tu próximo premio"
         : `Faltan ${next[0] - v} visitas para tu próximo premio`,
-      sub: full
+      sub: !authed
+        ? "Cada visita al local suma. A la 2da ya tenés premio y a la 10ma sos cliente fijo con 5% siempre."
+        : full
         ? "5% de descuento en todas tus compras, siempre."
         : next[0] === 10
           ? (next[0] - v === 1 ? "En tu próxima visita te convertís en cliente fijo: 5% siempre." : `A la visita 10 te convertís en cliente fijo: 5% siempre.`)
           : `${next[0] - v === 1 ? "En tu próxima visita" : `A la visita ${next[0]}`}: ${next[2]}.`,
-      note: full
+      note: !authed
+        ? "Iniciá sesión para empezar a sumar visitas con el QR del local."
+        : full
         ? "Escaneá el QR en el local para aplicar tu 5% automáticamente."
         : "Cada visita se suma escaneando el QR del local o mostrando tu código."
     };
@@ -1562,7 +1592,7 @@ class Component extends DCLogic {
       { key: "inicio", label: "Inicio", icon: "home", view: "home" },
       { key: "buscar", label: "Buscar", icon: "search", view: "list" },
       { key: "regalar", label: "Regalar", icon: "redeem", view: "gift" },
-      { key: "perfil", label: "Perfil", icon: "person", view: "profile" }
+      { key: "perfil", label: this.state.user ? "Perfil" : "Login", icon: this.state.user ? "person" : "login", view: "profile" }
     ];
     const tabBits = on => ({
       pad: on ? "10px 17px" : "10px 13px",
@@ -1585,8 +1615,16 @@ class Component extends DCLogic {
     const payAmount = st.tier === "custom" ? customN : st.gift;
     const canBuy = payAmount > 0;
 
+    const fl = !!this.props.frameless;
     return {
       themeVars,
+      frameless: fl, showChrome: !fl,
+      shellStyle: fl
+        ? "height: 100vh; height: 100dvh; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; font-family: Inter, sans-serif;"
+        : "min-height: 100vh; background: radial-gradient(circle at 50% 0%, #23253A, #0E0F16 60%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 40px 20px; font-family: Inter, sans-serif;",
+      frameStyle: themeVars + (fl
+        ? " --hero: clamp(25px, 8.4vw, 36px); --heroText: center; width: 100%; flex: 1; min-height: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; background: var(--bg);"
+        : " --hero: 32px; width: 390px; height: 844px; border-radius: 46px; overflow: hidden; position: relative; box-shadow: 0 30px 70px rgba(0,0,0,0.6); display: flex; flex-direction: column; background: var(--bg);"),
       isDarkTheme: !light, isLightTheme: light,
       isHome: v === "home", isLoading: v === "loading", isList: v === "list",
       isMap: v === "map", isDetail: v === "detail", isGift: v === "gift", isProfile: v === "profile",
@@ -1672,7 +1710,7 @@ class Component extends DCLogic {
       hvBg: st.hideVisited ? "rgba(255,80,35,0.16)" : "var(--surf)",
       hvBc: st.hideVisited ? "rgba(255,80,35,0.4)" : "var(--line)",
       hvInk: st.hideVisited ? "#FF7A55" : "var(--ink2)",
-      filterCats: FCATS.map(c => ({
+      filterCats: (st.user ? FCATS : FCATS.filter(c => c.key !== "premios")).map(c => ({
         label: c.label, icon: c.icon,
         pick: () => this.setState({ fCat: c.key }),
         bg: st.fCat === c.key ? "linear-gradient(180deg, #FF6337, #E8431A)" : "var(--surf)",
@@ -1680,7 +1718,7 @@ class Component extends DCLogic {
         ink: st.fCat === c.key ? "#FFFFFF" : "var(--ink2)",
         sh: st.fCat === c.key ? "0 8px 20px rgba(255,80,35,0.3)" : "inset 0 1px 0 var(--hi)"
       })),
-      filterRows: FDEF.filter(d => d.cat === st.fCat).map(d => ({
+      filterRows: FDEF.filter(d => d.cat === st.fCat && (st.user || (d.key !== "tier" && d.key !== "reward"))).map(d => ({
         label: d.label, icon: d.icon, value: st.fDraft[d.key],
         valueInk: st.fDraft[d.key] === "Cualquiera" || st.fDraft[d.key] === "Relevancia" ? "var(--ink3)" : "#FF7A55",
         open: () => this.setState({ optKey: d.key })
@@ -1717,7 +1755,7 @@ class Component extends DCLogic {
       locInk: st.locOn ? "#FF5023" : "var(--ink2)",
 
       qrOpen: st.qrOpen,
-      openQr: () => this.setState({ qrOpen: true, qrTab: "scan" }),
+      openQr: () => this.setState(st.user ? { qrOpen: true, qrTab: "scan" } : { tab: "perfil", view: "profile", qrOpen: false }),
       closeQr: () => this.setState({ qrOpen: false }),
       qrShowMine: () => this.setState({ qrTab: "mine" }),
       qrShowScan: () => this.setState({ qrTab: "scan" }),
@@ -1747,7 +1785,8 @@ class Component extends DCLogic {
         name: p.name, meta: meta(p), photo: PH(p.photoSpec), icon: TYPES[p.type].icon, color: TYPES[p.type].color,
         price: money(p.price), dist: p.d < 1 ? Math.round(p.d * 1000) + " m" : String(p.d).replace(".", ",") + " km",
         dish: `${p.dish} · ${money(p.dishPrice)}`,
-        hasReward: p.visits > 0, reward: `${p.visits}/${p.need}`,
+        hasReward: st.user ? p.visits > 0 : true,
+        rewardLabel: st.user ? `${p.visits}/${p.need}` : `premio a las ${p.need}`,
         ...favOf(p), fav: toggleFav(p), open: () => this.openPlace(p)
       })),
 
@@ -1788,7 +1827,7 @@ class Component extends DCLogic {
         ...favOf(cur)
       },
       mTabs: [
-        { key: "loyal", label: "Mis visitas", icon: "workspace_premium" },
+        { key: "loyal", label: st.user ? "Mis visitas" : "Recompensas", icon: "workspace_premium" },
         { key: "menu", label: "Menú", icon: "restaurant_menu" }
       ].map(t => {
         const on = st.mTab === t.key;
@@ -1883,6 +1922,7 @@ class Component extends DCLogic {
       deleteLabel: st.delArmed ? "Tocá de nuevo para confirmar" : "Eliminar mi cuenta",
 
       loggedOut: !st.user, loggedIn: !!st.user,
+      goLogin: () => this.setState({ tab: "perfil", view: "profile" }),
       email: st.email, pass: st.pass,
       onEmail: e => this.setState({ email: e.target.value }),
       onPass: e => this.setState({ pass: e.target.value }),
@@ -1922,7 +1962,7 @@ class Component extends DCLogic {
         style: `flex: 1; border: ${st.gift === a ? "2px solid #FF5023" : "1px solid var(--line)"}; background: ${st.gift === a ? "rgba(255,80,35,0.14)" : "var(--surf)"}; color: ${st.gift === a ? "#FF7A55" : "var(--ink)"}; border-radius: 14px; padding: ${st.gift === a ? "13px 0" : "14px 0"}; font-family: Barlow, sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: inset 0 1px 0 var(--hi); transition: border-color .2s ease, background .2s ease;`
       })),
       buying: st.buying,
-      buyGift: () => { if (canBuy) this.setState({ buying: true }); },
+      buyGift: () => { if (canBuy && st.user) this.setState({ buying: true }); },
       closeBuy: () => this.setState({ buying: false, giftPhone: "", giftMsg: "" }),
       wonTier: (TIERS.find(t => t.key === st.tier) || TIERS[0]).tier,
       wonTo: st.giftPhone ? `Enviada a ${st.giftPhone}` : "Lista para compartir por WhatsApp",
