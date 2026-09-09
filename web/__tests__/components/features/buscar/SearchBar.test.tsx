@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen } from "@testing-library/react";
-import { SearchBar } from "@/components/buscar/SearchBar";
+import { SearchBar } from "@/components/features/buscar/SearchBar";
 import { SEARCH_EXAMPLES } from "@/lib/mock/search";
 
 describe("SearchBar", () => {
@@ -78,5 +78,21 @@ describe("SearchBar", () => {
         vi.advanceTimersByTime(3000 * 5);
       });
     }).not.toThrow();
+  });
+
+  it("uses a static placeholder instead of rotating when one is passed explicitly (wide layout)", () => {
+    render(<SearchBar defaultValue="" placeholder="Buscar por nombre, plato o barrio" />);
+    expect(screen.getByRole("textbox")).toHaveAttribute(
+      "placeholder",
+      "Buscar por nombre, plato o barrio",
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(3000 * 3);
+    });
+    expect(screen.getByRole("textbox")).toHaveAttribute(
+      "placeholder",
+      "Buscar por nombre, plato o barrio",
+    );
   });
 });

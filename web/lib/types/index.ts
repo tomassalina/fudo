@@ -88,3 +88,60 @@ export interface BusinessHours {
   closes_at: string | null;
   closed: boolean;
 }
+
+/** Mirrors `public.reward_type_enum` (backend/db/structure.sql). */
+export type RewardType = "discount_percent" | "free_item" | "cashback" | "other";
+
+/**
+ * Mirrors `loyalty_rules` (backend/db/structure.sql) field-for-field. There
+ * is no live endpoint for this table yet (see lib/api/README.md's "Endpoint
+ * coverage" table — only merchants/menu_items are confirmed), so
+ * lib/mock/loyalty.ts derives a plausible ladder per merchant instead of
+ * fetching real rows. Real per-consumer visit counts also don't exist here
+ * (see lib/api/README.md's "Out of scope: auth" — visit history lives in the
+ * mobile app), so `getLoyaltyProgress` below renders honest mock progress
+ * once `useSession()` (a real, mocked-login session — see
+ * lib/session/session-provider.tsx) reports a logged-in consumer, and the
+ * logged-out copy otherwise; the real `visits` table still needs to land
+ * before the visit counts themselves are real.
+ */
+export interface LoyaltyRule {
+  id: number;
+  merchant_id: number;
+  visits_required: number;
+  reward_type: RewardType;
+  reward_description: string;
+  is_permanent: boolean;
+}
+
+/** One rung of the visit-progress ladder rendered on the merchant detail page. */
+export interface LoyaltyStep {
+  visitNumber: number;
+  rule: LoyaltyRule | null;
+  /** The consumer has already reached this many visits. */
+  done: boolean;
+  /** The consumer is exactly at this step right now. */
+  isHere: boolean;
+  /** This is the next reward the consumer hasn't reached yet. */
+  isNext: boolean;
+}
+
+/** Fully-derived loyalty state for one merchant, ready to render — see
+ * `getLoyaltyProgress` in lib/mock/loyalty.ts for both the logged-in and
+ * logged-out copy variants this carries. */
+export interface LoyaltyProgress {
+  authenticated: boolean;
+  visits: number;
+  steps: LoyaltyStep[];
+  tierLabel: string;
+  headline: string;
+  sub: string;
+  note: string;
+}
+
+/** One dish result for the /buscar "Platos" mode — a menu item plus the
+ * merchant that serves it, since dish cards render both (see DishCard). */
+export interface DishSearchResult {
+  item: MenuItem;
+  merchant: Merchant;
+}

@@ -1,129 +1,211 @@
 // Public, SSR search page — the only piece of the mobile app's 3 tabs this
 // web platform surfaces (see PRD: web is the lowest-priority, SEO-oriented
-// slice of just "Buscar"). Server Component: data and filtering happen here,
-// the only client-side bit is the placeholder rotation in <SearchBar>.
+// slice of just "Buscar"). Server Component: data, filtering, and sorting
+// all happen here; the interactive shell (BuscarView) is a client island
+// that receives the final, already-filtered arrays as props — see its doc
+// comment for why the phone/wide split and the loadMore reveal both live
+// there instead of duplicating server logic.
 //
-// Search itself is a plain GET form (?q=...), so it works without JS and is
-// fully crawlable/linkable. Data comes from lib/data/search, which filters
-// the local fixture dataset (lib/mock) by default and only calls the real
-// `POST /api/v1/search` when NEXT_PUBLIC_API_BASE_URL is set — see
-// lib/api/README.md. A real backend failure is caught by ./error.tsx, not
-// here.
+// The base query/type/tags filter still goes through lib/data/search (mock
+// fixture dataset by default, real `POST /api/v1/search`'s equivalent
+// client-side re-filter once NEXT_PUBLIC_API_BASE_URL is set — see
+// lib/api/README.md). price/hood/dist/sort/hideVisited are additional
+// dimensions layered on top directly in this file, the same way the design
+// reference's own `merchantsBase()` chains one filter after another — they
+// don't have a confirmed server-side equivalent, so narrowing the
+// already-fetched array here is the honest option instead of inventing an
+// API param.
 
-import Link from "next/link";
-import { SearchBar } from "@/components/buscar/SearchBar";
-import { FilterChips } from "@/components/buscar/FilterChips";
-import { MerchantCard } from "@/components/buscar/MerchantCard";
-import { MapPanel } from "@/components/buscar/MapPanel";
 import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
-import type { MerchantType } from "@/lib/types";
-import { MERCHANT_TYPES_IN_USE, TAGS_IN_USE } from "@/lib/mock/merchants";
+import { FluidContainer } from "@/components/ui/FluidContainer";
+import { BuscarView } from "@/components/features/buscar/BuscarView";
+import type { ResultMode } from "@/components/features/buscar/ResultModeToggle";
+import { getDishSearchResults } from "@/lib/data/menu-items";
 import { searchMerchants } from "@/lib/data/search";
+import { getMockVisitCount } from "@/lib/mock/loyalty";
+import { MERCHANT_TYPES_IN_USE, TAGS_IN_USE } from "@/lib/mock/merchants";
+import type { Merchant, MerchantType } from "@/lib/types";
+import type { BuscarParams } from "@/lib/utils/buscar-href";
+import { buscarHref } from "@/lib/utils/buscar-href";
 
-function parseType(raw: string | string[] | undefined): MerchantType | null {
-  const value = typeof raw === "string" ? raw : undefined;
-  return value && (MERCHANT_TYPES_IN_USE as string[]).includes(value)
-    ? (value as MerchantType)
+function firstString(raw: string | string[] | undefined): string {
+  return typeof raw === "string" ? raw : "";
+}
+
+function parseType(raw: string): MerchantType | null {
+  return (MERCHANT_TYPES_IN_USE as string[]).includes(raw)
+    ? (raw as MerchantType)
     : null;
 }
 
-function parseTags(raw: string | string[] | undefined): string[] {
-  const value = typeof raw === "string" ? raw : "";
-  const requested = value
+function parseTags(raw: string): string[] {
+  const requested = raw
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
-
   // Keep only real, filterable tags — an unknown value in the URL just gets
   // dropped instead of silently zeroing out the results.
   return TAGS_IN_USE.filter((tag) => requested.includes(tag));
 }
 
+function parseMode(raw: string): ResultMode {
+  return raw === "platos" ? "platos" : "lugares";
+}
+
+/** "min-max" -> [min, max], both inclusive. Malformed values fall back to no bound. */
+function parsePriceRange(raw: string): [number, number] | null {
+  const match = /^(\d+)-(\d+)$/.exec(raw);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2])];
+}
+
+function applyExtraFilters(
+  merchants: Merchant[],
+  params: BuscarParams,
+): Merchant[] {
+  let out = merchants;
+
+  if (params.hood) {
+    out = out.filter((merchant) => merchant.neighborhood === params.hood);
+  }
+
+  const priceRange = params.price ? parsePriceRange(params.price) : null;
+  if (priceRange) {
+    const [min, max] = priceRange;
+    out = out.filter((merchant) => {
+      const price = merchant.price_per_person_min;
+      return price != null && price >= min && price <= max;
+    });
+  }
+
+  if (params.dist) {
+    const km = Number(params.dist);
+    if (Number.isFinite(km)) {
+      out = out.filter((merchant) => merchant.distanceKm <= km);
+    }
+  }
+
+  // Cosmetic-only gate: the checkbox that sets this param is only rendered
+  // client-side once useSession() reports isAuthenticated (see
+  // FilterFields.tsx) — a Server Component can't read that hook (it's a
+  // "use client" module), and there's no real per-user data at stake here
+  // either way, since "visited" is the same deterministic mock derivation
+  // getMockVisitCount always returns (see lib/mock/loyalty.ts), not a real
+  // per-consumer record. Manually appending `?hideVisited=1` as a
+  // logged-out visitor just previews the same filter, nothing private leaks.
+  if (params.hideVisited === "1") {
+    out = out.filter((merchant) => getMockVisitCount(merchant) === 0);
+  }
+
+  if (params.sort === "distancia") {
+    out = [...out].sort((a, b) => a.distanceKm - b.distanceKm);
+  } else if (params.sort === "precio") {
+    out = [...out].sort((a, b) => {
+      const priceA = a.price_per_person_min ?? Number.POSITIVE_INFINITY;
+      const priceB = b.price_per_person_min ?? Number.POSITIVE_INFINITY;
+      return priceA - priceB;
+    });
+  }
+
+  return out;
+}
+
 export default async function BuscarPage({
   searchParams,
 }: PageProps<"/buscar">) {
-  const params = await searchParams;
-  const rawQuery = params.q;
-  const query = typeof rawQuery === "string" ? rawQuery : "";
-  const type = parseType(params.type);
-  const tags = parseTags(params.tags);
-  const hasFilters = type !== null || tags.length > 0;
+  const rawParams = await searchParams;
+  const current: BuscarParams = {
+    q: firstString(rawParams.q),
+    type: firstString(rawParams.type),
+    tags: parseTags(firstString(rawParams.tags)).join(","),
+    mode: firstString(rawParams.mode),
+    price: firstString(rawParams.price),
+    hood: firstString(rawParams.hood),
+    dist: firstString(rawParams.dist),
+    sort: firstString(rawParams.sort),
+    hideVisited: firstString(rawParams.hideVisited) === "1" ? "1" : "",
+  };
 
-  const results = await searchMerchants({
+  const query = current.q;
+  const type = parseType(current.type);
+  const tags = current.tags ? current.tags.split(",") : [];
+  const mode = parseMode(current.mode);
+  const hasFilters =
+    type !== null ||
+    tags.length > 0 ||
+    Boolean(current.price) ||
+    Boolean(current.hood) ||
+    Boolean(current.dist) ||
+    current.hideVisited === "1";
+
+  const baseResults = await searchMerchants({
     query,
     type: type ?? undefined,
     tags,
   });
+  const merchants = applyExtraFilters(baseResults, current);
+  const availableHoods = Array.from(
+    new Set(
+      baseResults
+        .map((merchant) => merchant.neighborhood)
+        .filter((hood): hood is string => Boolean(hood)),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "es-AR"));
+
+  const dishes =
+    mode === "platos" ? await getDishSearchResults(merchants, query) : [];
+
+  const resultCount = mode === "platos" ? dishes.length : merchants.length;
   const countLabel =
-    results.length === 1
-      ? "1 lugar encontrado"
-      : `${results.length} lugares encontrados`;
+    resultCount === 1
+      ? mode === "platos"
+        ? "1 plato encontrado"
+        : "1 lugar encontrado"
+      : mode === "platos"
+        ? `${resultCount} platos encontrados`
+        : `${resultCount} lugares encontrados`;
+
+  const emptyTitle =
+    mode === "platos"
+      ? hasFilters || query
+        ? "Ningún plato con esos filtros"
+        : "No encontramos platos para tu búsqueda"
+      : hasFilters
+        ? "Ningún lugar con esos filtros"
+        : `No encontramos lugares para “${query}”`;
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-6 py-8">
+    <FluidContainer as="main" className="flex flex-1 flex-col gap-6 py-8">
       <SearchAnalytics
         hasQuery={query.length > 0}
         queryText={query}
         filterTypes={type ? [type] : []}
         filterTags={tags}
-        resultCount={results.length}
+        resultCount={resultCount}
       />
 
-      <div className="flex flex-col gap-4">
-        <SearchBar defaultValue={query} />
-
-        <FilterChips
-          query={query}
-          activeType={type}
-          activeTags={tags}
-          availableTypes={MERCHANT_TYPES_IN_USE}
-          availableTags={TAGS_IN_USE}
-        />
-      </div>
-
-      <div className="grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between px-1">
-            <span className="text-[13px] text-foreground-muted">
-              {countLabel}
-            </span>
-            {hasFilters || query ? (
-              <Link
-                href="/buscar"
-                className="text-[13px] font-semibold text-accent hover:text-accent-light"
-              >
-                {hasFilters ? "Limpiar filtros" : "Limpiar búsqueda"}
-              </Link>
-            ) : null}
-          </div>
-
-          {results.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {results.map((merchant) => (
-                <MerchantCard key={merchant.id} merchant={merchant} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-12 text-center">
-              <p className="font-heading text-lg font-bold text-foreground">
-                {hasFilters
-                  ? "Ningún lugar con esos filtros"
-                  : `No encontramos lugares para “${query}”`}
-              </p>
-              <Link
-                href="/buscar"
-                className="rounded-full bg-accent-soft px-4 py-2 text-[13px] font-semibold text-accent-light"
-              >
-                Ver todos los lugares
-              </Link>
-            </div>
-          )}
-        </section>
-
-        <aside className="lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
-          <MapPanel merchants={results} />
-        </aside>
-      </div>
-    </main>
+      <BuscarView
+        current={current}
+        query={query}
+        activeType={type}
+        activeTags={tags}
+        availableTypes={MERCHANT_TYPES_IN_USE}
+        availableTags={TAGS_IN_USE}
+        availableHoods={availableHoods}
+        mode={mode}
+        merchants={merchants}
+        dishes={dishes}
+        countLabel={countLabel}
+        emptyTitle={emptyTitle}
+        clearHref={buscarHref(current, {
+          type: null,
+          tags: null,
+          price: null,
+          hood: null,
+          dist: null,
+          hideVisited: null,
+        })}
+      />
+    </FluidContainer>
   );
 }

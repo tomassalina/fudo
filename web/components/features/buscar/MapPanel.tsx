@@ -7,8 +7,7 @@
 // next/dynamic with `ssr: false`. That option only works inside a Client
 // Component (Next.js's own docs: "ssr: false is not allowed with
 // next/dynamic in Server Components"), hence this thin 'use client'
-// wrapper — the surrounding /buscar page stays a Server Component and
-// renders <MapPanel> directly, same as before.
+// wrapper.
 import dynamic from "next/dynamic";
 import type { Merchant } from "@/lib/types";
 

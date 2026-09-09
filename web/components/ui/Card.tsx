@@ -1,11 +1,19 @@
-import type { HTMLAttributes } from "react";
+import type { ComponentPropsWithoutRef, ElementType } from "react";
 import { cn } from "@/lib/utils/cn";
 
-export type CardProps = HTMLAttributes<HTMLDivElement> & {
+type CardOwnProps<T extends ElementType> = {
+  /** Rendered element/component — defaults to `div`. Same polymorphic `as`
+   * pattern as `FluidContainer` (components/ui/FluidContainer.tsx), for the
+   * rare card that needs to be an `<article>` (e.g. a merchant result) or
+   * another semantic element instead of a plain `<div>`. */
+  as?: T;
   /** Adds the hover border-accent treatment used by tappable cards (e.g. a
    * merchant result) — omit for a purely static surface. */
   interactive?: boolean;
 };
+
+export type CardProps<T extends ElementType = "div"> = CardOwnProps<T> &
+  Omit<ComponentPropsWithoutRef<T>, keyof CardOwnProps<T>>;
 
 /**
  * The design's one repeated "panel" look: `--surf` background, hairline
@@ -13,13 +21,16 @@ export type CardProps = HTMLAttributes<HTMLDivElement> & {
  * a subtle glass edge (`box-shadow: inset 0 1px 0 var(--hi)` in the
  * reference — see e.g. the filter panel in Fudo Customers.dc.html).
  */
-export function Card({
+export function Card<T extends ElementType = "div">({
+  as,
   interactive = false,
   className,
   ...props
-}: CardProps) {
+}: CardProps<T>) {
+  const Component = as ?? "div";
+
   return (
-    <div
+    <Component
       className={cn(
         "rounded-card border border-border bg-surface shadow-[inset_0_1px_0_var(--highlight)]",
         interactive &&
