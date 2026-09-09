@@ -1,22 +1,17 @@
-// Data-layer facade for search — see lib/data/merchants.ts for the
-// mock/real switching rationale.
+// Data-layer facade for the /buscar text search bar (SearchBar.tsx) — see
+// lib/data/merchants.ts for the mock/real switching rationale. This is
+// deliberately NOT the home hero's "IA" search: that flow calls the real
+// `POST /api/v1/search` Gemini parser directly (lib/api/search.ts,
+// lib/search/resolve-ai-search.ts, mounted via AiSearchResolver.tsx) and
+// never touches this file — this module is only for the plain text field,
+// which stays a simple client-side match against `merchant.name` in both
+// modes (see lib/mock/search.ts's header comment for why that scope is
+// deliberate, not a limitation).
 //
-// `POST /api/v1/search` (the real natural-language endpoint PLAN.md
-// documents) turned out, confirmed against the live backend's swagger
-// spec and a live 401 response, to require `bearer_auth` — a logged-in
-// consumer. This app is intentionally public/unauthenticated (see
-// lib/api/README.md's "Out of scope: auth" section), so that endpoint is
-// unusable here and is NOT called.
-//
-// Instead, both mock and real modes go through the same path: fetch the
-// merchant list (mock or real, via getMerchants()) and run it through the
-// exact same client-side type/tags/substring filtering
-// (lib/mock/search.ts's searchMerchants) that already powers this page
-// today. This is not a regression from what real natural-language search
-// would have done — this app never had real NLP search; the "AI"
-// filtering was always a documented stand-in (see lib/mock/search.ts's
-// own header comment), so the ceiling here doesn't change, only the data
-// source under it does.
+// Both mock and real modes go through the same path: fetch the merchant
+// list (mock or real, via getMerchants()) and run it through the exact
+// same client-side type/tags/name-substring filtering (lib/mock/search.ts's
+// searchMerchants) that already powers this page today.
 //
 // GET /api/v1/merchants confirms server-side `neighborhood`/`type`/`tags`
 // query filters (see Api::V1::MerchantsController#filtered_merchants and
@@ -31,8 +26,8 @@
 // `type`), so `filterMerchants` below still re-checks it — a harmless no-op
 // once the backend has already narrowed by it, and the only path that
 // applies it at all in mock mode. `query` has no server equivalent (this
-// app never calls the real NLP search endpoint, see lib/api/README.md's
-// point 4) so it stays client-side in both modes.
+// module never calls the Gemini-backed search endpoint — see this file's
+// own header comment) so it stays client-side, name-only, in both modes.
 
 import type { Merchant } from "@/lib/types";
 import type { SearchFilters } from "@/lib/mock/search";

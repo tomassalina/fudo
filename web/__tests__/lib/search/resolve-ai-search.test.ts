@@ -1,0 +1,83 @@
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
+
+describe("resolveAiSearchFilters", () => {
+  const originalEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+    if (originalEnv === undefined) {
+      delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    } else {
+      process.env.NEXT_PUBLIC_API_BASE_URL = originalEnv;
+    }
+    vi.resetModules();
+  });
+
+  it("throws without calling fetch when no backend is configured (mock/local mode)", async () => {
+    delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    await expect(resolveAiSearchFilters("pizza")).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("maps the backend's structured filters onto this app's price-band vocabulary", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    localStorage.setItem("fudo:consumer-token", "test-jwt");
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: {
+            neighborhood: "Palermo",
+            type: "bar",
+            tags: ["picante"],
+            price_per_person: 8000,
+          },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("algo picante y barato en Palermo");
+
+    expect(resolved).toEqual({
+      type: "bar",
+      neighborhood: "Palermo",
+      tags: ["picante"],
+      priceBand: "0-20000",
+    });
+  });
+
+  it("passes through a null price estimate as a null priceBand (no price filter)", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: { neighborhood: null, type: null, tags: [], price_per_person: null },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("un bar con buena onda");
+
+    expect(resolved.priceBand).toBeNull();
+  });
+});

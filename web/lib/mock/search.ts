@@ -1,17 +1,23 @@
-// Trivial mock "search" over the real fixture merchant dataset.
-//
-// This is NOT the real natural-language search from the PRD (that needs a
-// real backend/LLM). It's a proportional stand-in for this low-priority SSR
-// pass: a case-insensitive substring match over name, type, tags,
-// neighborhood, and the featured dish, narrowed by real `type`/`tags` filters
-// — enough to make the search bar and filter chips feel real without faking
-// AI understanding it doesn't have yet.
+// The /buscar text search bar's (SearchBar.tsx) filtering logic — a plain,
+// client-side, case-insensitive substring match against `merchant.name`
+// ONLY, narrowed by the real `type`/`tags` chip filters. This is
+// deliberately narrow: it's the free-text search box, not the home hero's
+// "IA" search — that one is a different feature entirely, resolved via the
+// real Gemini-backed parser (POST /api/v1/search, see lib/api/search.ts and
+// lib/search/resolve-ai-search.ts) into structured filters instead of a
+// substring match. This function never calls that endpoint and never will:
+// it's the honest, simple "find it by its name" behavior /buscar's search
+// bar promises, nothing more (see its placeholder/aria-label). Matching
+// against neighborhood/type/tags/topDish here too — the previous behavior —
+// blurred that line: it made the plain text box quietly behave like a
+// keyword search over everything, indistinguishable from what the AI search
+// was supposed to be doing instead.
 
 import type { Merchant, MerchantType } from "@/lib/types";
-import { MERCHANT_TYPE_LABELS, TAG_LABELS } from "@/lib/mock/merchants";
 
 export interface SearchFilters {
-  /** Free-text query, matched as a substring (see haystack below). */
+  /** Free-text query, matched as a substring against `merchant.name` only
+   * (see the haystack below) — NOT neighborhood, type, tags, or dish. */
   query?: string;
   /** Single merchant type — a merchant only has one, so this is exclusive. */
   type?: MerchantType;
@@ -48,19 +54,7 @@ export function searchMerchants(
       return true;
     }
 
-    const haystack = [
-      merchant.name,
-      merchant.neighborhood,
-      merchant.type,
-      MERCHANT_TYPE_LABELS[merchant.type],
-      merchant.topDish ?? "",
-      ...merchant.tags,
-      ...merchant.tags.map((tag) => TAG_LABELS[tag] ?? tag),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(normalizedQuery);
+    return merchant.name.toLowerCase().includes(normalizedQuery);
   });
 }
 

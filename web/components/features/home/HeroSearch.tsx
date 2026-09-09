@@ -102,7 +102,13 @@ export function HeroSearch() {
     const fallback = SEARCH_EXAMPLES[phraseIndex.current % SEARCH_EXAMPLES.length];
     const finalQuery = query.trim() || fallback;
 
-    const params = new URLSearchParams({ q: finalQuery });
+    // `ai` (not `q`) — this is the AI search: /buscar reads it as a prompt
+    // to resolve into real filters via the Gemini-backed parser
+    // (AiSearchResolver.tsx), not as a plain name-only text query. Never
+    // rename this back to `q`: that param means "match merchant.name only"
+    // on /buscar (see lib/mock/search.ts's header comment) and would
+    // silently turn this into a text search Gemini never sees.
+    const params = new URLSearchParams({ ai: finalQuery });
     if (selectedOption.value) {
       params.set("type", selectedOption.value);
     }

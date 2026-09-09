@@ -31,7 +31,7 @@ describe("HeroSearch", () => {
     expect(screen.getByRole("textbox", { name: SEARCH_INPUT_NAME })).toHaveValue("");
   });
 
-  it("navigates to /buscar with the typed query on submit", () => {
+  it("navigates to /buscar with the typed query as an `ai` prompt on submit", () => {
     render(<HeroSearch />);
 
     fireEvent.change(screen.getByRole("textbox", { name: SEARCH_INPUT_NAME }), {
@@ -39,7 +39,11 @@ describe("HeroSearch", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Buscar con IA/ }));
 
-    const expected = new URLSearchParams({ q: "sushi" }).toString();
+    // `ai`, not `q` — this is the AI search, resolved into real filters by
+    // the Gemini-backed parser (AiSearchResolver.tsx), never a name-only
+    // text query (see lib/mock/search.ts's header comment for that
+    // distinction).
+    const expected = new URLSearchParams({ ai: "sushi" }).toString();
     expect(pushMock).toHaveBeenCalledWith(`/buscar?${expected}`);
   });
 
@@ -48,7 +52,7 @@ describe("HeroSearch", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Buscar con IA/ }));
 
-    const expected = new URLSearchParams({ q: SEARCH_EXAMPLES[0] }).toString();
+    const expected = new URLSearchParams({ ai: SEARCH_EXAMPLES[0] }).toString();
     expect(pushMock).toHaveBeenCalledWith(`/buscar?${expected}`);
   });
 
@@ -81,7 +85,7 @@ describe("HeroSearch", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Buscar con IA/ }));
 
-    const expected = new URLSearchParams({ q: "medialunas", type: "cafe" }).toString();
+    const expected = new URLSearchParams({ ai: "medialunas", type: "cafe" }).toString();
     expect(pushMock).toHaveBeenCalledWith(`/buscar?${expected}`);
   });
 });

@@ -110,19 +110,19 @@ describe("searchMerchants", () => {
       expect(result.map((m) => m.id)).toEqual([1]);
     });
 
-    it("matches the neighborhood", () => {
+    it("does NOT match the neighborhood — name-only, per the /buscar search bar contract", () => {
       const result = searchMerchants(merchants, { query: "recoleta" });
-      expect(result.map((m) => m.id)).toEqual([2]);
+      expect(result).toEqual([]);
     });
 
-    it("matches the top dish", () => {
+    it("does NOT match the top dish — name-only, per the /buscar search bar contract", () => {
       const result = searchMerchants(merchants, { query: "medialunas" });
-      expect(result.map((m) => m.id)).toEqual([2]);
+      expect(result).toEqual([]);
     });
 
-    it("matches a raw tag value", () => {
+    it("does NOT match a raw tag value — name-only, per the /buscar search bar contract", () => {
       const result = searchMerchants(merchants, { query: "sin_tacc" });
-      expect(result.map((m) => m.id)).toEqual([3]);
+      expect(result).toEqual([]);
     });
 
     it("trims whitespace and ignores case", () => {
