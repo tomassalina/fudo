@@ -60,7 +60,14 @@ export function GiftTierPicker({
               active ? "-translate-y-1 scale-100" : "translate-y-0 scale-[0.97]",
             )}
           >
-            <span className="flex items-center justify-between">
+            <span
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-y-[-40%] w-[70px] animate-fudo-sheen bg-gradient-to-r from-transparent via-white/[0.22] to-transparent",
+                tier.key === "black" ? "[animation-duration:4.4s]" : "[animation-duration:3.6s]",
+              )}
+            />
+            <span className="relative flex items-center justify-between">
               <Image
                 src="/fudo-logo.png"
                 alt=""
@@ -76,7 +83,7 @@ export function GiftTierPicker({
               </span>
             </span>
 
-            <span className="flex flex-col gap-1.5 text-left">
+            <span className="relative flex flex-col gap-1.5 text-left">
               <span
                 className={cn(
                   "font-heading font-black leading-none text-white",
