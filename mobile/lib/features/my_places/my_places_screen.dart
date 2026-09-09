@@ -193,12 +193,6 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
     super.dispose();
   }
 
-  void _showMockSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _onLoginPressed() async {
     final connectionMode = ref.read(connectionModeProvider);
     if (connectionMode == ConnectionMode.local) {
@@ -287,32 +281,6 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              // Decorative: per the design brief §2.7/§3, Google login has
-              // no real backend integration (the `consumers` schema has no
-              // OAuth columns at all) and is not implemented — this only
-              // tells the user so instead of pretending to do something.
-              onPressed: () => _showMockSnackBar(
-                'Login con Google no disponible en este MVP',
-              ),
-              icon: const Icon(Symbols.g_mobiledata, size: 22),
-              label: const Text('Continuar con Google'),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Expanded(child: Divider(color: AppTheme.border)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('o con email', style: AppTheme.bodySecondary),
-              ),
-              const Expanded(child: Divider(color: AppTheme.border)),
-            ],
-          ),
-          const SizedBox(height: 20),
           TextField(
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
