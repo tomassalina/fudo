@@ -146,6 +146,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _filters = const SearchFilters());
   }
 
+  void _updateFilters(SearchFilters next) {
+    setState(() => _filters = next);
+  }
+
+  /// Toggles one diet-tag id in [_filters.dietTagIds] — the same
+  /// [SearchFilters.dietTagIds]/`copyWith` state the advanced filters
+  /// sheet's "Dieta" row already manages (`filters_sheet.dart`'s
+  /// `_DietTagChips`), so tapping a chip here and picking the same tag in
+  /// the sheet stay in sync automatically instead of drifting apart.
+  void _toggleDietTag(int tagId) {
+    final current = _filters.dietTagIds;
+    final next = {...current};
+    if (!next.remove(tagId)) next.add(tagId);
+    _updateFilters(_filters.copyWith(dietTagIds: next));
+  }
+
   void _toggleResultsMode() {
     setState(() {
       _view = _view == _SearchView.map ? _SearchView.list : _SearchView.map;
@@ -202,7 +218,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
+      // `bottom: false` (fix, 2026-09-09, product-reported — third time
+      // across screens): this screen's `Scaffold` has no
+      // `bottomNavigationBar` of its own — the floating nav pill lives one
+      // level up in `main_shell.dart`'s `Scaffold` (with `extendBody:
+      // true`, confirmed already correct there), floating OVER this
+      // screen's content rather than reserving layout space for it. A
+      // default `SafeArea` (bottom: true) here was still reserving the
+      // device's own bottom system inset for this whole subtree regardless
+      // — pointless since nothing below it needs to avoid system chrome
+      // specifically (the floating nav pill computes its own safe-area
+      // margin independently, see `mainShellNavBottomMargin`), and it made
+      // `_SearchView.list`'s results `ListView` (`search_results_list.dart`)
+      // stop short of the true screen bottom, leaving a dead gap of bare
+      // background above the floating pill instead of scrolling all the way
+      // down. `SearchHomeView` already assumes exactly this — see its own
+      // doc comment ("this widget always renders inside `MainShell` ...
+      // `constraints.maxHeight` already extends behind the pill") — so
+      // removing this reservation actually matches that view's existing
+      // design intent instead of fighting it. `top` stays true (unchanged)
+      // so content still clears the status bar.
       body: SafeArea(
+        bottom: false,
         child: switch (_view) {
           _SearchView.home => SearchHomeView(onSearch: _startSearch),
           _SearchView.loading => SearchLoadingView(query: _query),
@@ -217,6 +254,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     resultMode: _resultMode,
                     onResultModeChanged: _setResultMode,
                     showingMap: false,
+                    filters: _filters,
+                    onToggleDietTag: _toggleDietTag,
                     activeFilterCount: _filters.activeCount,
                     onOpenFilters: _openFiltersSheet,
                   ),
@@ -235,6 +274,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         onClearSearch: _clearQuery,
                         onClearFilters: _clearFilters,
                         onOpenMerchant: _openMerchant,
+                        onFiltersChanged: _updateFilters,
                       ),
                     },
                   ),
@@ -308,6 +348,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   resultMode: _resultMode,
                   onResultModeChanged: _setResultMode,
                   showingMap: true,
+                  filters: _filters,
+                  onToggleDietTag: _toggleDietTag,
                   activeFilterCount: _filters.activeCount,
                   onOpenFilters: _openFiltersSheet,
                 ),
@@ -412,6 +454,8 @@ class _ResultsHeader extends StatelessWidget {
     required this.resultMode,
     required this.onResultModeChanged,
     required this.showingMap,
+    required this.filters,
+    required this.onToggleDietTag,
     required this.activeFilterCount,
     required this.onOpenFilters,
   });
@@ -422,6 +466,8 @@ class _ResultsHeader extends StatelessWidget {
   final _ResultMode resultMode;
   final ValueChanged<_ResultMode> onResultModeChanged;
   final bool showingMap;
+  final SearchFilters filters;
+  final ValueChanged<int> onToggleDietTag;
   final int activeFilterCount;
   final VoidCallback onOpenFilters;
 
@@ -480,8 +526,123 @@ class _ResultsHeader extends StatelessWidget {
           if (!showingMap) ...[
             const SizedBox(height: 12),
             _ResultModeToggle(mode: resultMode, onChanged: onResultModeChanged),
+            const SizedBox(height: 12),
+            _DietChipsRow(filters: filters, onToggleTag: onToggleDietTag),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Horizontally-scrollable "AI-powered" diet-tag chip row (design parity
+/// with web's `AiChips.tsx`, shown right below the search bar + Lugares/
+/// Platos toggle): a sparkle-icon chip per diet tag that toggles it in
+/// [SearchFilters.dietTagIds] — the exact same filter dimension the
+/// advanced filters sheet's "Dieta" row manages
+/// (`filters_sheet.dart`'s `_DietTagChips`). Reuses that row's
+/// [dietTagOrder]/[dietTagLabels] (made module-level there specifically for
+/// this reuse) so both surfaces show the same 5 tags in the same order —
+/// only the toggle callback itself ([_SearchScreenState._toggleDietTag], a
+/// plain Set add/remove) and the chip's visuals are separate, since they're
+/// two different entry points into the same state rather than one shared
+/// widget.
+class _DietChipsRow extends ConsumerWidget {
+  const _DietChipsRow({required this.filters, required this.onToggleTag});
+
+  final SearchFilters filters;
+  final ValueChanged<int> onToggleTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tagsAsync = ref.watch(tagsProvider);
+    return tagsAsync.when(
+      data: (tags) {
+        final byName = {for (final tag in tags) tag.name: tag};
+        final dietTags = [
+          for (final name in dietTagOrder)
+            if (byName[name] != null) byName[name]!,
+        ];
+        if (dietTags.isEmpty) return const SizedBox.shrink();
+        return SizedBox(
+          height: 34,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: dietTags.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final tag = dietTags[index];
+              final selected = filters.dietTagIds.contains(tag.id);
+              return _AiChip(
+                label: dietTagLabels[tag.name] ?? tag.name,
+                selected: selected,
+                onTap: () => onToggleTag(tag.id),
+              );
+            },
+          ),
+        );
+      },
+      // While tags haven't resolved yet, or on error, this row simply isn't
+      // shown — no time-under-deadline justification for a skeleton/error
+      // state on what's a secondary, always-optional filter shortcut.
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// A single sparkle-prefixed AI chip — visual match for web's `AiChips.tsx`
+/// pill (`rounded-full border px-3.5 py-1.5`, `auto_awesome` icon, active =
+/// accent-tinted border/background/text).
+class _AiChip extends StatelessWidget {
+  const _AiChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected
+          ? AppTheme.accent.withValues(alpha: 0.16)
+          : AppTheme.surface,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: selected
+              ? AppTheme.accent.withValues(alpha: 0.5)
+              : AppTheme.border,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Symbols.auto_awesome,
+                size: 14,
+                color: selected ? AppTheme.accent : AppTheme.textTertiary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTheme.body.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? AppTheme.accent : AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

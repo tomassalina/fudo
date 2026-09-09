@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/merchant.dart';
 import '../../../data/models/visit_summary.dart';
 import '../../../data/providers.dart';
+import '../../../shared/widgets/main_shell.dart';
 import '../../../shared/widgets/network_error_view.dart';
 import 'search_utils.dart';
 
@@ -19,12 +20,24 @@ Map<int, int> _visitCountsByMerchant(List<VisitSummary>? summaries) {
 }
 
 /// Results list view for the "Buscar" tab (design-brief §2.3): merchant
-/// cards filtered by [query], result-count copy, and an empty state.
-class SearchResultsList extends ConsumerWidget {
+/// cards filtered by [query], a result-count + sort row, and an empty
+/// state.
+///
+/// Also owns the design's infinite-scroll reveal (parity with web's
+/// `SearchResultsGrid.tsx` — same `PAGE_SIZE`/`LOAD_MORE_DELAY_MS`): the
+/// full filtered list is already resolved client-side (via
+/// `merchantsProvider` + `applySearchFilters`), so "loading more" here means
+/// revealing more of an already-known array as the user nears the bottom,
+/// not a new network fetch — see that file's own doc comment for the same
+/// rationale. `ConsumerStatefulWidget` (rather than the previous
+/// `ConsumerWidget`) so the revealed-count/scroll-controller state survives
+/// rebuilds triggered by provider updates instead of resetting every frame.
+class SearchResultsList extends ConsumerStatefulWidget {
   const SearchResultsList({
     required this.query,
     required this.onClearSearch,
     required this.onOpenMerchant,
+    required this.onFiltersChanged,
     this.filters = const SearchFilters(),
     this.onClearFilters,
     super.key,
@@ -35,6 +48,15 @@ class SearchResultsList extends ConsumerWidget {
   final VoidCallback onClearSearch;
   final ValueChanged<int> onOpenMerchant;
 
+  /// Applies an edited [SearchFilters] back up to the owning `SearchScreen`
+  /// — today only used by the sort dropdown next to the result count
+  /// (design parity with web's "N lugares encontrados · Relevancia ▾" row),
+  /// the same [SearchFilters.copyWith]/[SortOption] vocabulary the advanced
+  /// filters sheet's "Básico" category already wires up
+  /// (`filters_sheet.dart`'s `_BasicoCategory`) — a second entry point into
+  /// the same sort state, not a parallel one.
+  final ValueChanged<SearchFilters> onFiltersChanged;
+
   /// Resets [filters] to the default (no filters). Only used by the empty
   /// state's "Limpiar filtros" action when filters (rather than the text
   /// query) are the reason the list is empty — `null` falls back to
@@ -42,7 +64,87 @@ class SearchResultsList extends ConsumerWidget {
   final VoidCallback? onClearFilters;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchResultsList> createState() => _SearchResultsListState();
+}
+
+class _SearchResultsListState extends ConsumerState<SearchResultsList> {
+  /// Matches web's `PAGE_SIZE`/`LOAD_MORE_DELAY_MS`
+  /// (`SearchResultsGrid.tsx`) exactly: same batch size, same simulated
+  /// "loading more" delay before the next batch reveals.
+  static const int _pageSize = 10;
+  static const Duration _loadMoreDelay = Duration(milliseconds: 750);
+
+  /// How close to the bottom (in logical pixels) triggers the next reveal —
+  /// the Flutter analogue of web's `IntersectionObserver` sentinel with
+  /// `rootMargin: "400px"`.
+  static const double _loadMoreThreshold = 400;
+
+  /// How many skeleton rows to show while the next page is "loading" —
+  /// matches web's 3 `RowSkeleton` placeholders on phone.
+  static const int _loadingSkeletonCount = 3;
+
+  final ScrollController _scrollController = ScrollController();
+
+  int _visibleCount = _pageSize;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  String? _resetKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_hasMore || _loadingMore) return;
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - _loadMoreThreshold) {
+      _loadMore();
+    }
+  }
+
+  void _loadMore() {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    Future.delayed(_loadMoreDelay, () {
+      if (!mounted) return;
+      setState(() {
+        _visibleCount += _pageSize;
+        _loadingMore = false;
+      });
+    });
+  }
+
+  /// A new search query or filter set means a different result set — the
+  /// reveal window resets to the first page, same as web remounting
+  /// `SearchResultsGrid` via a filter-params `key` on any filter change
+  /// (see that file's own doc comment). Detected via a cheap identity-key
+  /// comparison at the top of [build] instead of `didUpdateWidget`
+  /// boilerplate — safe because it only mutates fields that are read later
+  /// in the same build pass, no `setState` needed for the current frame.
+  void _resetIfFiltersChanged() {
+    final key = '${widget.query}|${widget.filters.hashCode}';
+    if (_resetKey != null && _resetKey != key) {
+      _visibleCount = _pageSize;
+      _loadingMore = false;
+    }
+    _resetKey = key;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _resetIfFiltersChanged();
+
     final merchantsAsync = ref.watch(merchantsProvider);
     final favoriteIds = ref.watch(favoriteIdsProvider);
     // All four default to an empty map while still loading —
@@ -62,40 +164,76 @@ class SearchResultsList extends ConsumerWidget {
     return merchantsAsync.when(
       data: (merchants) {
         final filtered = applySearchFilters(
-          filterMerchants(merchants, query),
-          filters,
+          filterMerchants(merchants, widget.query),
+          widget.filters,
           merchantTagIds: merchantTagIds,
           visitCountsByMerchant: visitCountsByMerchant,
           businessHoursByMerchant: businessHoursByMerchant,
           loyaltyRulesByMerchant: loyaltyRulesByMerchant,
         );
         if (filtered.isEmpty) {
+          _hasMore = false;
           return _EmptyResults(
-            query: query,
-            hasActiveFilters: filters.activeCount > 0,
-            onClear: filters.activeCount > 0
-                ? (onClearFilters ?? onClearSearch)
-                : onClearSearch,
+            query: widget.query,
+            hasActiveFilters: widget.filters.activeCount > 0,
+            onClear: widget.filters.activeCount > 0
+                ? (widget.onClearFilters ?? widget.onClearSearch)
+                : widget.onClearSearch,
           );
         }
+
+        final visible = _visibleCount.clamp(0, filtered.length);
+        _hasMore = visible < filtered.length;
+        final itemCount = visible + (_loadingMore ? _loadingSkeletonCount : 0);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                filtered.length == 1
-                    ? '1 coincidencia'
-                    : '${filtered.length} coincidencias',
-                style: AppTheme.bodySecondary,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    filtered.length == 1
+                        ? '1 coincidencia'
+                        : '${filtered.length} coincidencias',
+                    style: AppTheme.bodySecondary,
+                  ),
+                  _SortButton(
+                    sort: widget.filters.sort,
+                    onChanged: (option) => widget.onFiltersChanged(
+                      widget.filters.copyWith(sort: option),
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: filtered.length,
+                controller: _scrollController,
+                // Bottom padding sized off the SAME shared nav metrics
+                // `main_shell.dart`'s `_FloatingBottomNav` and this screen's
+                // own `_FloatingMapButton` already use
+                // (`mainShellNavBottomMargin`/`mainShellNavPillHeight`) —
+                // not a guessed constant — plus a fixed 16px gap so the
+                // last real card clears the floating pill visually. The
+                // scrollable itself still reaches the TRUE bottom of the
+                // viewport (no dead gap of bare background above the
+                // floating pill): see `search_screen.dart`'s
+                // `SafeArea(bottom: false)` fix for the other half of this.
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  mainShellNavBottomMargin(context) + mainShellNavPillHeight + 16,
+                ),
+                itemCount: itemCount,
                 separatorBuilder: (_, _) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
+                  if (index >= visible) {
+                    return const _ResultSkeletonCard();
+                  }
                   final merchant = filtered[index];
                   return _MerchantCard(
                     merchant: merchant,
@@ -103,7 +241,7 @@ class SearchResultsList extends ConsumerWidget {
                     onToggleFavorite: () => ref
                         .read(favoriteIdsProvider.notifier)
                         .toggle(merchant.id),
-                    onTap: () => onOpenMerchant(merchant.id),
+                    onTap: () => widget.onOpenMerchant(merchant.id),
                   );
                 },
               ),
@@ -116,6 +254,149 @@ class SearchResultsList extends ConsumerWidget {
       error: (error, stackTrace) => NetworkErrorView(
         message: 'No pudimos cargar los lugares.',
         onRetry: () => ref.invalidate(merchantsProvider),
+      ),
+    );
+  }
+}
+
+/// Sort trigger next to the result count — design parity with web's
+/// "Relevancia ▾" (`SortMenu.tsx`): shows the current [SortOption.label]
+/// and opens a menu to pick another.
+class _SortButton extends StatelessWidget {
+  const _SortButton({required this.sort, required this.onChanged});
+
+  final SortOption sort;
+  final ValueChanged<SortOption> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<SortOption>(
+      initialValue: sort,
+      onSelected: onChanged,
+      color: AppTheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        side: const BorderSide(color: AppTheme.border),
+      ),
+      itemBuilder: (context) => SortOption.values
+          .map(
+            (option) => PopupMenuItem<SortOption>(
+              value: option,
+              child: Text(
+                option.label,
+                style: AppTheme.body.copyWith(
+                  fontWeight: option == sort ? FontWeight.w700 : FontWeight.w400,
+                  color: option == sort ? AppTheme.accent : AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            sort.label,
+            style: AppTheme.bodySecondary.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const Icon(Symbols.expand_more, size: 18, color: AppTheme.textSecondary),
+        ],
+      ),
+    );
+  }
+}
+
+/// Loading-more placeholder shown while the next page reveals (parity with
+/// web's `RowSkeleton`) — mirrors [_MerchantCard]'s own shape/radii 1:1
+/// (same `AspectRatio(16/9)` + `Material` surface) so nothing jumps size
+/// once the real card replaces it, using the same shimmer-sweep technique
+/// `search_loading_view.dart`'s `_ShimmerSkeleton` uses. Duplicated rather
+/// than shared: that one is private to its own file, which is out of this
+/// task's edit scope.
+class _ResultSkeletonCard extends StatefulWidget {
+  const _ResultSkeletonCard();
+
+  @override
+  State<_ResultSkeletonCard> createState() => _ResultSkeletonCardState();
+}
+
+class _ResultSkeletonCardState extends State<_ResultSkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget _shimmerBox({
+    double width = double.infinity,
+    required double height,
+    required double radius,
+  }) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = _controller.value;
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + 3 * t, 0),
+              end: Alignment(1 + 3 * t, 0),
+              colors: const [
+                AppTheme.surfaceSecondary,
+                AppTheme.border,
+                AppTheme.surfaceSecondary,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(AppTheme.radiusCardLarge),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: _shimmerBox(height: double.infinity, radius: 0),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FractionallySizedBox(
+                  widthFactor: 0.6,
+                  child: _shimmerBox(height: 16, radius: 6),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _shimmerBox(width: 46, height: 20, radius: AppTheme.radiusPill),
+                    const SizedBox(width: 8),
+                    _shimmerBox(width: 60, height: 12, radius: 6),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

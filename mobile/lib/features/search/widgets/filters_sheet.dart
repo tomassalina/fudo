@@ -480,6 +480,37 @@ class _PriceRangeSlider extends StatelessWidget {
   }
 }
 
+/// The 5 real diet tags a merchant can carry (`backend/db/seeds.rb`:
+/// `sin_tacc vegano vegetariano picante economico`), in display order —
+/// mirrors `DIET_TAG_KEYS` in the web app's `filter-rows.ts`. `tagsProvider`'s
+/// full tag catalog also carries unrelated values like
+/// "para_llevar"/"con_delivery", so consumers filter down to just these
+/// instead of rendering every known tag as a "diet" option.
+///
+/// Module-level (not private to [_DietTagChips]) so the Buscar top-section
+/// AI chip row (`search_screen.dart`'s `_DietChipsRow`, design parity with
+/// web's `AiChips.tsx`) can reuse the exact same 5 tags/order instead of
+/// hand-rolling a second list that could drift out of sync with this one.
+const List<String> dietTagOrder = [
+  'vegano',
+  'sin_tacc',
+  'picante',
+  'economico',
+  'vegetariano',
+];
+
+/// Spanish display labels for [dietTagOrder], matching web's `TAG_LABELS`
+/// (`web/lib/mock/merchants.ts`) — the catalog stores tag names as raw
+/// snake_case identifiers, not display-ready text. See [dietTagOrder]'s doc
+/// comment for why this is module-level rather than a private class member.
+const Map<String, String> dietTagLabels = {
+  'vegano': 'Vegano',
+  'sin_tacc': 'Sin TACC',
+  'picante': 'Picante',
+  'economico': 'Económico',
+  'vegetariano': 'Vegetariano',
+};
+
 class _DietTagChips extends StatelessWidget {
   const _DietTagChips({
     required this.tags,
@@ -491,36 +522,11 @@ class _DietTagChips extends StatelessWidget {
   final SearchFilters filters;
   final ValueChanged<SearchFilters> onChanged;
 
-  /// The 5 real diet tags a merchant can carry (`backend/db/seeds.rb`:
-  /// `sin_tacc vegano vegetariano picante economico`), in display order —
-  /// mirrors `DIET_TAG_KEYS` in the web app's `filter-rows.ts`. [tags] (from
-  /// `tagsProvider`, the app's full tag catalog) also carries unrelated
-  /// values like "para_llevar"/"con_delivery", so this row filters down to
-  /// just these instead of rendering every known tag as a "diet" option.
-  static const List<String> _dietTagOrder = [
-    'vegano',
-    'sin_tacc',
-    'picante',
-    'economico',
-    'vegetariano',
-  ];
-
-  /// Spanish display labels for [_dietTagOrder], matching web's `TAG_LABELS`
-  /// (`web/lib/mock/merchants.ts`) — the catalog stores tag names as raw
-  /// snake_case identifiers, not display-ready text.
-  static const Map<String, String> _dietTagLabels = {
-    'vegano': 'Vegano',
-    'sin_tacc': 'Sin TACC',
-    'picante': 'Picante',
-    'economico': 'Económico',
-    'vegetariano': 'Vegetariano',
-  };
-
   @override
   Widget build(BuildContext context) {
     final byName = {for (final tag in tags) tag.name: tag};
     final dietTags = [
-      for (final name in _dietTagOrder)
+      for (final name in dietTagOrder)
         if (byName[name] != null) byName[name]!,
     ];
     if (dietTags.isEmpty) {
@@ -535,7 +541,7 @@ class _DietTagChips extends StatelessWidget {
       children: dietTags.map((tag) {
         final isSelected = filters.dietTagIds.contains(tag.id);
         return _FilterChoiceChip(
-          label: _dietTagLabels[tag.name] ?? tag.name,
+          label: dietTagLabels[tag.name] ?? tag.name,
           selected: isSelected,
           onTap: () {
             final next = {...filters.dietTagIds};

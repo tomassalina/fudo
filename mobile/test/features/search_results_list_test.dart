@@ -34,6 +34,7 @@ Future<void> _pumpList(
             filters: filters,
             onClearSearch: () {},
             onOpenMerchant: (_) {},
+            onFiltersChanged: (_) {},
           ),
         ),
       ),
