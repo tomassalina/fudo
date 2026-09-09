@@ -1,0 +1,1842 @@
+[
+  {
+    "id": 1,
+    "merchant_id": 1,
+    "day_of_week": "monday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 2,
+    "merchant_id": 1,
+    "day_of_week": "monday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 3,
+    "merchant_id": 1,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 4,
+    "merchant_id": 1,
+    "day_of_week": "tuesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 5,
+    "merchant_id": 1,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 6,
+    "merchant_id": 1,
+    "day_of_week": "wednesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 7,
+    "merchant_id": 1,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 8,
+    "merchant_id": 1,
+    "day_of_week": "thursday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 9,
+    "merchant_id": 1,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 10,
+    "merchant_id": 1,
+    "day_of_week": "friday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 11,
+    "merchant_id": 1,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 12,
+    "merchant_id": 1,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 13,
+    "merchant_id": 2,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 14,
+    "merchant_id": 2,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 15,
+    "merchant_id": 2,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 16,
+    "merchant_id": 2,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 17,
+    "merchant_id": 2,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 18,
+    "merchant_id": 2,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 19,
+    "merchant_id": 2,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 20,
+    "merchant_id": 3,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 21,
+    "merchant_id": 3,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 22,
+    "merchant_id": 3,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 23,
+    "merchant_id": 3,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 24,
+    "merchant_id": 3,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 25,
+    "merchant_id": 3,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 26,
+    "merchant_id": 3,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 27,
+    "merchant_id": 4,
+    "day_of_week": "monday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 28,
+    "merchant_id": 4,
+    "day_of_week": "monday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 29,
+    "merchant_id": 4,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 30,
+    "merchant_id": 4,
+    "day_of_week": "tuesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 31,
+    "merchant_id": 4,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 32,
+    "merchant_id": 4,
+    "day_of_week": "wednesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 33,
+    "merchant_id": 4,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 34,
+    "merchant_id": 4,
+    "day_of_week": "thursday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 35,
+    "merchant_id": 4,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 36,
+    "merchant_id": 4,
+    "day_of_week": "friday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 37,
+    "merchant_id": 4,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 38,
+    "merchant_id": 4,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 39,
+    "merchant_id": 5,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 40,
+    "merchant_id": 5,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 41,
+    "merchant_id": 5,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 42,
+    "merchant_id": 5,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 43,
+    "merchant_id": 5,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 44,
+    "merchant_id": 5,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 45,
+    "merchant_id": 5,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 46,
+    "merchant_id": 6,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 47,
+    "merchant_id": 6,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 48,
+    "merchant_id": 6,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 49,
+    "merchant_id": 6,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 50,
+    "merchant_id": 6,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 51,
+    "merchant_id": 6,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 52,
+    "merchant_id": 6,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 53,
+    "merchant_id": 7,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 54,
+    "merchant_id": 7,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 55,
+    "merchant_id": 7,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 56,
+    "merchant_id": 7,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 57,
+    "merchant_id": 7,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 58,
+    "merchant_id": 7,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 59,
+    "merchant_id": 7,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 60,
+    "merchant_id": 8,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 61,
+    "merchant_id": 8,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 62,
+    "merchant_id": 8,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 63,
+    "merchant_id": 8,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 64,
+    "merchant_id": 8,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 65,
+    "merchant_id": 8,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 66,
+    "merchant_id": 8,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 67,
+    "merchant_id": 9,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 68,
+    "merchant_id": 9,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 69,
+    "merchant_id": 9,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 70,
+    "merchant_id": 9,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 71,
+    "merchant_id": 9,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 72,
+    "merchant_id": 9,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 73,
+    "merchant_id": 9,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 74,
+    "merchant_id": 10,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 75,
+    "merchant_id": 10,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 76,
+    "merchant_id": 10,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 77,
+    "merchant_id": 10,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 78,
+    "merchant_id": 10,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 79,
+    "merchant_id": 10,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 80,
+    "merchant_id": 10,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 81,
+    "merchant_id": 11,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 82,
+    "merchant_id": 11,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 83,
+    "merchant_id": 11,
+    "day_of_week": "wednesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 84,
+    "merchant_id": 11,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 85,
+    "merchant_id": 11,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 86,
+    "merchant_id": 11,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 87,
+    "merchant_id": 11,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 88,
+    "merchant_id": 12,
+    "day_of_week": "monday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 89,
+    "merchant_id": 12,
+    "day_of_week": "monday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 90,
+    "merchant_id": 12,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 91,
+    "merchant_id": 12,
+    "day_of_week": "tuesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 92,
+    "merchant_id": 12,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 93,
+    "merchant_id": 12,
+    "day_of_week": "wednesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 94,
+    "merchant_id": 12,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 95,
+    "merchant_id": 12,
+    "day_of_week": "thursday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 96,
+    "merchant_id": 12,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 97,
+    "merchant_id": 12,
+    "day_of_week": "friday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 98,
+    "merchant_id": 12,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 99,
+    "merchant_id": 12,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 100,
+    "merchant_id": 13,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 101,
+    "merchant_id": 13,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 102,
+    "merchant_id": 13,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 103,
+    "merchant_id": 13,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 104,
+    "merchant_id": 13,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 105,
+    "merchant_id": 13,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 106,
+    "merchant_id": 13,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 107,
+    "merchant_id": 14,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 108,
+    "merchant_id": 14,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 109,
+    "merchant_id": 14,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 110,
+    "merchant_id": 14,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 111,
+    "merchant_id": 14,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 112,
+    "merchant_id": 14,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 113,
+    "merchant_id": 14,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 114,
+    "merchant_id": 15,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 115,
+    "merchant_id": 15,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 116,
+    "merchant_id": 15,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 117,
+    "merchant_id": 15,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 118,
+    "merchant_id": 15,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 119,
+    "merchant_id": 15,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 120,
+    "merchant_id": 15,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 121,
+    "merchant_id": 16,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 122,
+    "merchant_id": 16,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 123,
+    "merchant_id": 16,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 124,
+    "merchant_id": 16,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 125,
+    "merchant_id": 16,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 126,
+    "merchant_id": 16,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 127,
+    "merchant_id": 16,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 128,
+    "merchant_id": 17,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 129,
+    "merchant_id": 17,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 130,
+    "merchant_id": 17,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 131,
+    "merchant_id": 17,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 132,
+    "merchant_id": 17,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 133,
+    "merchant_id": 17,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 134,
+    "merchant_id": 17,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 135,
+    "merchant_id": 18,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 136,
+    "merchant_id": 18,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 137,
+    "merchant_id": 18,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 138,
+    "merchant_id": 18,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 139,
+    "merchant_id": 18,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 140,
+    "merchant_id": 18,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 141,
+    "merchant_id": 18,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 142,
+    "merchant_id": 19,
+    "day_of_week": "monday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 143,
+    "merchant_id": 19,
+    "day_of_week": "monday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 144,
+    "merchant_id": 19,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 145,
+    "merchant_id": 19,
+    "day_of_week": "tuesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 146,
+    "merchant_id": 19,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 147,
+    "merchant_id": 19,
+    "day_of_week": "wednesday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 148,
+    "merchant_id": 19,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 149,
+    "merchant_id": 19,
+    "day_of_week": "thursday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 150,
+    "merchant_id": 19,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "15:30:00",
+    "closed": false
+  },
+  {
+    "id": 151,
+    "merchant_id": 19,
+    "day_of_week": "friday",
+    "opens_at": "20:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 152,
+    "merchant_id": 19,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 153,
+    "merchant_id": 19,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 154,
+    "merchant_id": 20,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 155,
+    "merchant_id": 20,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 156,
+    "merchant_id": 20,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 157,
+    "merchant_id": 20,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 158,
+    "merchant_id": 20,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 159,
+    "merchant_id": 20,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 160,
+    "merchant_id": 20,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 161,
+    "merchant_id": 21,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 162,
+    "merchant_id": 21,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 163,
+    "merchant_id": 21,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 164,
+    "merchant_id": 21,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 165,
+    "merchant_id": 21,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 166,
+    "merchant_id": 21,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 167,
+    "merchant_id": 21,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 168,
+    "merchant_id": 22,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 169,
+    "merchant_id": 22,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 170,
+    "merchant_id": 22,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 171,
+    "merchant_id": 22,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 172,
+    "merchant_id": 22,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 173,
+    "merchant_id": 22,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 174,
+    "merchant_id": 22,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 175,
+    "merchant_id": 23,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 176,
+    "merchant_id": 23,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 177,
+    "merchant_id": 23,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 178,
+    "merchant_id": 23,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 179,
+    "merchant_id": 23,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 180,
+    "merchant_id": 23,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 181,
+    "merchant_id": 23,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 182,
+    "merchant_id": 24,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 183,
+    "merchant_id": 24,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 184,
+    "merchant_id": 24,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 185,
+    "merchant_id": 24,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 186,
+    "merchant_id": 24,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 187,
+    "merchant_id": 24,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 188,
+    "merchant_id": 24,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 189,
+    "merchant_id": 25,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 190,
+    "merchant_id": 25,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 191,
+    "merchant_id": 25,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 192,
+    "merchant_id": 25,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 193,
+    "merchant_id": 25,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 194,
+    "merchant_id": 25,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 195,
+    "merchant_id": 25,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 196,
+    "merchant_id": 26,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 197,
+    "merchant_id": 26,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 198,
+    "merchant_id": 26,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 199,
+    "merchant_id": 26,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 200,
+    "merchant_id": 26,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 201,
+    "merchant_id": 26,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 202,
+    "merchant_id": 26,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 203,
+    "merchant_id": 27,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 204,
+    "merchant_id": 27,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 205,
+    "merchant_id": 27,
+    "day_of_week": "wednesday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 206,
+    "merchant_id": 27,
+    "day_of_week": "thursday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 207,
+    "merchant_id": 27,
+    "day_of_week": "friday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 208,
+    "merchant_id": 27,
+    "day_of_week": "saturday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 209,
+    "merchant_id": 27,
+    "day_of_week": "sunday",
+    "opens_at": "19:00:00",
+    "closes_at": "00:00:00",
+    "closed": false
+  },
+  {
+    "id": 210,
+    "merchant_id": 28,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 211,
+    "merchant_id": 28,
+    "day_of_week": "tuesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 212,
+    "merchant_id": 28,
+    "day_of_week": "wednesday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 213,
+    "merchant_id": 28,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 214,
+    "merchant_id": 28,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 215,
+    "merchant_id": 28,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 216,
+    "merchant_id": 28,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "22:00:00",
+    "closed": false
+  },
+  {
+    "id": 217,
+    "merchant_id": 29,
+    "day_of_week": "monday",
+    "opens_at": null,
+    "closes_at": null,
+    "closed": true
+  },
+  {
+    "id": 218,
+    "merchant_id": 29,
+    "day_of_week": "tuesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 219,
+    "merchant_id": 29,
+    "day_of_week": "wednesday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 220,
+    "merchant_id": 29,
+    "day_of_week": "thursday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 221,
+    "merchant_id": 29,
+    "day_of_week": "friday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 222,
+    "merchant_id": 29,
+    "day_of_week": "saturday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 223,
+    "merchant_id": 29,
+    "day_of_week": "sunday",
+    "opens_at": "12:00:00",
+    "closes_at": "23:30:00",
+    "closed": false
+  },
+  {
+    "id": 224,
+    "merchant_id": 30,
+    "day_of_week": "monday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 225,
+    "merchant_id": 30,
+    "day_of_week": "tuesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 226,
+    "merchant_id": 30,
+    "day_of_week": "wednesday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 227,
+    "merchant_id": 30,
+    "day_of_week": "thursday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 228,
+    "merchant_id": 30,
+    "day_of_week": "friday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 229,
+    "merchant_id": 30,
+    "day_of_week": "saturday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  },
+  {
+    "id": 230,
+    "merchant_id": 30,
+    "day_of_week": "sunday",
+    "opens_at": "08:00:00",
+    "closes_at": "20:00:00",
+    "closed": false
+  }
+]

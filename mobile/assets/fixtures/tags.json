@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "vegano"
+  },
+  {
+    "id": 2,
+    "name": "sin_tacc"
+  },
+  {
+    "id": 3,
+    "name": "picante"
+  },
+  {
+    "id": 4,
+    "name": "vegetariano"
+  },
+  {
+    "id": 5,
+    "name": "para_llevar"
+  },
+  {
+    "id": 6,
+    "name": "con_delivery"
+  }
+]

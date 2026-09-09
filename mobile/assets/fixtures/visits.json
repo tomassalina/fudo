@@ -1,0 +1,263 @@
+[
+  {
+    "id": 1,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 1,
+    "amount": 42000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-10T20:30:00Z"
+  },
+  {
+    "id": 2,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 1,
+    "amount": 42000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Café o postre de cortesía",
+    "visited_at": "2026-08-19T20:30:00Z"
+  },
+  {
+    "id": 3,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 1,
+    "amount": 42000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-28T20:30:00Z"
+  },
+  {
+    "id": 4,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 1,
+    "amount": 42000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "15% en tu cuenta",
+    "visited_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 5,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-07-14T20:30:00Z"
+  },
+  {
+    "id": 6,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Medialuna de cortesía",
+    "visited_at": "2026-07-23T20:30:00Z"
+  },
+  {
+    "id": 7,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-01T20:30:00Z"
+  },
+  {
+    "id": 8,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Café de especialidad gratis",
+    "visited_at": "2026-08-10T20:30:00Z"
+  },
+  {
+    "id": 9,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-19T20:30:00Z"
+  },
+  {
+    "id": 10,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "15% en tu pedido",
+    "visited_at": "2026-08-28T20:30:00Z"
+  },
+  {
+    "id": 11,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "amount": 18500.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 12,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-07-23T20:30:00Z"
+  },
+  {
+    "id": 13,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Café o postre de cortesía",
+    "visited_at": "2026-08-01T20:30:00Z"
+  },
+  {
+    "id": 14,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-10T20:30:00Z"
+  },
+  {
+    "id": 15,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "15% en tu cuenta",
+    "visited_at": "2026-08-19T20:30:00Z"
+  },
+  {
+    "id": 16,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-28T20:30:00Z"
+  },
+  {
+    "id": 17,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "amount": 42000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Entrada para compartir",
+    "visited_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 18,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 17,
+    "amount": 58000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-19T20:30:00Z"
+  },
+  {
+    "id": 19,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 17,
+    "amount": 58000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Trago de bienvenida",
+    "visited_at": "2026-08-28T20:30:00Z"
+  },
+  {
+    "id": 20,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 17,
+    "amount": 58000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 21,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-06-26T20:30:00Z"
+  },
+  {
+    "id": 22,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Café o postre de cortesía",
+    "visited_at": "2026-07-05T20:30:00Z"
+  },
+  {
+    "id": 23,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-07-14T20:30:00Z"
+  },
+  {
+    "id": 24,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "15% en tu cuenta",
+    "visited_at": "2026-07-23T20:30:00Z"
+  },
+  {
+    "id": 25,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-01T20:30:00Z"
+  },
+  {
+    "id": 26,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "Entrada para compartir",
+    "visited_at": "2026-08-10T20:30:00Z"
+  },
+  {
+    "id": 27,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-08-19T20:30:00Z"
+  },
+  {
+    "id": 28,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": true,
+    "reward_description_snapshot": "10% de cashback en Fudo",
+    "visited_at": "2026-08-28T20:30:00Z"
+  },
+  {
+    "id": 29,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "amount": 47000.0,
+    "reward_applied": false,
+    "reward_description_snapshot": null,
+    "visited_at": "2026-09-06T20:30:00Z"
+  }
+]

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/gifting/gifting_screen.dart';
 import '../../features/my_places/my_places_screen.dart';
+import '../../features/search/restaurant_detail_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
@@ -13,6 +14,13 @@ class AppRoutes {
   static const String search = '/search';
   static const String myPlaces = '/my-places';
   static const String gifting = '/gifting';
+
+  /// Restaurant detail — full-screen route outside the bottom-nav shell
+  /// (the design's detail view has no bottom nav, just back/favorite
+  /// buttons over the photo header). Reached from search results and the
+  /// map, regardless of which tab is active.
+  static String merchantDetail(int merchantId) => '/merchant/$merchantId';
+  static const String merchantDetailPattern = '/merchant/:id';
 
   static const List<String> _tabOrder = [search, myPlaces, gifting];
 
@@ -50,6 +58,24 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => const GiftingScreen(),
         ),
       ],
+    ),
+    // Outside the ShellRoute on purpose: the detail screen replaces the
+    // bottom nav with its own back/favorite buttons over the photo header.
+    GoRoute(
+      path: AppRoutes.merchantDetailPattern,
+      builder: (context, state) {
+        // int.tryParse (not int.parse): today the only emitter of this
+        // route is the typed AppRoutes.merchantDetail(int), but the path is
+        // still a plain URL segment — a malformed deep link (or a future
+        // external link) with a non-numeric id must not crash the app.
+        final id = int.tryParse(state.pathParameters['id'] ?? '');
+        if (id == null) {
+          return const Scaffold(
+            body: Center(child: Text('Restaurante no encontrado')),
+          );
+        }
+        return RestaurantDetailScreen(merchantId: id);
+      },
     ),
   ],
 );

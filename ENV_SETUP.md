@@ -71,7 +71,8 @@ Contexto técnico completo de cada variable: ver los comentarios dentro de `back
   ```bash
   flutter run --dart-define-from-file=.env
   ```
-- [ ] Nota: hoy el código de `mobile/lib/` todavía no lee estas variables (no hay ningún `String.fromEnvironment` implementado) — eso es trabajo de la Fase 4 del `PLAN.md` (conectar mobile al backend real). El archivo ya está listo para cuando se implemente esa fase.
+- [ ] `mobile/lib/core/analytics/analytics_service.dart` ya lee `POSTHOG_API_KEY`/`POSTHOG_HOST` vía `String.fromEnvironment` — sin `--dart-define-from-file=.env` (o sin llenar esas variables), la app arranca igual con analytics deshabilitado (no hace ninguna llamada de red a PostHog).
+- [ ] Fase 4 (`PLAN.md`) ya está implementada y probada contra el backend real: `mobile/lib/data/connection_mode.dart` lee `CONNECTION_MODE` (`local`, default, sin backend — o `remote`, pega de verdad a `/api/v1`) y `mobile/lib/core/config/dio_client.dart` lee `API_BASE_URL` (default `http://localhost:3000/api/v1`), ambas también vía `String.fromEnvironment`. No hace falta agregarlas a `mobile/.env` para el flujo normal — se pasan como `--dart-define` sueltos en el comando de `flutter run` (ver el README raíz, sección "Mobile"), ya que cambian según cómo estés corriendo la app (local vs. contra el backend, emulador Android vs. simulador iOS) más que ser un secreto fijo por desarrollador. `GEMINI_API_KEY` y el resto de las variables de backend siguen sin leerse desde `mobile/lib/` — esas viven del lado del backend, mobile nunca las necesita directamente.
 
 ## 7. Web — cómo correr la app con estas variables
 

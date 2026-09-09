@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required by mobile_scanner for the loyalty QR "Escanear" tab
+         (lib/features/loyalty/qr_sheet.dart). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:label="mobile"
         android:name="${applicationName}"

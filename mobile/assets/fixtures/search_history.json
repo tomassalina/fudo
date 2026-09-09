@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "query_text": "Algo picante y barato cerca mío",
+    "structured_output": {
+      "mode": "ai",
+      "matched_filters": [
+        "picante",
+        "economico",
+        "cerca"
+      ],
+      "radius_km": 2.6
+    }
+  },
+  {
+    "id": 2,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "query_text": "Café tranquilo para laburar en Palermo",
+    "structured_output": {
+      "mode": "ai",
+      "matched_filters": [
+        "cerca"
+      ],
+      "neighborhood": "Palermo"
+    }
+  },
+  {
+    "id": 3,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "query_text": "Tostado Café Club",
+    "structured_output": {
+      "mode": "name",
+      "matched_merchant_id": 2
+    }
+  }
+]

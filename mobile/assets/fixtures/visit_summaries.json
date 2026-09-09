@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 1,
+    "count": 4,
+    "current_tier": "plata",
+    "last_visit_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 2,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 2,
+    "count": 7,
+    "current_tier": "plata",
+    "last_visit_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 3,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 10,
+    "count": 6,
+    "current_tier": "plata",
+    "last_visit_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 4,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 17,
+    "count": 3,
+    "current_tier": "bronce",
+    "last_visit_at": "2026-09-06T20:30:00Z"
+  },
+  {
+    "id": 5,
+    "consumer_id": "00000000-0000-0000-0000-000000000001",
+    "merchant_id": 24,
+    "count": 9,
+    "current_tier": "oro",
+    "last_visit_at": "2026-09-06T20:30:00Z"
+  }
+]
