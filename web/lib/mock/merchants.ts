@@ -100,6 +100,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 56700,
     tags: ["picante"],
     topDish: "Tacos al pastor (3u)",
+    topDishPrice: 12300,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -119,6 +120,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 25000,
     tags: ["sin_tacc", "vegano", "economico"],
     topDish: "Flat white",
+    topDishPrice: 5500,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
   {
@@ -138,6 +140,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 51300,
     tags: ["picante"],
     topDish: "Papas bravas",
+    topDishPrice: 11200,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -157,6 +160,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 128300,
     tags: [],
     topDish: "Bife de chorizo",
+    topDishPrice: 27900,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -176,6 +180,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 43200,
     tags: ["picante", "economico", "vegano"],
     topDish: "Wok picante de fideos",
+    topDishPrice: 9400,
     rewardTeaser: "Envío gratis en tu 2ª visita",
   },
   {
@@ -195,6 +200,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 56700,
     tags: ["economico"],
     topDish: "Muzzarella grande",
+    topDishPrice: 12300,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -214,6 +220,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 28400,
     tags: ["sin_tacc", "vegano"],
     topDish: "Espresso de origen",
+    topDishPrice: 6200,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
   {
@@ -233,6 +240,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 110700,
     tags: [],
     topDish: "Combinado 30 piezas",
+    topDishPrice: 24100,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -252,6 +260,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 59400,
     tags: [],
     topDish: "Pinta IPA",
+    topDishPrice: 12900,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -271,6 +280,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 56700,
     tags: ["vegano", "sin_tacc"],
     topDish: "Bowl de estación",
+    topDishPrice: 12300,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -290,6 +300,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 20300,
     tags: ["economico"],
     topDish: "Choripán completo",
+    topDishPrice: 4400,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -309,6 +320,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 118800,
     tags: ["picante"],
     topDish: "Costillar al asador",
+    topDishPrice: 25900,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -328,6 +340,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 55400,
     tags: ["economico"],
     topDish: "Milanesa napolitana",
+    topDishPrice: 12100,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -347,6 +360,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 26300,
     tags: ["sin_tacc"],
     topDish: "Cappuccino",
+    topDishPrice: 5800,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
   {
@@ -366,6 +380,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 59400,
     tags: ["picante"],
     topDish: "Ramen tonkotsu",
+    topDishPrice: 12900,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -385,6 +400,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 18900,
     tags: ["economico", "vegano"],
     topDish: "Croissant de manteca",
+    topDishPrice: 4100,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
   {
@@ -404,6 +420,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 78300,
     tags: [],
     topDish: "Copa de malbec",
+    topDishPrice: 17100,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -423,6 +440,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 45900,
     tags: ["economico"],
     topDish: "Doble cheddar",
+    topDishPrice: 10000,
     rewardTeaser: "Envío gratis en tu 2ª visita",
   },
   {
@@ -442,6 +460,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 222800,
     tags: [],
     topDish: "Ojo de bife",
+    topDishPrice: 48500,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -461,6 +480,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 86400,
     tags: [],
     topDish: "Cóctel de autor",
+    topDishPrice: 18800,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -480,6 +500,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 51300,
     tags: ["economico"],
     topDish: "Ravioles caseros",
+    topDishPrice: 11200,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -499,6 +520,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 59400,
     tags: ["vegano"],
     topDish: "Margherita de masa madre",
+    topDishPrice: 12900,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -518,6 +540,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 27700,
     tags: ["sin_tacc"],
     topDish: "Cortado en jarrita",
+    topDishPrice: 6000,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
   {
@@ -537,6 +560,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 63500,
     tags: ["picante"],
     topDish: "Ramen miso picante",
+    topDishPrice: 13800,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -556,6 +580,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 54000,
     tags: ["economico"],
     topDish: "Pinta rubia",
+    topDishPrice: 11800,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -575,6 +600,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 44600,
     tags: ["vegano", "sin_tacc"],
     topDish: "Poke de salmón",
+    topDishPrice: 9700,
     rewardTeaser: "Envío gratis en tu 2ª visita",
   },
   {
@@ -594,6 +620,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 79700,
     tags: [],
     topDish: "Copa de blend",
+    topDishPrice: 17300,
     rewardTeaser: "Trago de bienvenida en tu 2ª visita",
   },
   {
@@ -613,6 +640,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 25700,
     tags: ["picante", "economico"],
     topDish: "Docena surtida",
+    topDishPrice: 5600,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -632,6 +660,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 129600,
     tags: ["picante"],
     topDish: "Tiradito nikkei",
+    topDishPrice: 28200,
     rewardTeaser: "Café o postre de cortesía en tu 2ª visita",
   },
   {
@@ -651,6 +680,7 @@ const MOCK_MERCHANTS_BASE: Omit<Merchant, "distanceKm">[] = [
     price_per_person_max: 20900,
     tags: ["economico"],
     topDish: "Pan de masa madre",
+    topDishPrice: 4600,
     rewardTeaser: "Medialuna de cortesía en tu 2ª visita",
   },
 ];

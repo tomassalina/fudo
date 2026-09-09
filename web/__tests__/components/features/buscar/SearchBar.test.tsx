@@ -1,17 +1,13 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { SearchBar } from "@/components/features/buscar/SearchBar";
-import { SEARCH_EXAMPLES } from "@/lib/mock/search";
+
+// Covers the compact results-page search bar (`isList`'s search row in
+// docs/design-reference/Fudo App.dc.html) — a static placeholder, no
+// rotation (that behavior lives on the home page's own HeroSearch.tsx), plus
+// the clear ("x") button that only shows once the field has text.
 
 describe("SearchBar", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("submits as a plain GET form to /buscar with a `q` field (works without JS)", () => {
     render(<SearchBar defaultValue="" />);
     const form = screen.getByRole("textbox").closest("form")!;
@@ -25,74 +21,44 @@ describe("SearchBar", () => {
     expect(screen.getByRole("textbox")).toHaveValue("sushi");
   });
 
-  it("starts with the first rotating example as the placeholder", () => {
+  it("uses the static isList placeholder by default", () => {
     render(<SearchBar defaultValue="" />);
     expect(screen.getByRole("textbox")).toHaveAttribute(
       "placeholder",
-      SEARCH_EXAMPLES[0],
+      "Buscar por nombre, tipo o barrio",
     );
   });
 
-  it("rotates to the next example every 3 seconds", () => {
-    render(<SearchBar defaultValue="" />);
-
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
-    expect(screen.getByRole("textbox")).toHaveAttribute(
-      "placeholder",
-      SEARCH_EXAMPLES[1],
-    );
-
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
-    expect(screen.getByRole("textbox")).toHaveAttribute(
-      "placeholder",
-      SEARCH_EXAMPLES[2],
-    );
-  });
-
-  it("wraps back to the first example after cycling through all of them", () => {
-    render(<SearchBar defaultValue="" />);
-
-    act(() => {
-      vi.advanceTimersByTime(3000 * SEARCH_EXAMPLES.length);
-    });
-
-    expect(screen.getByRole("textbox")).toHaveAttribute(
-      "placeholder",
-      SEARCH_EXAMPLES[0],
-    );
-  });
-
-  it("stops rotating after unmount (interval is cleared)", () => {
-    const { unmount } = render(<SearchBar defaultValue="" />);
-    unmount();
-
-    // If the interval weren't cleared, advancing timers post-unmount would
-    // throw or otherwise misbehave when React tries to update an unmounted
-    // component's state.
-    expect(() => {
-      act(() => {
-        vi.advanceTimersByTime(3000 * 5);
-      });
-    }).not.toThrow();
-  });
-
-  it("uses a static placeholder instead of rotating when one is passed explicitly (wide layout)", () => {
+  it("accepts a placeholder override (wide layout)", () => {
     render(<SearchBar defaultValue="" placeholder="Buscar por nombre, plato o barrio" />);
     expect(screen.getByRole("textbox")).toHaveAttribute(
       "placeholder",
       "Buscar por nombre, plato o barrio",
     );
+  });
 
-    act(() => {
-      vi.advanceTimersByTime(3000 * 3);
-    });
-    expect(screen.getByRole("textbox")).toHaveAttribute(
-      "placeholder",
-      "Buscar por nombre, plato o barrio",
-    );
+  it("hides the clear button when the field is empty", () => {
+    render(<SearchBar defaultValue="" />);
+    expect(screen.queryByLabelText("Borrar búsqueda")).not.toBeInTheDocument();
+  });
+
+  it("shows the clear button once the field has text, and clears it on click", () => {
+    render(<SearchBar defaultValue="sushi" />);
+
+    const clearButton = screen.getByLabelText("Borrar búsqueda");
+    expect(clearButton).toBeInTheDocument();
+
+    fireEvent.click(clearButton);
+
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.queryByLabelText("Borrar búsqueda")).not.toBeInTheDocument();
+  });
+
+  it("shows the clear button after typing into an initially empty field", () => {
+    render(<SearchBar defaultValue="" />);
+
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "sushi" } });
+
+    expect(screen.getByLabelText("Borrar búsqueda")).toBeInTheDocument();
   });
 });

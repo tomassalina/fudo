@@ -3,17 +3,20 @@
 import Link from "next/link";
 import type { Merchant } from "@/lib/types";
 import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
-import {
-  MERCHANT_TYPE_BADGE,
-  MERCHANT_TYPE_LABELS,
-  TAG_LABELS,
-} from "@/lib/mock/merchants";
+import { formatDistanceLabel } from "@/lib/utils/distance";
+import { MERCHANT_TYPE_BADGE, MERCHANT_TYPE_LABELS } from "@/lib/mock/merchants";
 import { Card } from "@/components/ui/Card";
-import { cn } from "@/lib/utils/cn";
 import { FavoriteButton } from "./FavoriteButton";
 
 function formatFromPrice(min: number) {
   return `desde $${min.toLocaleString("es-AR")}`;
+}
+
+/** Plain "$X.XXX", no "desde" prefix — the row layout's price pill
+ * (`money()` in `docs/design-reference/Fudo App.dc.html`), unlike the wide
+ * card layout's price-range framing above. */
+function formatMoney(value: number) {
+  return `$${Math.round(value).toLocaleString("es-AR")}`;
 }
 
 export interface MerchantCardProps {
@@ -31,10 +34,13 @@ export interface MerchantCardProps {
 
 export function MerchantCard({ merchant, layout }: MerchantCardProps) {
   const typeBadge = MERCHANT_TYPE_BADGE[merchant.type];
-  const visibleTags = merchant.tags.slice(0, 3);
   const priceLabel =
     merchant.price_per_person_min != null
       ? formatFromPrice(merchant.price_per_person_min)
+      : null;
+  const rowPriceLabel =
+    merchant.price_per_person_min != null
+      ? formatMoney(merchant.price_per_person_min)
       : null;
   // Real distance once the visitor activates location (Header's "Activar
   // ubicación" pill); falls back to merchant.distanceKm (currently always 0
@@ -118,7 +124,7 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
               <span aria-hidden className="material-symbols text-[15px]">
                 location_on
               </span>
-              {distanceKm.toLocaleString("es-AR")} km
+              {formatDistanceLabel(distanceKm)}
             </span>
           </div>
         </div>
@@ -126,8 +132,17 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
     );
   }
 
+  // "Tacos al pastor · $16.000" — only when both the dish name and its price
+  // are known; a dish with no price (real API mode never sends one — see
+  // lib/api/merchants.ts) falls back to just the name instead of a
+  // dangling "·".
+  const dishLine =
+    merchant.topDish && merchant.topDishPrice != null
+      ? `${merchant.topDish} · ${formatMoney(merchant.topDishPrice)}`
+      : merchant.topDish;
+
   return (
-    <article className="flex gap-3 rounded-[18px] border border-border bg-surface p-2.5 shadow-inner shadow-white/5 transition-colors hover:border-accent/50">
+    <article className="flex gap-3 rounded-[18px] border border-border bg-surface p-2.5 shadow-[inset_0_1px_0_var(--highlight)] transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/50">
       <Link
         href={`/restaurantes/${merchant.id}`}
         className="relative h-[88px] w-[88px] flex-none overflow-hidden rounded-[13px] bg-surface-2"
@@ -149,7 +164,7 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
           </div>
         )}
         <span
-          className="material-symbols absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-[14px] leading-none"
+          className="material-symbols absolute bottom-1 left-1 flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(20,21,31,0.82)] text-[14px] leading-none"
           style={{ color: typeBadge.color }}
         >
           {typeBadge.icon}
@@ -166,53 +181,40 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
           <FavoriteButton
             merchantId={merchant.id}
             variant="plain"
-            className={cn("h-7 w-7 border-0 bg-transparent shadow-none")}
+            className="h-7 w-7 flex-none border-0 bg-transparent shadow-none"
           />
         </div>
         <p className="truncate text-[12.5px] text-foreground-muted">
           {MERCHANT_TYPE_LABELS[merchant.type]} ·{" "}
           {merchant.neighborhood ?? merchant.city}
         </p>
-        {merchant.topDish ? (
+        {dishLine ? (
           <p className="truncate text-[12.5px] text-foreground-faint">
-            {merchant.topDish}
+            {dishLine}
           </p>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {priceLabel ? (
-            <span className="flex-none whitespace-nowrap rounded-full bg-accent-soft px-2.5 py-0.5 text-[12.5px] font-bold text-accent-light">
-              {priceLabel}
+        <div className="flex items-center gap-[9px] pt-0.5">
+          {rowPriceLabel ? (
+            <span className="flex-none whitespace-nowrap rounded-full bg-accent-soft px-2.5 py-[3px] text-[12.5px] font-bold text-accent-light">
+              {rowPriceLabel}
             </span>
           ) : null}
           <span className="flex flex-none items-center gap-0.5 whitespace-nowrap text-[12.5px] text-foreground-faint">
             <span aria-hidden className="material-symbols text-[14px]">
               location_on
             </span>
-            {distanceKm.toLocaleString("es-AR")} km
+            {formatDistanceLabel(distanceKm)}
           </span>
           {merchant.rewardTeaser ? (
-            <span className="flex items-center gap-0.5 text-[12px] font-semibold text-success">
-              <span aria-hidden className="material-symbols text-[14px]">
+            <span className="flex min-w-0 items-center gap-[3px] truncate text-[12px] font-semibold text-success">
+              <span aria-hidden className="material-symbols flex-none text-[14px]">
                 redeem
               </span>
-              {merchant.rewardTeaser}
+              <span className="truncate">{merchant.rewardTeaser}</span>
             </span>
           ) : null}
         </div>
-
-        {visibleTags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {visibleTags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-success-soft px-2 py-0.5 text-[10px] font-bold text-success"
-              >
-                {TAG_LABELS[tag] ?? tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </div>
     </article>
   );

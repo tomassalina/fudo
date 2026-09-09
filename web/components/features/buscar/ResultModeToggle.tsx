@@ -15,12 +15,22 @@ const MODES: { key: ResultMode; label: string; icon: string }[] = [
 export function ResultModeToggle({
   current,
   mode,
+  fullWidth = false,
 }: {
   current: BuscarParams;
   mode: ResultMode;
+  /** Phone layout (`isList` in the design reference) stretches both segments
+   * to fill the bar edge-to-edge; wide keeps the original compact,
+   * left-aligned pill. */
+  fullWidth?: boolean;
 }) {
   return (
-    <div className="flex flex-none gap-1 rounded-full border border-border bg-surface p-1">
+    <div
+      className={cn(
+        "flex gap-1 rounded-full border border-border bg-surface p-1",
+        fullWidth ? "w-full" : "flex-none",
+      )}
+    >
       {MODES.map((m) => {
         const active = mode === m.key;
         return (
@@ -30,7 +40,8 @@ export function ResultModeToggle({
             scroll={false}
             aria-pressed={active}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition-colors duration-200",
+              "flex items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-semibold transition-colors duration-200",
+              fullWidth ? "flex-1" : "px-4",
               active
                 ? "bg-gradient-to-b from-cta-from to-cta-to text-white"
                 : "text-foreground-faint hover:text-foreground",

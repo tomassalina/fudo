@@ -44,6 +44,15 @@ interface SearchResultsGridProps {
  * `useState` initial value) on every filter change rather than patching
  * state after the fact.
  */
+/** Matches the design's own `loadMore` (`setTimeout(..., 750)` in
+ * `docs/design-reference/Fudo App.dc.html`) — there's no real network
+ * latency to wait on (the full filtered array is already in hand, see the
+ * file-level comment above), but revealing the next 10 instantly would skip
+ * the skeleton the design explicitly specifies for this moment
+ * (`showSkels: st.refiltering || st.loadingMore`). This is that same
+ * deliberate, simulated delay. */
+const LOAD_MORE_DELAY_MS = 750;
+
 export function SearchResultsGrid({
   mode,
   merchants,
@@ -54,23 +63,33 @@ export function SearchResultsGrid({
   const isPhone = useIsPhoneViewport();
   const total = mode === "platos" ? dishes.length : merchants.length;
   const [visibleCount, setVisibleCount] = useState(Math.min(PAGE_SIZE, total));
+  const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const canLoadMore = visibleCount < total && !loadingMore;
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || !canLoadMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleCount((count) => Math.min(count + PAGE_SIZE, total));
-        }
+        if (entries[0]?.isIntersecting) setLoadingMore(true);
       },
       { rootMargin: "400px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [total]);
+  }, [canLoadMore]);
+
+  useEffect(() => {
+    if (!loadingMore) return;
+    const timer = setTimeout(() => {
+      setVisibleCount((count) => Math.min(count + PAGE_SIZE, total));
+      setLoadingMore(false);
+    }, LOAD_MORE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [loadingMore, total]);
 
   if (total === 0) {
     return (
@@ -111,9 +130,46 @@ export function SearchResultsGrid({
                 <MerchantCard key={merchant.id} merchant={merchant} layout={layout} />
               ))}
       </div>
+
+      {loadingMore ? (
+        <div
+          aria-hidden
+          className={isPhone ? "flex flex-col gap-[11px] pt-[11px]" : `${containerClass} pt-[18px]`}
+        >
+          {isPhone
+            ? [0, 1, 2].map((i) => <RowSkeleton key={i} />)
+            : [0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-[240px] w-full animate-pulse rounded-card border border-border bg-surface"
+                />
+              ))}
+        </div>
+      ) : null}
+
       {visibleCount < total ? (
         <div ref={sentinelRef} aria-hidden className="h-1 w-full" />
       ) : null}
+    </div>
+  );
+}
+
+/** The `isList` loading-more skeleton row (`skeletons`/`showSkels` in
+ * `docs/design-reference/Fudo App.dc.html`): same 88×88 thumbnail + 3-bar
+ * text shape as a real `MerchantCard` row, with a shimmer sweep instead of
+ * content — reused as-is rather than inventing a different placeholder
+ * shape for the "loading the next 10" moment. */
+function RowSkeleton() {
+  return (
+    <div className="flex gap-3 rounded-[18px] border border-border bg-surface p-2.5">
+      <div className="relative h-[88px] w-[88px] flex-none overflow-hidden rounded-[13px] bg-surface-2">
+        <span className="absolute inset-0 animate-fudo-shimmer bg-gradient-to-r from-transparent via-[var(--highlight)] to-transparent" />
+      </div>
+      <div className="flex flex-1 flex-col gap-[9px] pt-1.5">
+        <span className="h-[15px] w-[65%] rounded-md bg-surface-2" />
+        <span className="h-[11px] w-[45%] rounded-md bg-surface-2" />
+        <span className="h-[11px] w-[30%] rounded-md bg-surface-2" />
+      </div>
     </div>
   );
 }

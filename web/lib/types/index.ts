@@ -46,6 +46,8 @@ export interface Merchant {
   tags: string[];
   /** Derived for this mock/UI layer only — name of a representative active menu item. */
   topDish?: string;
+  /** Derived for this mock/UI layer only — that same representative menu item's price, ARS. Only meaningful alongside `topDish`. */
+  topDishPrice?: number;
   /** Derived for this mock/UI layer only — the merchant's easiest loyalty_rules tier, pre-formatted for the card. */
   rewardTeaser?: string;
   /**

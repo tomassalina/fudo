@@ -154,6 +154,7 @@ export function parseMerchant(raw: RawMerchant): Merchant {
     tags: raw.tags ?? [],
     // No backend equivalent at all (UI-only derived) — see lib/types.
     topDish: undefined,
+    topDishPrice: undefined,
     rewardTeaser: undefined,
     distanceKm: 0,
   };

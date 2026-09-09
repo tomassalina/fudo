@@ -39,3 +39,21 @@ export function haversineDistanceKm(from: Coordinates, to: Coordinates): number 
 export function roundToOneDecimal(value: number): number {
   return Math.round(value * 10) / 10;
 }
+
+/**
+ * Formats a distance in km for display the way both design references do:
+ * under 1 km shows whole meters ("800 m"), 1 km and over shows one decimal
+ * with the Argentine comma separator ("2,1 km") — matches
+ * `docs/design-reference/Fudo App.dc.html`'s `p.d < 1 ? Math.round(p.d *
+ * 1000) + " m" : String(p.d).replace(".", ",") + " km"`. `Infinity` (the
+ * "unknown distance" sentinel — see app/buscar/page.tsx's `withDistances`)
+ * renders as an em dash instead of a nonsensical number.
+ */
+export function formatDistanceLabel(km: number): string {
+  if (!Number.isFinite(km)) return "—";
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  return `${km.toLocaleString("es-AR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })} km`;
+}

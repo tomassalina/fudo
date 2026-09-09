@@ -14,6 +14,7 @@ import { FilterSidebar } from "./FilterSidebar";
 import { PhoneFilterSheet } from "./PhoneFilterSheet";
 import { SearchResultsGrid } from "./SearchResultsGrid";
 import { MapToggleSection } from "./MapToggleSection";
+import { SortMenu } from "./SortMenu";
 
 export interface BuscarViewProps {
   current: BuscarParams;
@@ -121,12 +122,9 @@ export function BuscarView({
         {isPhone ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
       </div>
 
-      <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
+      <ResultModeToggle current={current} mode={mode} fullWidth={isPhone} />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ResultModeToggle current={current} mode={mode} />
-        <span className="text-[13px] text-foreground-muted">{countLabel}</span>
-      </div>
+      <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
 
       <div
         className="grid items-start gap-6"
@@ -140,6 +138,12 @@ export function BuscarView({
 
         <div className="flex min-w-0 flex-col gap-4">
           {mode === "lugares" ? <MapToggleSection merchants={merchants} /> : null}
+
+          <div className="flex items-baseline justify-between px-0.5">
+            <span className="text-[13px] text-foreground-muted">{countLabel}</span>
+            <SortMenu current={current} />
+          </div>
+
           <SearchResultsGrid
             // Remounts (resetting the infinite-scroll reveal window) on any
             // filter/query change instead of patching state via an effect —

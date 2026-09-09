@@ -1,59 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { SEARCH_EXAMPLES } from "@/lib/mock/search";
+import { useState } from "react";
 
 /**
- * The only client island on the Buscar page's search field: rotates the
- * input's placeholder through example queries. The form itself is a plain
- * GET form, so search works even without JS — this just adds the cosmetic
- * rotation on top.
+ * The compact results-page search bar — `isList`'s search row in both design
+ * references (`docs/design-reference/Fudo App.dc.html`), not the big
+ * rotating-placeholder hero search (that one lives on the home page's own
+ * `HeroSearch.tsx`). Static placeholder, a search glyph on the left, and an
+ * "x" to clear the field once it has text — no submit button: a form with a
+ * single text field submits on Enter per the HTML living standard's implicit
+ * submission rule, so search still works with JS disabled (the clear button
+ * is the only bit that needs it, same as the rest of this page's philosophy
+ * — see BuscarView's doc comment).
  */
 export function SearchBar({
   defaultValue,
-  placeholder,
+  placeholder = "Buscar por nombre, tipo o barrio",
 }: {
   defaultValue: string;
-  /** Overrides the rotating example for one static placeholder (wide layout uses a longer static hint per the design; phone keeps the rotation). */
   placeholder?: string;
 }) {
-  const [exampleIndex, setExampleIndex] = useState(0);
-
-  useEffect(() => {
-    if (placeholder) return;
-    const id = setInterval(() => {
-      setExampleIndex((current) => (current + 1) % SEARCH_EXAMPLES.length);
-    }, 3000);
-
-    return () => clearInterval(id);
-  }, [placeholder]);
+  const [value, setValue] = useState(defaultValue);
 
   return (
     <form action="/buscar" method="GET" className="w-full">
-      <div className="relative flex items-center gap-2 rounded-[26px] border border-border bg-surface px-5 py-4 shadow-lg shadow-black/20">
+      <div className="flex min-w-0 items-center gap-2.5 rounded-full border border-border bg-surface px-[15px] py-[11px] shadow-[inset_0_1px_0_var(--highlight)]">
         <span
           aria-hidden
-          className="material-symbols flex-none text-lg leading-none text-foreground-faint"
+          className="material-symbols flex-none text-[18px] leading-none text-foreground-faint"
+          style={{ fontVariationSettings: "'wght' 250" }}
         >
           search
         </span>
         <input
           type="text"
           name="q"
-          defaultValue={defaultValue}
-          placeholder={placeholder ?? SEARCH_EXAMPLES[exampleIndex]}
-          aria-label="Buscar restaurantes, bares o cafés"
-          className="min-w-0 flex-1 bg-transparent text-[17px] text-foreground outline-none placeholder:text-foreground-faint"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder={placeholder}
+          aria-label="Buscar por nombre, tipo o barrio"
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-foreground outline-none placeholder:text-foreground-faint"
         />
-        <button
-          type="submit"
-          aria-label="Buscar"
-          className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-gradient-to-b from-[#FF6337] to-[#E8431A] text-white shadow-md shadow-accent/30 transition-transform hover:scale-105 active:scale-95"
-        >
-          <span aria-hidden className="material-symbols text-lg leading-none">
-            arrow_forward
-          </span>
-        </button>
+        {value ? (
+          <button
+            type="button"
+            onClick={() => setValue("")}
+            aria-label="Borrar búsqueda"
+            className="flex flex-none items-center justify-center border-0 bg-transparent p-0"
+          >
+            <span
+              aria-hidden
+              className="material-symbols text-[18px] leading-none text-foreground-faint"
+              style={{ fontVariationSettings: "'wght' 300" }}
+            >
+              close
+            </span>
+          </button>
+        ) : null}
       </div>
     </form>
   );
