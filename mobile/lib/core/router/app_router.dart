@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/providers.dart';
 import '../../features/auth/register_screen.dart';
 import '../../features/gifting/gifting_screen.dart';
 import '../../features/home/home_screen.dart';
@@ -46,12 +48,32 @@ final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.home,
   routes: [
     ShellRoute(
+      // Gate the ENTIRE shell chrome behind auth, not just the routed child
+      // (unlike search's existing per-screen gate, see
+      // `features/search/search_screen.dart` Decisión 37). A logged-out
+      // visitor must see no bottom nav at all — only the login screen — so
+      // this `Consumer` decides, reactively on [isLoggedInProvider], whether
+      // to mount [MainShell] (with the 5-tab nav) or bypass it entirely and
+      // render the login form directly. [MyPlacesScreen] already renders
+      // just that form (via its own `_LoggedOutView`, no [MainShell]
+      // wrapper) when logged out — see commits `129f95b`/`25d2313` — so it's
+      // reused here instead of duplicating the login UI.
       builder: (context, state, child) {
-        final currentIndex = AppRoutes.indexForLocation(state.uri.toString());
-        return MainShell(
-          currentIndex: currentIndex,
-          onTap: (index) => context.go(_locationForIndex(index)),
-          child: child,
+        return Consumer(
+          builder: (context, ref, _) {
+            final isLoggedIn = ref.watch(isLoggedInProvider);
+            if (!isLoggedIn) {
+              return const MyPlacesScreen();
+            }
+            final currentIndex = AppRoutes.indexForLocation(
+              state.uri.toString(),
+            );
+            return MainShell(
+              currentIndex: currentIndex,
+              onTap: (index) => context.go(_locationForIndex(index)),
+              child: child,
+            );
+          },
         );
       },
       routes: [
