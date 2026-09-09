@@ -116,8 +116,16 @@ export function BuscarView({
     isAuthenticated,
   };
 
-  return (
-    <div className="flex flex-col gap-4">
+  // Search bar (+ phone filter trigger) / result-mode toggle / AI chips —
+  // per the design reference (docs/design-reference/Fudo Customers.dc.html,
+  // the `isList` view) these three live INSIDE the grid's right column,
+  // stacked above the results, not as a full-width header floating above
+  // the [FilterSidebar | content] grid. Kept as one JSX chunk (rather than
+  // inlined twice) so it can also sit above DesktopMapSplit unchanged when
+  // that view is active — DesktopMapSplit owns its own self-contained
+  // layout and isn't part of this grid (see its doc comment).
+  const searchAndControls = (
+    <>
       <div className="flex items-center gap-2.5">
         <div className="min-w-0 flex-1">
           <SearchBar
@@ -133,9 +141,15 @@ export function BuscarView({
       <ResultModeToggle current={current} mode={mode} fullWidth={isPhone} />
 
       <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {showDesktopMapSplit ? searchAndControls : null}
 
       <div
-        className="grid items-start gap-6"
+        className="grid items-start gap-7"
         style={
           isPhone || showDesktopMapSplit
             ? undefined
@@ -158,6 +172,8 @@ export function BuscarView({
             {!isPhone ? <FilterSidebar {...filterFieldsProps} /> : null}
 
             <div className="flex min-w-0 flex-col gap-4">
+              {searchAndControls}
+
               {mode === "lugares" ? (
                 <MapToggleSection
                   merchants={merchants}
