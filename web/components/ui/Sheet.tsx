@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { cn } from "@/lib/utils/cn";
 
 export type SheetProps = {
@@ -41,6 +42,15 @@ export type SheetProps = {
    * full-bleed rows list or a nested option-picker's own padding.
    */
   bodyClassName?: string;
+  /**
+   * Wide-viewport (vw>=900) presentation. Defaults to "sheet" — every
+   * existing call site keeps rendering as a bottom sheet on wide screens
+   * too, unchanged. "modal" opts a call site into a small, centered dialog
+   * on wide screens instead (see the home hero's type-of-place picker),
+   * while the phone layout (vw<900) always stays the bottom sheet — this
+   * only ever changes the wide presentation.
+   */
+  wideVariant?: "sheet" | "modal";
 };
 
 /**
@@ -51,6 +61,12 @@ export type SheetProps = {
  * `children`, and — since /buscar's filters sheet needs a header pill row,
  * a pinned footer, and a nested options sub-sheet above it — the optional
  * `headerExtra`/`footer`/`elevated` props above.
+ *
+ * On wide viewports (vw>=900), a call site can opt into `wideVariant="modal"`
+ * to render as a small centered dialog (with its own internal scroll) rather
+ * than a bottom sheet stretched to `max-w-lg` — the bottom-sheet pattern
+ * reads as a mobile affordance once there's no screen edge to anchor to.
+ * Phone stays the bottom sheet regardless of `wideVariant`.
  */
 export function Sheet({
   open,
@@ -63,7 +79,11 @@ export function Sheet({
   className,
   titleClassName,
   bodyClassName,
+  wideVariant = "sheet",
 }: SheetProps) {
+  const isPhone = useIsPhoneViewport();
+  const isCenteredModal = wideVariant === "modal" && !isPhone;
+
   if (!open) return null;
 
   return (
@@ -71,7 +91,8 @@ export function Sheet({
       role="presentation"
       onClick={onClose}
       className={cn(
-        "fixed inset-0 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fudo-veil",
+        "fixed inset-0 flex bg-black/60 backdrop-blur-sm animate-fudo-veil",
+        isCenteredModal ? "items-center justify-center p-4" : "items-end justify-center",
         elevated ? "z-50" : "z-40",
       )}
     >
@@ -81,12 +102,22 @@ export function Sheet({
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
         className={cn(
-          "flex w-full max-w-lg flex-col rounded-t-sheet border-t border-border bg-background shadow-floating animate-fudo-sheet",
+          "flex w-full flex-col border-border bg-background shadow-floating",
+          isCenteredModal
+            ? "max-w-[420px] max-h-[85vh] animate-fudo-in rounded-sheet border"
+            : "max-w-lg animate-fudo-sheet rounded-t-sheet border-t",
           className,
         )}
       >
-        <div className="mx-auto mt-2.5 h-1 w-11 flex-none rounded-full bg-foreground-faint/60" />
-        <div className="flex flex-none items-center justify-between px-5 pt-3.5">
+        {isCenteredModal ? null : (
+          <div className="mx-auto mt-2.5 h-1 w-11 flex-none rounded-full bg-foreground-faint/60" />
+        )}
+        <div
+          className={cn(
+            "flex flex-none items-center justify-between px-5",
+            isCenteredModal ? "pt-5" : "pt-3.5",
+          )}
+        >
           {title ? (
             <h2
               className={cn(

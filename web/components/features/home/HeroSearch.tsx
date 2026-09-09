@@ -163,7 +163,7 @@ export function HeroSearch() {
               onChange={(event) => setQuery(event.target.value)}
               aria-label="Buscar restaurantes, bares o cafés"
               className={cn(
-                "relative z-[2] w-full bg-transparent leading-[1.35] text-foreground outline-none",
+                "relative z-[2] w-full bg-transparent text-left leading-[1.35] text-foreground outline-none",
                 isPhone ? "text-[17px]" : "text-[21px]",
               )}
             />
@@ -171,8 +171,8 @@ export function HeroSearch() {
               <div
                 aria-hidden
                 className={cn(
-                  "pointer-events-none absolute inset-x-0 top-0 z-[1] leading-[1.35] text-foreground-muted",
-                  isPhone ? "text-[17px] text-left" : "text-[21px]",
+                  "pointer-events-none absolute inset-x-0 top-0 z-[1] text-left leading-[1.35] text-foreground-muted",
+                  isPhone ? "text-[17px]" : "text-[21px]",
                 )}
               >
                 {typed}
@@ -222,6 +222,7 @@ export function HeroSearch() {
         open={typeSheetOpen}
         onClose={() => setTypeSheetOpen(false)}
         title="Tipo de lugar"
+        wideVariant="modal"
       >
         <div className="flex flex-col gap-2.5">
           {TYPE_OPTIONS.map((option) => {
