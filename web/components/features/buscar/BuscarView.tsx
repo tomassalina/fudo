@@ -116,37 +116,40 @@ export function BuscarView({
     isAuthenticated,
   };
 
-  // Search bar (+ phone filter trigger) / result-mode toggle / AI chips —
-  // per the design reference (docs/design-reference/Fudo Customers.dc.html,
-  // the `isList` view) these three live INSIDE the grid's right column,
-  // stacked above the results, not as a full-width header floating above
-  // the [FilterSidebar | content] grid. Kept as one JSX chunk (rather than
-  // inlined twice) so it can also sit above DesktopMapSplit unchanged when
-  // that view is active — DesktopMapSplit owns its own self-contained
-  // layout and isn't part of this grid (see its doc comment).
-  const searchAndControls = (
-    <>
-      <div className="flex items-center gap-2.5">
-        <div className="min-w-0 flex-1">
-          <SearchBar
-            defaultValue={query}
-            placeholder={
-              isPhone ? undefined : "Buscar por nombre de local, plato, tipo o barrio"
-            }
-          />
-        </div>
-        {isPhone ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
+  // Search bar (+ phone filter trigger) — per the design reference
+  // (docs/design-reference/Fudo Customers.dc.html, the `isList` view) this
+  // lives INSIDE the grid's right column, stacked above the results, not as
+  // a full-width header floating above the [FilterSidebar | content] grid.
+  // Kept as its own JSX chunk (rather than inlined twice) so it can also sit
+  // above DesktopMapSplit unchanged when that view is active —
+  // DesktopMapSplit owns its own self-contained layout and isn't part of
+  // this grid (see its doc comment).
+  const searchBar = (
+    <div className="flex items-center gap-2.5">
+      <div className="min-w-0 flex-1">
+        <SearchBar
+          defaultValue={query}
+          placeholder={
+            isPhone ? undefined : "Buscar por nombre de local, plato, tipo o barrio"
+          }
+        />
       </div>
-
-      <ResultModeToggle current={current} mode={mode} fullWidth={isPhone} />
-
-      <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
-    </>
+      {isPhone ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
+    </div>
   );
 
   return (
     <div className="flex flex-col gap-4">
-      {showDesktopMapSplit ? searchAndControls : null}
+      {showDesktopMapSplit ? (
+        // Above DesktopMapSplit there's no result count/sort row to fuse
+        // the toggle into (DesktopMapSplit renders its own "N lugares · Ver
+        // lista" row) and no AI chips (desktop never shows them — see
+        // below), so this header is just the search bar + mode toggle.
+        <div className="flex flex-col gap-4">
+          {searchBar}
+          <ResultModeToggle current={current} mode={mode} />
+        </div>
+      ) : null}
 
       <div
         className="grid items-start gap-7"
@@ -172,7 +175,50 @@ export function BuscarView({
             {!isPhone ? <FilterSidebar {...filterFieldsProps} /> : null}
 
             <div className="flex min-w-0 flex-col gap-4">
-              {searchAndControls}
+              {searchBar}
+
+              {isPhone ? (
+                <>
+                  <ResultModeToggle current={current} mode={mode} fullWidth />
+                  <AiChips
+                    current={current}
+                    activeTags={activeTags}
+                    availableTags={availableTags}
+                  />
+                </>
+              ) : (
+                // Desktop: a single row — mode toggle + result count on the
+                // left, sort + "Ver mapa" on the right — matching the design
+                // reference exactly ("N lugares · Relevancia ▾ · Ver mapa" as
+                // one line, not the toggle/AI-chips/count-row stack phone
+                // uses). No AI chips here: confirmed out of scope for the
+                // desktop /buscar view — they still show on phone above.
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <ResultModeToggle current={current} mode={mode} />
+                    <span className="text-[13px] text-foreground-muted">{countLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <SortMenu current={current} />
+                    {mode === "lugares" ? (
+                      // Desktop's own "Ver mapa" toggle — plain in-flow
+                      // button (unlike the phone pill, no map-mode lock or
+                      // full-screen layer to own; MapToggleSection is
+                      // phone-only, see its doc comment).
+                      <button
+                        type="button"
+                        onClick={() => setShowMap(true)}
+                        className="flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:border-accent/50"
+                      >
+                        <span aria-hidden className="material-symbols text-[17px]">
+                          map
+                        </span>
+                        Ver mapa
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              )}
 
               {mode === "lugares" ? (
                 <MapToggleSection
@@ -184,31 +230,12 @@ export function BuscarView({
 
               {hidePhoneListWhileMapping ? null : (
                 <>
-                  <div className="flex items-baseline justify-between px-0.5">
-                    <span className="text-[13px] text-foreground-muted">{countLabel}</span>
-                    <div className="flex items-center gap-2">
-                      {mode === "lugares" && !isPhone ? (
-                        // Desktop's own "Ver mapa" toggle — plain in-flow
-                        // button (unlike the phone pill, no map-mode lock or
-                        // full-screen layer to own; MapToggleSection is
-                        // phone-only, see its doc comment) sitting right next
-                        // to SortMenu so this reads as one row — "N lugares
-                        // encontrados · Relevancia ▾ · Ver mapa" — matching
-                        // the design reference instead of its own line above.
-                        <button
-                          type="button"
-                          onClick={() => setShowMap(true)}
-                          className="flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:border-accent/50"
-                        >
-                          <span aria-hidden className="material-symbols text-[17px]">
-                            map
-                          </span>
-                          Ver mapa
-                        </button>
-                      ) : null}
+                  {isPhone ? (
+                    <div className="flex items-baseline justify-between px-0.5">
+                      <span className="text-[13px] text-foreground-muted">{countLabel}</span>
                       <SortMenu current={current} />
                     </div>
-                  </div>
+                  ) : null}
 
                   <SearchResultsGrid
                     // Remounts (resetting the infinite-scroll reveal window) on any
