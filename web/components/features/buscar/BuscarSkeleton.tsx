@@ -5,6 +5,8 @@
 // the exact same shape, so this is extracted once instead of hand-copying
 // the markup in both places.
 
+import { CardSkeleton } from "./CardSkeleton";
+
 export function BuscarSkeleton() {
   return (
     <>
@@ -24,10 +26,7 @@ export function BuscarSkeleton() {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-[18px]">
         {/* Static skeleton, no stable id to key by. */}
         {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-[240px] w-full animate-pulse rounded-card border border-border bg-surface"
-          />
+          <CardSkeleton key={index} />
         ))}
       </div>
     </>

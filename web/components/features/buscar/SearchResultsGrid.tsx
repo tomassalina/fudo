@@ -6,6 +6,7 @@ import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import type { DishSearchResult, Merchant } from "@/lib/types";
 import { MerchantCard } from "./MerchantCard";
 import { DishCard } from "./DishCard";
+import { CardSkeleton } from "./CardSkeleton";
 import type { ResultMode } from "./ResultModeToggle";
 
 /** Matches the design's `page * 10` batching (`loadMore`/`page` in both
@@ -166,13 +167,7 @@ export function SearchResultsGrid({
               ))}
 
         {!isPhone && loadingMore
-          ? Array.from({ length: desktopSkeletonCount }, (_, i) => (
-              <div
-                key={i}
-                aria-hidden
-                className="h-[240px] w-full animate-pulse rounded-card border border-border bg-surface"
-              />
-            ))
+          ? Array.from({ length: desktopSkeletonCount }, (_, i) => <CardSkeleton key={i} />)
           : null}
       </div>
 
