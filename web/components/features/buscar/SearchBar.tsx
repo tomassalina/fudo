@@ -31,6 +31,12 @@ export function SearchBar({
   return (
     <form action="/buscar" method="GET" className="w-full">
       <div className="relative flex items-center gap-2 rounded-[26px] border border-border bg-surface px-5 py-4 shadow-lg shadow-black/20">
+        <span
+          aria-hidden
+          className="material-symbols flex-none text-lg leading-none text-foreground-faint"
+        >
+          search
+        </span>
         <input
           type="text"
           name="q"

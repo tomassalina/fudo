@@ -299,7 +299,7 @@ export function MerchantDetailView({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-16">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col pb-28">
       <div className="relative h-[232px] w-full flex-none bg-surface-2">
         {merchant.cover_image_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- external mock photos, not worth Image config for this low-priority pass

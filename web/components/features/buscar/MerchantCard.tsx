@@ -102,11 +102,11 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
           ) : null}
           <div className="flex flex-wrap items-center gap-2.5 pt-1">
             {priceLabel ? (
-              <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[13px] font-bold text-accent-light">
+              <span className="flex-none whitespace-nowrap rounded-full bg-accent-soft px-2.5 py-1 text-[13px] font-bold text-accent-light">
                 {priceLabel}
               </span>
             ) : null}
-            <span className="flex items-center gap-0.5 text-[12.5px] text-foreground-faint">
+            <span className="flex flex-none items-center gap-0.5 whitespace-nowrap text-[12.5px] text-foreground-faint">
               <span aria-hidden className="material-symbols text-[15px]">
                 location_on
               </span>
@@ -173,11 +173,11 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {priceLabel ? (
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[12.5px] font-bold text-accent-light">
+            <span className="flex-none whitespace-nowrap rounded-full bg-accent-soft px-2.5 py-0.5 text-[12.5px] font-bold text-accent-light">
               {priceLabel}
             </span>
           ) : null}
-          <span className="flex items-center gap-0.5 text-[12.5px] text-foreground-faint">
+          <span className="flex flex-none items-center gap-0.5 whitespace-nowrap text-[12.5px] text-foreground-faint">
             <span aria-hidden className="material-symbols text-[14px]">
               location_on
             </span>

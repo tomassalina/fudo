@@ -83,11 +83,11 @@ function FeaturedCard({ merchant }: { merchant: Merchant }) {
         </p>
         <div className="flex items-center gap-2 pt-0.5">
           {merchant.price_per_person_min != null ? (
-            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[12.5px] font-bold text-accent-light">
+            <span className="flex-none whitespace-nowrap rounded-full bg-accent-soft px-2.5 py-0.5 text-[12.5px] font-bold text-accent-light">
               {formatFromPrice(merchant.price_per_person_min)}
             </span>
           ) : null}
-          <span className="flex items-center gap-0.5 text-[12.5px] text-foreground-faint">
+          <span className="flex flex-none items-center gap-0.5 whitespace-nowrap text-[12.5px] text-foreground-faint">
             <span className="material-symbols text-[14px]">location_on</span>
             {merchant.distanceKm.toLocaleString("es-AR")} km
           </span>

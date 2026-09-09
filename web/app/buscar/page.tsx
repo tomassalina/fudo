@@ -175,7 +175,7 @@ export default async function BuscarPage({
         : `No encontramos lugares para “${query}”`;
 
   return (
-    <FluidContainer as="main" className="flex flex-1 flex-col gap-6 py-8">
+    <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
       <SearchAnalytics
         hasQuery={query.length > 0}
         queryText={query}

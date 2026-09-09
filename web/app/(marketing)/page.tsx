@@ -28,7 +28,7 @@ export default async function MarketingLandingPage() {
       </HeroSection>
 
       {featured.length > 0 ? (
-        <FluidContainer as="section" className="flex flex-col gap-4 pb-16">
+        <FluidContainer as="section" className="flex flex-col gap-4 pb-28">
           <h2 className="font-heading text-title-fluid font-black text-foreground">
             Lugares destacados
           </h2>
