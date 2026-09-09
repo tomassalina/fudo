@@ -12,6 +12,7 @@ import { GiftTierPicker } from "@/components/features/regalar/GiftTierPicker";
 import { CustomAmountInput } from "@/components/features/regalar/CustomAmountInput";
 import { LoginRequiredCard } from "@/components/features/regalar/LoginRequiredCard";
 import { GiftCheckoutForm } from "@/components/features/regalar/GiftCheckoutForm";
+import { GiftPurchaseSuccess } from "@/components/features/regalar/GiftPurchaseSuccess";
 
 export default function RegalarPage() {
   const { isAuthenticated } = useSession();
@@ -51,29 +52,13 @@ export default function RegalarPage() {
         {!isAuthenticated ? (
           <LoginRequiredCard />
         ) : gift.purchased ? (
-          <div className="animate-fudo-in mt-[22px] flex flex-col items-center gap-3 rounded-[22px] border border-success/40 bg-surface p-8 text-center shadow-[inset_0_1px_0_var(--highlight)]">
-            <span className="material-symbols text-3xl text-success">check_circle</span>
-            <div className="font-heading text-xl font-extrabold text-foreground">
-              ¡Gift card enviada!
-            </div>
-            <p className="text-sm text-foreground-muted">
-              {gift.recipientPhone
-                ? `Enviada a ${gift.recipientPhone}`
-                : "Lista para compartir por WhatsApp"}
-            </p>
-            {gift.purchasedGiftId ? (
-              <p className="text-xs text-foreground-faint">
-                Comprobante Nº {gift.purchasedGiftId}
-              </p>
-            ) : null}
-            <button
-              type="button"
-              onClick={gift.resetPurchase}
-              className="text-sm font-semibold text-accent-light"
-            >
-              Regalar otra
-            </button>
-          </div>
+          <GiftPurchaseSuccess
+            tier={gift.selectedTier}
+            amountLabel={gift.payAmountLabel}
+            recipientPhone={gift.recipientPhone}
+            giftId={gift.purchasedGiftId}
+            onDone={gift.resetPurchase}
+          />
         ) : (
           <GiftCheckoutForm
             recipientPhone={gift.recipientPhone}

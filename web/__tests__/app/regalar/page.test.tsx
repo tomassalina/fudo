@@ -105,7 +105,7 @@ describe("RegalarPage", () => {
       }),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Regalar otra" }));
+    fireEvent.click(screen.getByRole("button", { name: "Listo" }));
     expect(screen.getByPlaceholderText("Teléfono del destinatario")).toHaveValue("");
   });
 
