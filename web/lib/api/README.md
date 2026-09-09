@@ -117,6 +117,9 @@ paths and shapes, confirmed live (see above), not PLAN.md's prose:
 | `GET /api/v1/merchants`                  | `lib/api/merchants.ts` (list, static params, search's candidate set) |
 | `GET /api/v1/merchants/:id`              | `lib/api/merchants.ts` (detail, includes embedded `business_hours`) |
 | `GET /api/v1/menu_items?merchant_id=X`   | `lib/api/menu-items.ts`           |
+| `GET /api/v1/loyalty_rules?merchant_id=X`| `lib/api/loyalty.ts` — **public, no auth** (`index`/`show` are excluded from `authenticate_consumer!`). Real per-merchant reward ladder, confirmed genuinely isolated per merchant. Facade: `lib/data/loyalty.ts` (Pattern A, mock/real switch). |
+| `GET /api/v1/visits`                     | `lib/api/visits.ts` — authenticated, scoped to `current_consumer.visits`. No mock mode (Pattern B, same as favorites/gifts/consumer-settings) — see `lib/visits/use-visit-history.ts`. |
+| `GET /api/v1/visit_summaries`            | `lib/api/visits.ts` — authenticated, scoped to `current_consumer.visit_summaries`; `count`/`last_visit_at` per merchant drive real `LoyaltyProgress`/Perfil visit history. Same hook as `visits` above. |
 
 `POST /api/v1/search` is **not called** — see point 4 above. Confirmed
 filter query params on `GET /api/v1/merchants` are `neighborhood`, `type`,
@@ -149,12 +152,19 @@ reasoning is unaffected by auth becoming real.
 ## Layout
 
 - `client.ts` — `apiFetch`, `ApiError`, `isApiConfigured`.
-- `merchants.ts`, `menu-items.ts` — real `fetch` implementations per
-  endpoint, returning the same shapes as `lib/types`.
+- `merchants.ts`, `menu-items.ts`, `loyalty.ts` — real `fetch`
+  implementations for the public endpoints, returning the same shapes as
+  `lib/types`. `../data/*` is the facade pages/components actually import
+  from for these (picks mock vs. real per `isApiConfigured()`).
 - `auth.ts` — real `POST /api/v1/sessions` / `POST /api/v1/registrations`.
-- `favorites.ts`, `consumer-settings.ts` — real, authenticated
-  (`Authorization: Bearer <token>`) CRUD for the current consumer's own
-  favorites and settings.
-- `../data/*` — the facade pages actually import from; picks mock vs. real
-  per `isApiConfigured()` and exposes one async function per screen need,
-  regardless of which backend answers it.
+- `favorites.ts`, `consumer-settings.ts`, `visits.ts` — real, authenticated
+  (`Authorization: Bearer <token>`) reads/CRUD for the current consumer's own
+  favorites, settings, and visit history. No `isApiConfigured()` switch —
+  see "Auth (superseded)" below. `visits.ts` is consumed via a hook
+  (`lib/visits/use-visit-history.ts`), not a `lib/data/*` facade — see that
+  hook's header comment for why (Pattern B: authenticated-only, no mock
+  mode, so there's nothing to switch between).
+- `../data/*` — the facade pages actually import from for the public,
+  mock-or-real resources; picks mock vs. real per `isApiConfigured()` and
+  exposes one async function per screen need, regardless of which backend
+  answers it.

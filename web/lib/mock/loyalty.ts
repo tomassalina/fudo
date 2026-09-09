@@ -3,23 +3,21 @@
 // logic this mirrors (10-step ladder, an early reward, a permanent 5%
 // discount at the top).
 //
-// There is no live `loyalty_rules`/`visits` endpoint yet (see
-// lib/api/README.md's "Endpoint coverage" table) and no real per-consumer
-// session (see its "Out of scope: auth" section — visit history lives in
-// the mobile app). Both derivations below are therefore mock/UI-only,
-// exactly like `distanceKm`/`rewardTeaser` in lib/mock/merchants.ts:
-// deterministic, not hand-typed, and replaced wholesale once the real
-// `loyalty_rules` + `visits` tables are wired through lib/data + a real
-// `useSession()`. Every call site already reads through `isAuthenticated`
-// correctly, so swapping this module's internals later is not a call-site
-// change.
+// There ARE live `loyalty_rules`/`visits`/`visit_summaries` endpoints now
+// (see lib/api/loyalty.ts, lib/api/visits.ts, and lib/api/README.md's
+// "Endpoint coverage" table) and a real per-consumer session (see
+// lib/session/session-provider.tsx). This file is no longer the primary
+// source of loyalty data — `lib/data/loyalty.ts` is, and its
+// `buildLoyaltyProgress` is what actually composes rules + a real visit
+// count into a `LoyaltyProgress` for `LoyaltyCard`/`PerfilView`. What's left
+// here is ONLY the local-dev-without-a-backend fallback:
+// `getLoyaltyRulesForMerchant` backs `lib/data/loyalty.ts`'s
+// `!isApiConfigured()` branch, and `getMockVisitCount` backs both that same
+// branch and `/buscar`'s unrelated `hideVisited` filter
+// (app/buscar/page.tsx) — deterministic mock data, not hand-typed, exactly
+// like `distanceKm`/`rewardTeaser` in lib/mock/merchants.ts.
 
-import type {
-  LoyaltyProgress,
-  LoyaltyRule,
-  LoyaltyStep,
-  Merchant,
-} from "@/lib/types";
+import type { LoyaltyRule, Merchant } from "@/lib/types";
 
 const LADDER_LENGTH = 10;
 /** Visit count that unlocks the early reward — matches the design's "a la 2da ya tenés premio". */
@@ -59,84 +57,18 @@ export function getLoyaltyRulesForMerchant(merchant: Merchant): LoyaltyRule[] {
 }
 
 /**
- * Placeholder visit count for the demo "logged in" state — deterministic
- * (not random) so the same merchant always renders the same progress
- * across a render, seeded off `merchant.id` the same way `distanceKm` is
- * derived from real coordinates rather than hand-typed. `useSession()` is a
- * real (mocked-login) session now, so this *is* reachable whenever a visitor
- * logs in — only the visit count is still fake, kept ready for when a real
- * `visits` table replaces it.
+ * Placeholder visit count for local dev without a backend — deterministic
+ * (not random) so the same merchant always renders the same value, seeded
+ * off `merchant.id` the same way `distanceKm` is derived from real
+ * coordinates rather than hand-typed. Real visit counts now come from
+ * `visit_summaries` (lib/api/visits.ts) wherever a real consumer session is
+ * available — this stays only as `/buscar`'s `hideVisited` filter fallback
+ * (see app/buscar/page.tsx, a Server Component with no access to
+ * `useSession()`/`useVisitHistory()`) and as `lib/data/loyalty.ts`'s own
+ * `!isApiConfigured()` rules fallback needs no visit count of its own since
+ * `useVisitHistory()` always calls the real backend directly (Pattern B, no
+ * mock mode — see that hook's header comment).
  */
 export function getMockVisitCount(merchant: Merchant): number {
   return (merchant.id * 3) % (LADDER_LENGTH - 1);
-}
-
-function buildSteps(rules: LoyaltyRule[], visits: number): LoyaltyStep[] {
-  const byVisits = new Map(rules.map((rule) => [rule.visits_required, rule]));
-  const nextRule = rules.find((rule) => rule.visits_required > visits) ?? null;
-
-  return Array.from({ length: LADDER_LENGTH }, (_, index) => {
-    const visitNumber = index + 1;
-    const rule = byVisits.get(visitNumber) ?? null;
-    return {
-      visitNumber,
-      rule,
-      done: visits >= visitNumber,
-      isHere: visits === visitNumber,
-      isNext: nextRule?.visits_required === visitNumber,
-    };
-  });
-}
-
-/**
- * Full derived loyalty state for one merchant — steps plus the headline/sub/
- * note copy, branched on `isAuthenticated` exactly like the design's
- * `loyaltyOf()`: logged-out visitors see the program explained in the
- * abstract ("Así funcionan los premios"), logged-in consumers see their
- * real progress ("Arrancá tu camino" / "Faltan N visitas…" / "Sos cliente
- * fijo").
- */
-export function getLoyaltyProgress(
-  merchant: Merchant,
-  isAuthenticated: boolean,
-): LoyaltyProgress {
-  const rules = getLoyaltyRulesForMerchant(merchant);
-  const visits = isAuthenticated ? getMockVisitCount(merchant) : 0;
-  const steps = buildSteps(rules, visits);
-  const next = rules.find((rule) => rule.visits_required > visits) ?? null;
-  const full = !next;
-
-  const headline = !isAuthenticated
-    ? "Así funcionan los premios"
-    : full
-      ? "Sos cliente fijo"
-      : visits === 0
-        ? "Arrancá tu camino"
-        : next.visits_required - visits === 1
-          ? "Falta 1 visita para tu próximo premio"
-          : `Faltan ${next.visits_required - visits} visitas para tu próximo premio`;
-
-  const sub = !isAuthenticated
-    ? "Cada visita al local suma. A la 2ª ya tenés premio y a la 10ª sos cliente fijo con 5% siempre."
-    : full
-      ? "5% de descuento en todas tus compras, siempre."
-      : next.visits_required - visits === 1
-        ? `En tu próxima visita: ${next.reward_description}`
-        : `A la visita ${next.visits_required}: ${next.reward_description}`;
-
-  const note = !isAuthenticated
-    ? "Iniciá sesión para empezar a sumar visitas con el QR del local."
-    : full
-      ? "Escaneá el QR en el local para aplicar tu 5% automáticamente."
-      : "Cada visita se suma escaneando el QR del local o mostrando tu código.";
-
-  return {
-    authenticated: isAuthenticated,
-    visits,
-    steps,
-    tierLabel: isAuthenticated ? "TU CAMINO" : "PROGRAMA DE FIDELIZACIÓN",
-    headline,
-    sub,
-    note,
-  };
 }

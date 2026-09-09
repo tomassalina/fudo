@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
-import type { RewardEntry, RewardStatus } from "@/lib/mock/visit-history";
+import type { RewardEntry, RewardStatus } from "@/lib/types";
 
 const STATUS_LABEL: Record<RewardStatus, string> = {
   permanent: "Beneficio permanente",

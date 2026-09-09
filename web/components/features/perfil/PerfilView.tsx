@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/session/use-session";
 import { useRequireAuth } from "@/lib/session/use-require-auth";
@@ -12,7 +12,9 @@ import { VisitHistoryList } from "./VisitHistoryList";
 import { RewardsSection } from "./RewardsSection";
 import { FavoritesTab } from "./FavoritesTab";
 import { SettingsTab } from "./SettingsTab";
-import { getAvailableRewards, getVisitHistory, tierForVisits } from "@/lib/mock/visit-history";
+import { useVisitHistory } from "@/lib/visits/use-visit-history";
+import { buildVisitEntries, topTierFor } from "@/lib/visits/build-visit-entries";
+import type { RewardEntry, VisitHistoryEntry } from "@/lib/types";
 
 type ProfileTab = "visitas" | "favoritos" | "ajustes";
 
@@ -58,6 +60,49 @@ export function PerfilView() {
   const { ready, suppressNextRedirect } = useRequireAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("visitas");
+  const { visitSummaries } = useVisitHistory();
+  const [visitHistory, setVisitHistory] = useState<VisitHistoryEntry[]>([]);
+  const [rewards, setRewards] = useState<RewardEntry[]>([]);
+
+  // Derives both Perfil sections from the real `visit_summaries` the hook
+  // above loaded — resolving each visited merchant + its real loyalty rules
+  // is async (lib/visits/build-visit-entries.ts), so this can't be a plain
+  // render-time `const` the way the old mock derivation was. Routed through
+  // `Promise.resolve(...).then()` even for the empty case so no `setState`
+  // call here is synchronous within the effect body (same constraint as
+  // lib/visits/use-visit-history.ts — see its header comment).
+  useEffect(() => {
+    let cancelled = false;
+    const request =
+      visitSummaries.length === 0
+        ? Promise.resolve({ visitHistory: [], rewards: [] })
+        : buildVisitEntries(visitSummaries);
+
+    request
+      .then((result) => {
+        if (cancelled) return;
+        setVisitHistory(result.visitHistory);
+        setRewards(result.rewards);
+      })
+      .catch(() => {
+        // `buildVisitEntries` already catches a per-merchant network/5xx
+        // failure internally (see its header comment) — a rejection here
+        // means something else went wrong (a bug, not a flaky merchant).
+        // Explicitly reset both sections to empty rather than leaving an
+        // unhandled rejection and a stale/half-populated `visitHistory`/
+        // `rewards` from a previous render.
+        if (cancelled) return;
+        setVisitHistory([]);
+        setRewards([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-derive whenever the *set* of summaries changes, not on every array identity change from unrelated re-renders (same pattern as FavoritesTab.tsx).
+  }, [visitSummaries.map((summary) => `${summary.merchant_id}:${summary.count}`).join(",")]);
+
+  const topTier = topTierFor(visitHistory);
 
   if (!ready) {
     // Either still settling (see useRequireAuth) or genuinely logged out
@@ -66,12 +111,6 @@ export function PerfilView() {
     // exist yet/anymore.
     return null;
   }
-
-  const visitHistory = getVisitHistory();
-  const rewards = getAvailableRewards();
-  const topTier = visitHistory.length
-    ? tierForVisits(Math.max(...visitHistory.map((entry) => entry.progress.visits)))
-    : "Bronce";
 
   function handleLogout() {
     // Without this, useRequireAuth's own redirect effect would race this

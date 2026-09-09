@@ -1,44 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { getLoyaltyProgress, getMockVisitCount } from "@/lib/mock/loyalty";
+import { getLoyaltyRulesForMerchant, getMockVisitCount } from "@/lib/mock/loyalty";
 import { MOCK_MERCHANTS } from "@/lib/mock/merchants";
+
+// lib/mock/loyalty.ts is now only the local-dev-without-a-backend fallback
+// (see its header comment) — `getLoyaltyProgress`/`buildSteps` moved to
+// `buildLoyaltyProgress` in lib/data/loyalty.ts (see
+// __tests__/lib/data/loyalty.test.ts) since that composition is generic
+// over real or mock rules/visits, not mock-specific.
 
 const merchant = MOCK_MERCHANTS[0];
 
-describe("getLoyaltyProgress (login gating)", () => {
-  it("reports zero visits and the logged-out copy when not authenticated, regardless of the mock visit count", () => {
-    const progress = getLoyaltyProgress(merchant, false);
-
-    expect(progress.authenticated).toBe(false);
-    expect(progress.visits).toBe(0);
-    expect(progress.headline).toBe("Así funcionan los premios");
-    expect(progress.tierLabel).toBe("PROGRAMA DE FIDELIZACIÓN");
-    expect(progress.steps.every((step) => !step.done)).toBe(true);
+describe("getLoyaltyRulesForMerchant", () => {
+  it("always includes a permanent reward at the 10th visit", () => {
+    const rules = getLoyaltyRulesForMerchant(merchant);
+    const last = rules[rules.length - 1];
+    expect(last.visits_required).toBe(10);
+    expect(last.is_permanent).toBe(true);
   });
 
-  it("reports the real mock visit count and progress copy once authenticated", () => {
-    const progress = getLoyaltyProgress(merchant, true);
-    const expectedVisits = getMockVisitCount(merchant);
+  it("adds an early reward only when the merchant has a rewardTeaser", () => {
+    const withTeaser = getLoyaltyRulesForMerchant({ ...merchant, rewardTeaser: "Postre gratis" });
+    expect(withTeaser.some((rule) => rule.visits_required === 2)).toBe(true);
 
-    expect(progress.authenticated).toBe(true);
-    expect(progress.visits).toBe(expectedVisits);
-    expect(progress.tierLabel).toBe("TU CAMINO");
-    expect(progress.headline).not.toBe("Así funcionan los premios");
+    const withoutTeaser = getLoyaltyRulesForMerchant({ ...merchant, rewardTeaser: undefined });
+    expect(withoutTeaser.some((rule) => rule.visits_required === 2)).toBe(false);
   });
 
-  it("marks exactly the steps up to the visit count as done", () => {
-    const progress = getLoyaltyProgress(merchant, true);
-    for (const step of progress.steps) {
-      expect(step.done).toBe(step.visitNumber <= progress.visits);
-    }
+  it("is deterministic across calls for the same merchant", () => {
+    const a = getLoyaltyRulesForMerchant(merchant);
+    const b = getLoyaltyRulesForMerchant(merchant);
+    expect(a).toEqual(b);
   });
+});
 
-  it("always includes a permanent reward at the 10th step", () => {
-    const progress = getLoyaltyProgress(merchant, true);
-    const last = progress.steps[progress.steps.length - 1];
-    expect(last.visitNumber).toBe(10);
-    expect(last.rule?.is_permanent).toBe(true);
-  });
-
+describe("getMockVisitCount", () => {
   it("is deterministic across calls (not randomized) for the same merchant", () => {
     expect(getMockVisitCount(merchant)).toBe(getMockVisitCount(merchant));
   });

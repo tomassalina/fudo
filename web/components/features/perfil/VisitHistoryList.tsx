@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { MERCHANT_TYPE_BADGE } from "@/lib/mock/merchants";
 import { cn } from "@/lib/utils/cn";
-import type { VisitHistoryEntry } from "@/lib/mock/visit-history";
+import type { VisitHistoryEntry } from "@/lib/types";
 
 /** One visited-restaurant row's loyalty "stamps" — filled dots for visits
  * already made, hollow for the rest, out of that merchant's next reward

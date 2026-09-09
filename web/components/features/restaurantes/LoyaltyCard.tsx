@@ -1,24 +1,89 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Merchant } from "@/lib/types";
+import type { LoyaltyRule, Merchant } from "@/lib/types";
 import { useSession } from "@/lib/session/use-session";
-import { getLoyaltyProgress } from "@/lib/mock/loyalty";
+import { getLoyaltyRulesForMerchant, buildLoyaltyProgress } from "@/lib/data/loyalty";
+import { useVisitHistory } from "@/lib/visits/use-visit-history";
 
 // The loyalty/visit-progress tab (`mLoyal`/`loyaltyOf()` in
 // docs/design-reference/Fudo App.dc.html) — real login-gating, not cosmetic:
 // a logged-out visitor sees the program explained in the abstract plus a CTA
 // to log in ("Recompensas" framing, matches the design's `!authed` copy
-// branch); a logged-in consumer would see their real visit ladder instead.
-// `useSession()` is backed by a real (mocked-login) session — see
+// branch); a logged-in consumer sees their real visit ladder instead.
+// `useSession()` is backed by a real session — see
 // lib/session/session-provider.tsx — so both branches below actually render
-// depending on whether the visitor is logged in, per the task's requirement
-// that this gating be genuine rather than a cosmetic label swap. `visits`
-// itself is still a deterministic mock (see lib/mock/loyalty.ts) since there
-// is no real `visits` table wired through yet.
+// depending on whether the visitor is logged in.
+//
+// `loyalty_rules` (real, via lib/data/loyalty.ts) is public, so it's fetched
+// regardless of auth. The visit count that drives progress is real too
+// (`visit_summaries`, via `useVisitHistory()`, filtered to this merchant) —
+// that hook already no-ops without a stored token, so this never fires an
+// authenticated request for a logged-out visitor.
 export function LoyaltyCard({ merchant }: { merchant: Merchant }) {
   const { isAuthenticated } = useSession();
-  const progress = getLoyaltyProgress(merchant, isAuthenticated);
+  const { visitSummaries, loading: visitsLoading } = useVisitHistory();
+  const [rules, setRules] = useState<LoyaltyRule[] | null>(null);
+  const [rulesError, setRulesError] = useState(false);
+
+  // No synchronous `setRules(null)`/`setRulesError(false)` reset up front —
+  // `rules` already starts `null` (the loading state) on first render, and
+  // `merchant` doesn't change without remounting this component in
+  // practice, so there's nothing to reset. Every `setState` call here goes
+  // through a `.then()`/`.catch()` callback, same as
+  // lib/consumer-settings/use-notifications-setting.ts, to stay clear of the
+  // `react-hooks/set-state-in-effect` lint rule (see use-require-auth.ts's
+  // header comment for the same constraint on synchronous effect-body
+  // `setState`).
+  useEffect(() => {
+    let cancelled = false;
+
+    getLoyaltyRulesForMerchant(merchant)
+      .then((result) => {
+        if (cancelled) return;
+        setRules(result);
+        setRulesError(false);
+      })
+      .catch(() => {
+        if (!cancelled) setRulesError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [merchant]);
+
+  if (rulesError) {
+    return (
+      <p className="rounded-card border border-border bg-surface p-4 text-[13px] text-foreground-muted">
+        No pudimos cargar los premios de {merchant.name}. Probá de nuevo más tarde.
+      </p>
+    );
+  }
+
+  // Wait for BOTH sources before rendering real content when logged in:
+  // `rules` (public loyalty_rules, fast) resolves before `visitSummaries`
+  // (authenticated visit_summaries, backed by `useVisitHistory()`'s own
+  // `loading`) almost every time — `visitSummaries` starts as `[]`, so
+  // gating only on `rules` rendered "0 visitas · Arrancá tu camino" for an
+  // authenticated consumer with real visits, then jumped to the real count
+  // once `useVisitHistory` finished. A logged-out visitor never fetches
+  // visits at all (see useVisitHistory's header comment), so there's
+  // nothing to wait on in that case.
+  if (rules === null || (isAuthenticated && visitsLoading)) {
+    return (
+      <div
+        aria-busy="true"
+        className="h-[140px] animate-pulse rounded-hero border border-border bg-surface"
+      />
+    );
+  }
+
+  const visits = isAuthenticated
+    ? (visitSummaries.find((summary) => summary.merchant_id === merchant.id)?.count ?? 0)
+    : 0;
+  const progress = buildLoyaltyProgress(rules, visits, isAuthenticated);
 
   return (
     <div className="flex flex-col gap-4">

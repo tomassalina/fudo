@@ -93,17 +93,13 @@ export interface BusinessHours {
 export type RewardType = "discount_percent" | "free_item" | "cashback" | "other";
 
 /**
- * Mirrors `loyalty_rules` (backend/db/structure.sql) field-for-field. There
- * is no live endpoint for this table yet (see lib/api/README.md's "Endpoint
- * coverage" table — only merchants/menu_items are confirmed), so
- * lib/mock/loyalty.ts derives a plausible ladder per merchant instead of
- * fetching real rows. Real per-consumer visit counts also don't exist here
- * (see lib/api/README.md's "Out of scope: auth" — visit history lives in the
- * mobile app), so `getLoyaltyProgress` below renders honest mock progress
- * once `useSession()` (a real, mocked-login session — see
- * lib/session/session-provider.tsx) reports a logged-in consumer, and the
- * logged-out copy otherwise; the real `visits` table still needs to land
- * before the visit counts themselves are real.
+ * Mirrors `loyalty_rules` (backend/db/structure.sql) field-for-field.
+ * Confirmed live via `GET /api/v1/loyalty_rules?merchant_id=X` — see
+ * lib/api/loyalty.ts. That endpoint is public (no auth), and rules are
+ * genuinely scoped per merchant (isolation confirmed by comparing two real
+ * merchants' rule sets). `lib/data/loyalty.ts` is the facade: real rules
+ * once `isApiConfigured()`, `lib/mock/loyalty.ts`'s fallback ladder
+ * otherwise (local dev with no backend running).
  */
 export interface LoyaltyRule {
   id: number;
@@ -127,7 +123,7 @@ export interface LoyaltyStep {
 }
 
 /** Fully-derived loyalty state for one merchant, ready to render — see
- * `getLoyaltyProgress` in lib/mock/loyalty.ts for both the logged-in and
+ * `buildLoyaltyProgress` in lib/data/loyalty.ts for both the logged-in and
  * logged-out copy variants this carries. */
 export interface LoyaltyProgress {
   authenticated: boolean;
@@ -144,4 +140,43 @@ export interface LoyaltyProgress {
 export interface DishSearchResult {
   item: MenuItem;
   merchant: Merchant;
+}
+
+// No `Visit`/`VisitSummary` domain types here — same pattern as
+// lib/api/favorites.ts, which has no parallel `Favorite` type next to
+// `RawFavorite`. All real code (use-visit-history.ts, build-visit-entries.ts)
+// uses `RawVisit`/`RawVisitSummary` (lib/api/visits.ts) directly; a second,
+// unused parallel type here would just drift out of sync with the wire shape.
+
+/** Coarse loyalty tier badge derived purely from visit count, independent of
+ * any one merchant's own reward ladder — mirrors `tierOf()` in the design
+ * reference. See lib/visits/tier.ts for the derivation. */
+export type VisitTier = "Bronce" | "Plata" | "Oro";
+
+/** One row of Perfil's "Lugares que visitaste" — a merchant the consumer has
+ * a real `RawVisitSummary` for, plus its derived `LoyaltyProgress` and tier
+ * badge. Built by lib/visits/build-visit-entries.ts from real
+ * merchants + loyalty_rules + visit_summaries. */
+export interface VisitHistoryEntry {
+  merchant: Merchant;
+  progress: LoyaltyProgress;
+  tier: VisitTier;
+  /** "3 visitas · última hace 6 días" — mirrors `v.line` in the design
+   * reference, now built from the real `RawVisitSummary.last_visit_at`. */
+  visitsLine: string;
+}
+
+export type RewardStatus = "permanent" | "ready" | "upcoming";
+
+/** One row of Perfil's "Recompensas" — either a reward the consumer has
+ * already earned at some visited merchant, or the single next reward still
+ * pending there. Built alongside `VisitHistoryEntry[]` by
+ * lib/visits/build-visit-entries.ts, from the same `LoyaltyProgress.steps`
+ * so the two sections never disagree about what's earned. */
+export interface RewardEntry {
+  merchant: Merchant;
+  rule: LoyaltyRule;
+  status: RewardStatus;
+  /** Only set when `status === "upcoming"`. */
+  visitsRemaining?: number;
 }

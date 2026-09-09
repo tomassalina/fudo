@@ -4,7 +4,7 @@ import { useSession } from "@/lib/session/use-session";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils/cn";
-import type { VisitTier } from "@/lib/mock/visit-history";
+import type { VisitTier } from "@/lib/types";
 
 export interface ProfileHeaderProps {
   topTier: VisitTier;
