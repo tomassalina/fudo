@@ -9,6 +9,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { QrSheetContent } from "@/components/features/perfil/QrSheetContent";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { FluidContainer } from "@/components/ui/FluidContainer";
+import { LocationButton } from "@/components/layout/LocationButton";
 import { cn } from "@/lib/utils/cn";
 import { NAV_LEFT, visibleNavRight, type NavItemDef } from "./nav-items";
 import { isActiveHref } from "./is-active-href";
@@ -76,6 +77,8 @@ export function WideNav() {
           </div>
 
           <div className="flex-1" />
+
+          <LocationButton />
 
           {isAuthenticated ? (
             <Button

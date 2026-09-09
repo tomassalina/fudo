@@ -16,10 +16,16 @@ para vistas wide).
 - [x] QR sheet (Mi QR / Escanear) vs sheet de QR del prototipo (sección 7)
 - [x] Fix aplicado y commiteado: botón QR flotante tapaba el ícono "Buscar" cuando no hay
   sesión (ver "Fixes aplicados")
-- [x] Fixes aplicados (pendientes de commit): nav flotante tapaba el final del scroll en
-  Inicio/Buscar/Detalle, precio de card partido en 2 líneas en Inicio/Buscar, faltaba ícono
-  de lupa en `/buscar` (ver "Fixes aplicados" #2-#4). Verificado con `pnpm lint` / `pnpm
-  build` / `pnpm test` (127 tests) y capturas a viewport real 390×844.
+- [x] Fixes aplicados: nav flotante tapaba el final del scroll en Inicio/Buscar/Detalle,
+  precio de card partido en 2 líneas en Inicio/Buscar, faltaba ícono de lupa en `/buscar`
+  (ver "Fixes aplicados" #2-#4). Verificado con `pnpm lint` / `pnpm build` / `pnpm test`
+  (127 tests) y capturas a viewport real 390×844.
+- [x] Fix aplicado: header global faltante (logo FUDO + "Activar ubicación") en
+  Inicio/Buscar/Detalle, geolocalización real vía `navigator.geolocation`, y distancia real
+  (haversine) en vez del "0 km" hardcodeado en las cards (ver "Fixes aplicados" #5).
+  Verificado con `pnpm lint` / `pnpm build` / `pnpm test` (127 tests) y DOM/localStorage vía
+  `orca eval` (sin captura visual disponible en este entorno — ver la nota de metodología en
+  el fix #5).
 
 ### Corrección de metodología (viewport SÍ es controlable)
 
@@ -81,7 +87,7 @@ seleccionado por defecto).
 
 ### Discrepancias reales
 
-1. **[CRÍTICO] Falta el header completo.** La referencia tiene, arriba del todo: logo
+1. **[CRÍTICO — RESUELTO, ver "Fixes aplicados" #5] Falta el header completo.** La referencia tiene, arriba del todo: logo
    "FUDO" (wordmark) a la izquierda + botón píldora "Activar ubicación" (ícono
    `location_disabled` + texto) a la derecha. La página real **no tiene ningún header**:
    arranca directo en el titular. Esto no es solo estético — sin el botón de activar
@@ -107,7 +113,7 @@ seleccionado por defecto).
      una decisión de diseño ya documentada en el propio código como intencional — no la
      tocamos.
 
-3. **[BUG] Distancia siempre "0 km".** Todas las cards de "Lugares destacados" muestran
+3. **[BUG — RESUELTO, ver "Fixes aplicados" #5] Distancia siempre "0 km".** Todas las cards de "Lugares destacados" muestran
    "0 km" de distancia. Consistente con el punto 1: al no existir el flujo de activar
    ubicación, no hay lat/lng del usuario para calcular distancia real. Es un bug funcional
    encadenado al punto 1, no algo que se arregle solo en el frontend visual.
@@ -172,7 +178,7 @@ Real: `http://localhost:3001/buscar` — Referencia: click en tab "search" del p
    de producto, no un bug de CSS — queda documentado para que el dueño defina qué dato
    mostrar.
 
-7. **[BUG, mismo root cause que Inicio] Distancia "0 km" en todas las cards** — mismo
+7. **[BUG, mismo root cause que Inicio — RESUELTO, ver "Fixes aplicados" #5] Distancia "0 km" en todas las cards** — mismo
    problema del punto 3 de Inicio (falta activar ubicación).
 
 8. **[BUG — ARREGLADO] Bottom nav flotante tapaba el contenido de la última card visible
@@ -237,7 +243,7 @@ restaurante pero la vista es la misma).
    backend/seed, no una diferencia de implementación de la UI — documentado por si
    conviene truncar/abreviar en el futuro por espacio en pantallas chicas.
 
-5. **[BUG, mismo root cause de siempre] Distancia "0 km"** en vez de una distancia real
+5. **[BUG, mismo root cause de siempre — RESUELTO, ver "Fixes aplicados" #5] Distancia "0 km"** en vez de una distancia real
    (ligado a la falta del flujo de activar ubicación en el header — ver hallazgo #1 y #3
    de Inicio).
 
@@ -255,11 +261,9 @@ restaurante pero la vista es la misma).
   páginas (Inicio, Buscar, Detalle), el contenido final del scroll quedaba parcialmente
   tapado por el nav `fixed`. Corregido agregando `padding-bottom` a los 3 contenedores de
   página correspondientes — ver "Fixes aplicados".
-- **Distancia "0 km" en todos lados**: consecuencia directa de que el header con
-  "Activar ubicación" no existe en la implementación real. No se toca (requiere flujo de
-  geolocalización completo, es una feature grande).
-- **Falta el header global (logo FUDO + Activar ubicación)** en todas las páginas mobile
-  revisadas. No se toca — es una decisión de layout grande, no un detalle visual suelto.
+- **[RESUELTO] Distancia "0 km" en todos lados** y **[RESUELTO] header global faltante
+  (logo FUDO + Activar ubicación)** en las 3 páginas mobile — ver "Fixes aplicados" #5 para
+  la implementación (geolocalización real + haversine) y la evidencia.
 - El nav inferior sí tiene sus 5 ítems en la real (ver corrección en la sección 1, punto 2)
   — la diferencia real que queda es solo el tratamiento visual del botón de QR (FAB elevado
   vs. ícono plano), documentada como decisión de diseño intencional, no un faltante.
@@ -527,11 +531,71 @@ placeholder, layout intacto (el botón de submit naranja no se movió):
 `/private/tmp/claude-501/-Users-salina-dev-web2-fudo/03d738ea-da9a-407a-abe3-8b22e151b3fa/scratchpad/shots/buscar_fix_check.png`.
 `pnpm lint`/`build`/`test` limpios.
 
+### 5. Header global faltante (logo FUDO + "Activar ubicación") + distancia "0 km" — RESUELTO
+
+**Archivos nuevos:** `web/lib/location/use-location.ts` (hook de geolocalización real,
+persistido en `localStorage`), `web/lib/location/use-merchant-distance.ts` (distancia real
+por merchant), `web/lib/utils/distance.ts` (haversine compartido, extraído de
+`lib/mock/merchants.ts` para no reinventarlo), `web/components/layout/LocationButton.tsx`
+(pill compartida), `web/components/layout/Header.tsx` (header phone-only, logo + pill).
+**Archivos modificados:** `web/components/layout/nav/WideNav.tsx` (agrega la misma pill al
+nav sticky de wide, que en la referencia también la tiene —
+`docs/design-reference/Fudo Customers.dc.html` línea ~173), `web/lib/mock/merchants.ts`
+(deja de duplicar el haversine), `web/components/features/home/FeaturedGrid.tsx`,
+`web/components/features/buscar/MerchantCard.tsx`, `web/components/features/buscar/DishCard.tsx`,
+`web/components/features/restaurantes/MerchantDetailView.tsx` (usan la distancia real cuando
+hay ubicación activa, con fallback al `merchant.distanceKm` existente — sigue en "0 km" para
+datos reales hasta que el usuario activa ubicación, que es el comportamiento esperado, no un
+bug residual), y las 3 páginas mobile (`app/(marketing)/page.tsx`, `app/buscar/page.tsx`,
+`app/restaurantes/[id]/page.tsx` — solo import + render de `<Header />`, sin tocar el resto).
+
+**Causa raíz (hallazgo #1 de Inicio):** no existía ningún componente de header en la
+implementación real — arrancaba directo en el titular. Sin un botón "Activar ubicación" no
+había forma de que el browser pidiera geolocalización, así que `distanceKm` quedaba siempre
+en el `0` por defecto que pone `parseMerchant` (`lib/api/merchants.ts`) para datos reales.
+
+**Fix:** `Header` (phone, `vw<900`) y la pill agregada a `WideNav` (`vw>=900`) llaman a
+`navigator.geolocation.getCurrentPosition` vía `useLocation()`, un hook de external-store
+(mismo patrón que `lib/session/session-provider.tsx`) que persiste `{latitude, longitude}`
+en `localStorage` bajo la key `fudo:user-location` y no vuelve a pedir permiso en cada
+recarga. Un click estando activo limpia la ubicación (`clearLocation`) y el botón vuelve a
+"Activar ubicación"; un permiso denegado o no soportado también cae con gracia al mismo
+estado "off" — nunca rompe la UI. `useMerchantDistanceKm` calcula la distancia real
+(haversine) entre esas coordenadas y cada merchant, y las 4 cards (`FeaturedGrid`,
+`MerchantCard` en sus 2 layouts, `DishCard`, `MerchantDetailView`) la muestran en vez del
+campo `distanceKm` pre-cargado cuando hay ubicación activa.
+
+**Verificación real (sin captura visual disponible — ver nota de metodología):**
+- DOM: `document.querySelector('img[alt="Fudo"]')` y el botón "Activar ubicación" (ícono
+  `location_disabled`) confirmados presentes en `/`, `/buscar` y `/restaurantes/257` a
+  390×844 real, y ausentes duplicados en wide (1280×900, donde solo aparece el logo/pill de
+  `WideNav`, no un segundo header).
+- Antes de activar ubicación: las 5 primeras cards de Inicio mostraban `"0 km"` — reproduce
+  el bug reportado.
+- Geolocalización mockeada vía `orca eval` (`navigator.geolocation.getCurrentPosition`
+  parcheado para devolver `{latitude: -34.6037, longitude: -58.3816}`) + click real en el
+  botón: el ícono cambió a `my_location`, el label a "Ubicación activada",
+  `localStorage.getItem('fudo:user-location')` devolvió las coordenadas, y las mismas 5
+  cards pasaron a mostrar distancias reales (`4,8 km`, `3,1 km`, `6,3 km`, `7,4 km`,
+  `5,6 km`) — verificado en Inicio, Buscar y Detalle, y persistente entre navegaciones
+  (sin volver a pedir permiso).
+- Caso de permiso denegado: `getCurrentPosition` mockeado para invocar el callback de error;
+  tras el click el botón volvió solo a `location_disabled` / "Activar ubicación",
+  `localStorage` quedó sin la key, y `document.body` siguió intacto (sin excepciones ni UI
+  rota).
+- `pnpm lint`, `pnpm build` (41 páginas, sin errores de TypeScript) y `pnpm test` (127 tests,
+  20 archivos) corren limpios.
+- **Limitación de metodología:** a diferencia de fixes anteriores, no se pudo tomar captura
+  de pantalla esta vez (`orca screenshot` devolvió `"Screenshot timed out — the browser tab
+  may not be visible or the window may not have focus"` de forma consistente en este entorno,
+  incluso reaplicando el viewport). La verificación de arriba se hizo 100% vía DOM/localStorage
+  con `orca eval`, que es más preciso que una inspección visual para confirmar valores exactos
+  (texto del botón, ícono, coordenadas persistidas, km calculados) aunque no reemplaza una
+  captura para fidelidad pixel-a-pixel del layout.
+
 ### Qué NO se tocó (documentado en las secciones de arriba, requiere decisión de
 producto/diseño o trabajo más grande)
 
-- Header global faltante (logo FUDO + "Activar ubicación") en Inicio/Buscar/Detalle.
-- Distancia "0 km" en todos lados (depende del header de arriba — geolocalización real).
 - Pill "Abierto ahora" y botón "Delivery" en el detalle de restaurante.
 - Tratamiento visual del botón QR del nav (FAB elevado vs. ícono plano) — decisión de
   diseño ya justificada en el propio código, no un bug.

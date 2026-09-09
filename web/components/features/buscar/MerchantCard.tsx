@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { Merchant } from "@/lib/types";
+import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
 import {
   MERCHANT_TYPE_BADGE,
   MERCHANT_TYPE_LABELS,
@@ -33,6 +36,11 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
     merchant.price_per_person_min != null
       ? formatFromPrice(merchant.price_per_person_min)
       : null;
+  // Real distance once the visitor activates location (Header's "Activar
+  // ubicación" pill); falls back to merchant.distanceKm (currently always 0
+  // for real API data — see lib/api/merchants.ts) until they do.
+  const liveDistanceKm = useMerchantDistanceKm(merchant);
+  const distanceKm = liveDistanceKm ?? merchant.distanceKm;
 
   if (layout === "card") {
     return (
@@ -110,7 +118,7 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
               <span aria-hidden className="material-symbols text-[15px]">
                 location_on
               </span>
-              {merchant.distanceKm.toLocaleString("es-AR")} km
+              {distanceKm.toLocaleString("es-AR")} km
             </span>
           </div>
         </div>
@@ -181,7 +189,7 @@ export function MerchantCard({ merchant, layout }: MerchantCardProps) {
             <span aria-hidden className="material-symbols text-[14px]">
               location_on
             </span>
-            {merchant.distanceKm.toLocaleString("es-AR")} km
+            {distanceKm.toLocaleString("es-AR")} km
           </span>
           {merchant.rewardTeaser ? (
             <span className="flex items-center gap-0.5 text-[12px] font-semibold text-success">

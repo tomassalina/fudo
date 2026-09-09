@@ -14,6 +14,7 @@
 // the merchant detail page; the earlier extraction had dropped them.
 
 import type { Merchant, MerchantType } from "@/lib/types";
+import { haversineDistanceKm } from "@/lib/utils/distance";
 
 export const MERCHANT_TYPE_LABELS: Record<MerchantType, string> = {
   restaurant: "Restaurante",
@@ -54,30 +55,6 @@ export const MERCHANT_TYPE_BADGE: Record<
  * instead of picking a new one.
  */
 export const USER_LOCATION = { latitude: -34.5885, longitude: -58.4371 };
-
-const EARTH_RADIUS_KM = 6371;
-
-function toRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-/** Great-circle distance between two lat/lng points, in kilometers. */
-function haversineDistanceKm(
-  from: { latitude: number; longitude: number },
-  to: { latitude: number; longitude: number },
-): number {
-  const dLat = toRadians(to.latitude - from.latitude);
-  const dLon = toRadians(to.longitude - from.longitude);
-  const lat1 = toRadians(from.latitude);
-  const lat2 = toRadians(to.latitude);
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return EARTH_RADIUS_KM * c;
-}
 
 export const TAG_LABELS: Record<string, string> = {
   vegano: "Vegano",

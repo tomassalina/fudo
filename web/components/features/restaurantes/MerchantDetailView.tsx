@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
+import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
 import { FavoriteButton } from "@/components/features/buscar/FavoriteButton";
 import { FluidContainer } from "@/components/ui/FluidContainer";
 import { MERCHANT_TYPE_BADGE, MERCHANT_TYPE_LABELS } from "@/lib/mock/merchants";
@@ -64,6 +65,11 @@ export function MerchantDetailView({
   const isPhone = useIsPhoneViewport();
   const typeBadge = MERCHANT_TYPE_BADGE[merchant.type];
   const typeLabel = MERCHANT_TYPE_LABELS[merchant.type];
+  // Real distance once the visitor activates location (Header's "Activar
+  // ubicación" pill); falls back to merchant.distanceKm (currently always 0
+  // for real API data — see lib/api/merchants.ts) until they do.
+  const liveDistanceKm = useMerchantDistanceKm(merchant);
+  const distanceKm = liveDistanceKm ?? merchant.distanceKm;
 
   // Item cards themselves are identical between layouts; only the group's
   // wrapping grid differs — a single column on phone (`display: flex;
@@ -285,7 +291,7 @@ export function MerchantDetailView({
               ) : null}
               <span className="flex items-center gap-1.5 text-[13px] text-foreground-muted">
                 <span className="material-symbols text-[16px]">near_me</span>
-                {merchant.distanceKm.toLocaleString("es-AR")} km de tu
+                {distanceKm.toLocaleString("es-AR")} km de tu
                 ubicación
               </span>
               {contactButtons(true)}
@@ -362,7 +368,7 @@ export function MerchantDetailView({
           ) : null}
           <span className="flex items-center gap-1 text-[13px] text-foreground-muted">
             <span className="material-symbols text-[15px]">near_me</span>
-            {merchant.distanceKm.toLocaleString("es-AR")} km
+            {distanceKm.toLocaleString("es-AR")} km
           </span>
         </div>
 

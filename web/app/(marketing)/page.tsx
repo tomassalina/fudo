@@ -8,6 +8,7 @@
 // the featured-places fetch, stays server-rendered.
 
 import { FluidContainer } from "@/components/ui/FluidContainer";
+import { Header } from "@/components/layout/Header";
 import { HeroSection } from "@/components/features/home/HeroSection";
 import { HeroSearch } from "@/components/features/home/HeroSearch";
 import { FeaturedGrid } from "@/components/features/home/FeaturedGrid";
@@ -21,6 +22,7 @@ export default async function MarketingLandingPage() {
 
   return (
     <main className="flex flex-1 flex-col">
+      <Header />
       <HeroSection>
         <FluidContainer className="relative animate-fudo-fade">
           <HeroSearch />

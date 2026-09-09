@@ -18,6 +18,7 @@
 
 import Link from "next/link";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
+import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
 import { MERCHANT_TYPE_BADGE, MERCHANT_TYPE_LABELS } from "@/lib/mock/merchants";
 import type { Merchant } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
@@ -28,6 +29,11 @@ function formatFromPrice(min: number) {
 
 function FeaturedCard({ merchant }: { merchant: Merchant }) {
   const typeBadge = MERCHANT_TYPE_BADGE[merchant.type];
+  // Real distance once the visitor activates location (Header's "Activar
+  // ubicación" pill); falls back to merchant.distanceKm (currently always 0
+  // for real API data — see lib/api/merchants.ts) until they do.
+  const liveDistanceKm = useMerchantDistanceKm(merchant);
+  const distanceKm = liveDistanceKm ?? merchant.distanceKm;
 
   return (
     <Link
@@ -89,7 +95,7 @@ function FeaturedCard({ merchant }: { merchant: Merchant }) {
           ) : null}
           <span className="flex flex-none items-center gap-0.5 whitespace-nowrap text-[12.5px] text-foreground-faint">
             <span className="material-symbols text-[14px]">location_on</span>
-            {merchant.distanceKm.toLocaleString("es-AR")} km
+            {distanceKm.toLocaleString("es-AR")} km
           </span>
         </div>
       </div>

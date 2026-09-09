@@ -29,6 +29,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MerchantViewedTracker } from "@/components/analytics/MerchantViewedTracker";
+import { Header } from "@/components/layout/Header";
 import { MerchantDetailView } from "@/components/features/restaurantes/MerchantDetailView";
 import {
   buildOpeningHoursSpecification,
@@ -209,6 +210,7 @@ export default async function MerchantPage({
 
   return (
     <main className="flex flex-1 flex-col">
+      <Header />
       <MerchantViewedTracker merchantId={merchant.id} merchantType={merchant.type} />
       {/* Structured data for search engines — static, server-derived JSON, no user input involved. */}
       <script

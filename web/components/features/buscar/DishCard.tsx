@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { DishSearchResult } from "@/lib/types";
+import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
 import { TAG_LABELS } from "@/lib/mock/merchants";
 
 function formatPrice(value: number) {
@@ -17,6 +20,11 @@ export interface DishCardProps {
 export function DishCard({ result, layout }: DishCardProps) {
   const { item, merchant } = result;
   const visibleTags = merchant.tags.slice(0, 2);
+  // Real distance once the visitor activates location (Header's "Activar
+  // ubicación" pill); falls back to merchant.distanceKm (currently always 0
+  // for real API data — see lib/api/merchants.ts) until they do.
+  const liveDistanceKm = useMerchantDistanceKm(merchant);
+  const distanceKm = liveDistanceKm ?? merchant.distanceKm;
 
   if (layout === "card") {
     return (
@@ -54,7 +62,7 @@ export function DishCard({ result, layout }: DishCardProps) {
               <span aria-hidden className="material-symbols text-[14px]">
                 location_on
               </span>
-              {merchant.distanceKm.toLocaleString("es-AR")} km
+              {distanceKm.toLocaleString("es-AR")} km
             </span>
           </div>
           {visibleTags.length > 0 ? (
@@ -109,7 +117,7 @@ export function DishCard({ result, layout }: DishCardProps) {
             <span aria-hidden className="material-symbols text-[14px]">
               location_on
             </span>
-            {merchant.distanceKm.toLocaleString("es-AR")} km
+            {distanceKm.toLocaleString("es-AR")} km
           </span>
         </div>
         {visibleTags.length > 0 ? (
