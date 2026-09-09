@@ -87,7 +87,7 @@ export function WideNav() {
               size="sm"
               onClick={() => setQrOpen(true)}
             >
-              <span className="material-symbols text-[18px]">
+              <span className="material-symbols text-[18px] text-foreground-muted">
                 qr_code_scanner
               </span>
               Mi código
