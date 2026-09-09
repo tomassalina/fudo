@@ -872,6 +872,26 @@ mientras esa otra sesión trabajaba) — ninguno son archivos tocados en este fi
 resolvieron solos cuando esa otra sesión terminó su cambio; el estado final de arriba es el
 definitivo.
 
+**Revisión adversarial posterior y correcciones aplicadas:** una revisión fresca (fuera del
+contexto de quien implementó el fix) encontró 2 bugs reales sobre la primera versión de este
+diff, corregidos antes de commitear:
+
+- `withDistances` (`web/app/buscar/page.tsx`) dejaba `distanceKm: 0` para merchants con
+  `latitude`/`longitude` no parseables, lo que los hacía pasar cualquier filtro `?dist=` por
+  default y aparecer primero al ordenar por distancia. Corregido: coordenadas inválidas ahora
+  producen `distanceKm: Infinity` (mismo criterio que ya usaba
+  `web/lib/location/use-merchant-distance.ts` con `null` del lado cliente) — quedan excluidas
+  del filtro de radio y ordenan al final, nunca primero.
+- La key de remount de `SearchResultsGrid` (`BuscarView.tsx`) incluía `lat`/`lng`, así que
+  activar la ubicación a mitad de sesión remontaba el grid y reseteaba el scroll infinito ya
+  revelado por el visitante. Corregido: `lat`/`lng` quedan excluidos de esa key, con el mismo
+  criterio que ya se aplicaba en `countActiveFilters` (`lib/utils/buscar-href.ts`).
+- Agregado además un bounds check en `parseCoordinateParam` (lat en `[-90, 90]`, lng en
+  `[-180, 180]`) — un `?lat=999` ya no se acepta silenciosamente.
+
+`pnpm lint`, `pnpm build` y `pnpm test` (144/144) confirmados en verde después de aplicar
+estas correcciones.
+
 ### 7. Pill "Abierto ahora" faltante en el detalle de restaurante — RESUELTO
 
 **Archivos nuevos:** `web/lib/hooks/use-open-status.ts` (hook client-only que expone el
