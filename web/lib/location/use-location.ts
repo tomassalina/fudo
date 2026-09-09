@@ -93,8 +93,19 @@ function getSnapshot(): LocationState {
   return state;
 }
 
+// A stable module-level constant, not a fresh object literal per call:
+// `useSyncExternalStore` compares consecutive `getServerSnapshot()` results
+// with `Object.is`, and a new `{ coords: null, status: "idle" }` on every
+// invocation fails that check — React logs "The result of getServerSnapshot
+// should be cached to avoid an infinite loop" during hydration (confirmed
+// live: it fires on every phone/wide route that mounts the header, since
+// LocationButton is mounted from both). `state`'s own initial value above
+// is a separate object and intentionally not reused here — `state` is
+// mutable (reassigned by `setState`) while this one must never change.
+const SERVER_SNAPSHOT: LocationState = { coords: null, status: "idle" };
+
 function getServerSnapshot(): LocationState {
-  return { coords: null, status: "idle" };
+  return SERVER_SNAPSHOT;
 }
 
 function setState(next: LocationState) {
