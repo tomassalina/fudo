@@ -32,31 +32,12 @@ import '../search/widgets/search_utils.dart' show merchantTypeLabel;
 // cambio"). They're `Notifier`s (not raw fields) so screens can `ref.watch`
 // them and rebuild, following the same pattern as `FavoriteIdsNotifier` in
 // `data/providers.dart`.
+//
+// The session flag itself (`isLoggedInProvider`) now lives in
+// `data/providers.dart` instead of here — extracted so
+// `features/gifting/gifting_screen.dart` can gate on it too (see
+// `docs/flutter-vs-nextjs-gap-report.md`, Tarea 4).
 // ---------------------------------------------------------------------
-
-/// Whether the user is "logged in" — the UI flag that switches between the
-/// login form and the profile view.
-///
-/// In [ConnectionMode.local] (the default), tapping "Iniciar sesión" flips
-/// this to `true` instantly regardless of what (if anything) was typed into
-/// the email/password fields — there is no backend to validate against,
-/// matching the original prototype's `login()` handler exactly.
-///
-/// In [ConnectionMode.remote], [_LoggedOutViewState] only calls [logIn] after
-/// `AuthRepository.login()` actually succeeds against the real backend — see
-/// that class for the real request/loading/error handling.
-class _IsLoggedInNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void logIn() => state = true;
-
-  void logOut() => state = false;
-}
-
-final _isLoggedInProvider = NotifierProvider<_IsLoggedInNotifier, bool>(
-  _IsLoggedInNotifier.new,
-);
 
 /// In-memory overrides for the "DATOS PERSONALES" fields edited via the
 /// sheet in Ajustes. There is no backend endpoint to persist these edits, so
@@ -169,7 +150,7 @@ class MyPlacesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(_isLoggedInProvider);
+    final isLoggedIn = ref.watch(isLoggedInProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -224,7 +205,7 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
       // 100% fake login (design brief §3): any value — or none — logs in.
       // No credential is ever checked against anything, and there is
       // nothing to await.
-      ref.read(_isLoggedInProvider.notifier).logIn();
+      ref.read(isLoggedInProvider.notifier).logIn();
       return;
     }
 
@@ -251,7 +232,7 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
       if (!mounted) return;
       // Only flips the UI to the profile view once the login actually
       // succeeded — unlike the local/fake path, this is not instantaneous.
-      ref.read(_isLoggedInProvider.notifier).logIn();
+      ref.read(isLoggedInProvider.notifier).logIn();
     } on DioException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = _remoteLoginErrorMessage(error));
@@ -370,8 +351,10 @@ class _LoggedOutViewState extends ConsumerState<_LoggedOutView> {
           ],
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () =>
-                _showMockSnackBar('Registro no disponible en este MVP'),
+            // Real navigation to `RegisterScreen` (Tarea 4) — used to be a
+            // mock snackbar even though `AuthRepository.register()` already
+            // worked against the real backend.
+            onPressed: () => context.push(AppRoutes.register),
             child: const Text('¿No tenés cuenta? Registrate'),
           ),
         ],
@@ -1381,7 +1364,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     });
   }
 
-  /// Clears the local session ([_isLoggedInProvider]) and, in
+  /// Clears the local session ([isLoggedInProvider]) and, in
   /// [ConnectionMode.remote], also calls the real
   /// `AuthRepository.logout()` (clears the saved JWT and the cached
   /// consumer snapshot) — a no-op call in [ConnectionMode.local], where
@@ -1390,7 +1373,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     if (ref.read(connectionModeProvider) == ConnectionMode.remote) {
       ref.read(authRepositoryProvider).logout();
     }
-    ref.read(_isLoggedInProvider.notifier).logOut();
+    ref.read(isLoggedInProvider.notifier).logOut();
   }
 
   void _onDeleteTap() {

@@ -31,22 +31,29 @@ import 'current_consumer_session.dart';
 /// POST /api/v1/registrations
 /// request:  { "registration": { "email", "password",
 ///                                "password_confirmation", "first_name",
-///                                "last_name", "dni", "phone"? } }
+///                                "last_name", "dni"?, "phone"? } }
 /// 201:      same shape as POST /sessions's 200
 /// 422:      { "errors": {...} }  // duplicate email/dni, password mismatch,
 ///                                // missing fields
 /// ```
-/// `dni` is a *required* field to register — there is no way to create a
-/// consumer through this API without one. That makes `hasDniOnFile: true`
-/// a guaranteed fact (not a guess) for every consumer this app ever
-/// authenticates as; see [CurrentConsumerSession]'s doc for where that's
-/// used.
+/// `dni` is now **optional** (backend commit `1cdb20e`, per
+/// `openspec/changes/fudo-consumers-mvp/design.md` Decisión 1: the DNI is
+/// loaded by the waiter at checkout in the physical restaurant, not
+/// self-reported by the consumer at registration). The key must be **absent**
+/// from the request body to register without one — the backend's
+/// `allow_nil: true` uniqueness check only treats a `nil` `dni` as "no dni";
+/// sending `dni: ""` would set a real (non-nil) empty-string value, which
+/// stays unique-constrained and would 422 on a second such registration.
+/// [register] mirrors [phone]'s existing null-aware map-entry pattern for
+/// this reason — never pass an empty string, pass `null`/omit the argument.
+/// `hasDniOnFile: true` in [_storeConsumerSnapshot] is therefore only a
+/// guaranteed fact for consumers who *did* supply a [dni] here — see
+/// [CurrentConsumerSession]'s doc for where that's used.
 ///
 /// Neither response includes `has_dni_on_file` (a required, non-nullable
 /// field on [Consumer]), so the raw `consumer` object here is never parsed
 /// through [Consumer.fromJson] directly — [_storeConsumerSnapshot] builds the
-/// [Consumer] by hand, filling in `hasDniOnFile: true` per the inference
-/// above.
+/// [Consumer] by hand, filling in `hasDniOnFile` per the inference above.
 ///
 /// Callers should catch [DioException] and, on a 401/422, read
 /// `e.response?.data['error']`/`['errors']` for the user-facing message —
@@ -87,6 +94,12 @@ class AuthRepository {
   /// Registers a new consumer and, on success, logs them in immediately —
   /// same response shape and token/session handling as [login]. `dni` and
   /// `phone` follow the confirmed `POST /registrations` contract above.
+  ///
+  /// `dni` is optional (see this class's doc comment) — pass `null` (the
+  /// default) or omit it entirely to register without one; the key is then
+  /// left out of the request body rather than sent as an empty string, which
+  /// matters for how the backend's uniqueness check treats it.
+  ///
   /// Throws [DioException] on a network/HTTP failure (422 validation
   /// failures included), or [StateError] if a 2xx response is missing the
   /// confirmed top-level `token` field.
@@ -96,7 +109,7 @@ class AuthRepository {
     required String passwordConfirmation,
     required String firstName,
     required String lastName,
-    required String dni,
+    String? dni,
     String? phone,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
@@ -108,17 +121,24 @@ class AuthRepository {
           'password_confirmation': passwordConfirmation,
           'first_name': firstName,
           'last_name': lastName,
-          'dni': dni,
+          'dni': ?dni,
           'phone': ?phone,
         },
       },
     );
-    await _persistSession(response.data, endpoint: '/registrations');
+    await _persistSession(
+      response.data,
+      endpoint: '/registrations',
+      // Unlike before `dni` became optional, this is no longer a guaranteed
+      // `true` for every registration — see [_storeConsumerSnapshot].
+      hasDniOnFile: dni != null && dni.isNotEmpty,
+    );
   }
 
   Future<void> _persistSession(
     Map<String, dynamic>? data, {
     required String endpoint,
+    bool hasDniOnFile = true,
   }) async {
     final token = data?['token'] as String?;
     if (token == null) {
@@ -129,7 +149,10 @@ class AuthRepository {
       );
     }
     await _tokenStorage.saveToken(token);
-    _storeConsumerSnapshot(data?['consumer'] as Map<String, dynamic>?);
+    _storeConsumerSnapshot(
+      data?['consumer'] as Map<String, dynamic>?,
+      hasDniOnFile: hasDniOnFile,
+    );
   }
 
   /// Builds a [Consumer] from the partial `consumer` object embedded in a
@@ -137,7 +160,10 @@ class AuthRepository {
   /// stores it on [_consumerSession]. A no-op if [_consumerSession] wasn't
   /// provided, or if [consumerJson] is somehow missing despite a 2xx
   /// response (defensive — not expected per the confirmed contract).
-  void _storeConsumerSnapshot(Map<String, dynamic>? consumerJson) {
+  void _storeConsumerSnapshot(
+    Map<String, dynamic>? consumerJson, {
+    required bool hasDniOnFile,
+  }) {
     final session = _consumerSession;
     if (session == null || consumerJson == null) return;
     session.consumer = Consumer(
@@ -146,10 +172,13 @@ class AuthRepository {
       lastName: consumerJson['last_name'] as String,
       email: consumerJson['email'] as String,
       phone: consumerJson['phone'] as String?,
-      // See this class's doc: POST /registrations requires `dni`, so every
-      // consumer reachable through this API is guaranteed to have one on
-      // file. Not a guess.
-      hasDniOnFile: true,
+      // [login]'s call site leaves this at its `true` default — the
+      // session endpoint doesn't return `has_dni_on_file` either, so a
+      // logged-in-via-[login] consumer is still assumed to have one on
+      // file (pre-existing assumption, unchanged by this fix). [register]
+      // passes the real answer instead, since `dni` becoming optional
+      // (backend `1cdb20e`) means that assumption no longer holds there.
+      hasDniOnFile: hasDniOnFile,
     );
   }
 

@@ -145,6 +145,26 @@ final loyaltyRulesProvider = FutureProvider.family<List<LoyaltyRule>, int>((
   return dataSource.getLoyaltyRules(merchantId);
 });
 
+/// All merchants' business hours, grouped by merchant id. Used by the search
+/// filters sheet's "Abierto ahora" filter (design brief §2.9) to compute
+/// open/closed status for the whole result set without one request per
+/// merchant.
+final businessHoursByMerchantProvider =
+    FutureProvider<Map<int, List<BusinessHour>>>((ref) {
+      final dataSource = ref.watch(dataSourceProvider);
+      return dataSource.getBusinessHoursByMerchant();
+    });
+
+/// All merchants' loyalty ladder rules, grouped by merchant id. Used by the
+/// search filters sheet's "Solo con premio de fidelización disponible"
+/// filter (design brief §2.9) to compute reward availability for the whole
+/// result set without one request per merchant.
+final loyaltyRulesByMerchantProvider =
+    FutureProvider<Map<int, List<LoyaltyRule>>>((ref) {
+      final dataSource = ref.watch(dataSourceProvider);
+      return dataSource.getLoyaltyRulesByMerchant();
+    });
+
 /// All tags known to the app.
 final tagsProvider = FutureProvider<List<Tag>>((ref) {
   final dataSource = ref.watch(dataSourceProvider);
@@ -311,4 +331,38 @@ class FavoriteIdsNotifier extends Notifier<Set<int>> {
 /// Mutable in-memory favorite merchant ids, seeded from [favoritesProvider].
 final favoriteIdsProvider = NotifierProvider<FavoriteIdsNotifier, Set<int>>(
   FavoriteIdsNotifier.new,
+);
+
+/// Whether the user is "logged in" — the UI flag that switches between the
+/// login form and the profile view.
+///
+/// Extracted from `features/my_places/my_places_screen.dart` (formerly a
+/// private `_isLoggedInProvider` local to that screen — see
+/// `docs/flutter-vs-nextjs-gap-report.md`, Tarea 4) so any screen can gate
+/// itself on session state, not just `MyPlacesScreen`. `features/gifting/
+/// gifting_screen.dart` is the first other consumer: it shows a "Iniciá
+/// sesión para comprar" block instead of the purchase form while this is
+/// `false`.
+///
+/// In [ConnectionMode.local] (the default), tapping "Iniciar sesión" flips
+/// this to `true` instantly regardless of what (if anything) was typed into
+/// the email/password fields — there is no backend to validate against,
+/// matching the original prototype's `login()` handler exactly.
+///
+/// In [ConnectionMode.remote], `MyPlacesScreen`'s login form and
+/// `features/auth/register_screen.dart` only call [logIn] after
+/// `AuthRepository.login()`/`.register()` actually succeed against the real
+/// backend.
+class IsLoggedInNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void logIn() => state = true;
+
+  void logOut() => state = false;
+}
+
+/// Shared session flag — see [IsLoggedInNotifier].
+final isLoggedInProvider = NotifierProvider<IsLoggedInNotifier, bool>(
+  IsLoggedInNotifier.new,
 );

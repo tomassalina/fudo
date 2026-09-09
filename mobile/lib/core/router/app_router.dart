@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/register_screen.dart';
 import '../../features/gifting/gifting_screen.dart';
+import '../../features/home/home_screen.dart';
 import '../../features/my_places/my_places_screen.dart';
 import '../../features/search/restaurant_detail_screen.dart';
 import '../../features/search/search_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
-/// Bottom nav tab order: Buscar (0), Mis Lugares (1), Regalar (2).
+/// Bottom nav tab order: Inicio (0), Buscar (1), Mis Lugares (2), Regalar
+/// (3).
 class AppRoutes {
   AppRoutes._();
 
+  static const String home = '/home';
   static const String search = '/search';
   static const String myPlaces = '/my-places';
   static const String gifting = '/gifting';
+
+  /// Registro real (`features/auth/register_screen.dart`) — full-screen
+  /// route outside the bottom-nav shell, reached from `MyPlacesScreen`'s
+  /// "¿No tenés cuenta? Registrate" link (Tarea 4).
+  static const String register = '/register';
 
   /// Restaurant detail — full-screen route outside the bottom-nav shell
   /// (the design's detail view has no bottom nav, just back/favorite
@@ -22,7 +31,7 @@ class AppRoutes {
   static String merchantDetail(int merchantId) => '/merchant/$merchantId';
   static const String merchantDetailPattern = '/merchant/:id';
 
-  static const List<String> _tabOrder = [search, myPlaces, gifting];
+  static const List<String> _tabOrder = [home, search, myPlaces, gifting];
 
   static int indexForLocation(String location) {
     final index = _tabOrder.indexWhere((path) => location.startsWith(path));
@@ -30,10 +39,10 @@ class AppRoutes {
   }
 }
 
-/// App-wide router. Wraps the three main tabs in a [MainShell] with a
+/// App-wide router. Wraps the main tabs in a [MainShell] with a
 /// [BottomNavigationBar] so tab state persists across navigation.
 final GoRouter appRouter = GoRouter(
-  initialLocation: AppRoutes.search,
+  initialLocation: AppRoutes.home,
   routes: [
     ShellRoute(
       builder: (context, state, child) {
@@ -45,6 +54,13 @@ final GoRouter appRouter = GoRouter(
         );
       },
       routes: [
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (context, state) => HomeScreen(
+            onOpenMerchant: (merchantId) =>
+                context.push(AppRoutes.merchantDetail(merchantId)),
+          ),
+        ),
         GoRoute(
           path: AppRoutes.search,
           builder: (context, state) => const SearchScreen(),
@@ -77,17 +93,24 @@ final GoRouter appRouter = GoRouter(
         return RestaurantDetailScreen(merchantId: id);
       },
     ),
+    // Outside the ShellRoute too: registering has no bottom nav either.
+    GoRoute(
+      path: AppRoutes.register,
+      builder: (context, state) => const RegisterScreen(),
+    ),
   ],
 );
 
 String _locationForIndex(int index) {
   switch (index) {
     case 1:
-      return AppRoutes.myPlaces;
+      return AppRoutes.search;
     case 2:
+      return AppRoutes.myPlaces;
+    case 3:
       return AppRoutes.gifting;
     case 0:
     default:
-      return AppRoutes.search;
+      return AppRoutes.home;
   }
 }
