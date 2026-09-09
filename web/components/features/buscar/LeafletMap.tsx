@@ -173,13 +173,40 @@ function ZoneWatcher({
   return null;
 }
 
+/**
+ * Reports whenever any marker's popup opens/closes — lets the phone
+ * full-screen map view (MapToggleSection) raise its own wrapper's z-index
+ * above PhoneNav while a pin's `MerchantMapCard` is showing. Needed because
+ * that wrapper is `position: fixed` with its own `z-*` class, which creates a
+ * new stacking context: no z-index set on anything *inside* it (Leaflet's
+ * popup pane included, capped around z-index 700) can ever paint above a
+ * sibling outside it with a higher z-index, like PhoneNav — confirmed live,
+ * the card was rendering underneath the floating nav before this. Rendered
+ * as a child of `<MapContainer>` for the same reason `ZoneWatcher` is:
+ * `useMapEvents` needs the Leaflet map context only `MapContainer`'s own
+ * children get.
+ */
+function PopupWatcher({
+  onPopupOpenChange,
+}: {
+  onPopupOpenChange?: (open: boolean) => void;
+}) {
+  useMapEvents({
+    popupopen: () => onPopupOpenChange?.(true),
+    popupclose: () => onPopupOpenChange?.(false),
+  });
+  return null;
+}
+
 export interface LeafletMapProps {
   merchants: Merchant[];
   /** Show the type-label pill under each pin (phone full-screen map). Omitted on the compact desktop split view. */
   showLabels?: boolean;
+  /** See `PopupWatcher`'s doc comment above. Omitted where no ancestor needs to react (e.g. the desktop split view). */
+  onPopupOpenChange?: (open: boolean) => void;
 }
 
-export function LeafletMap({ merchants, showLabels = false }: LeafletMapProps) {
+export function LeafletMap({ merchants, showLabels = false, onPopupOpenChange }: LeafletMapProps) {
   const center: [number, number] = [
     USER_LOCATION.latitude,
     USER_LOCATION.longitude,
@@ -244,6 +271,7 @@ export function LeafletMap({ merchants, showLabels = false }: LeafletMapProps) {
           onVisibleChange={setMarkers}
           onSearchingChange={setSearchingZone}
         />
+        <PopupWatcher onPopupOpenChange={onPopupOpenChange} />
         {markers.map((merchant, index) => {
           const next = markers.length > 1 ? markers[(index + 1) % markers.length] : null;
           return (

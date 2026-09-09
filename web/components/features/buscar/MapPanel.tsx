@@ -35,9 +35,16 @@ export interface MapPanelProps {
    * bleed to the screen edges rather than sit in a boxed card.
    */
   variant?: "panel" | "fullscreen";
+  /** See LeafletMap's `PopupWatcher` doc comment — only wired up by the phone full-screen map view. */
+  onPopupOpenChange?: (open: boolean) => void;
 }
 
-export function MapPanel({ merchants, showLabels = false, variant = "panel" }: MapPanelProps) {
+export function MapPanel({
+  merchants,
+  showLabels = false,
+  variant = "panel",
+  onPopupOpenChange,
+}: MapPanelProps) {
   return (
     <div
       className={cn(
@@ -45,7 +52,11 @@ export function MapPanel({ merchants, showLabels = false, variant = "panel" }: M
         variant === "panel" && "rounded-2xl border border-border",
       )}
     >
-      <LeafletMap merchants={merchants} showLabels={showLabels} />
+      <LeafletMap
+        merchants={merchants}
+        showLabels={showLabels}
+        onPopupOpenChange={onPopupOpenChange}
+      />
     </div>
   );
 }

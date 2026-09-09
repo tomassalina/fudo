@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Merchant } from "@/lib/types";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { useScrollDirection } from "@/lib/hooks/use-scroll-direction";
@@ -50,6 +50,14 @@ export function MapToggleSection({
   const isPhone = useIsPhoneViewport();
   const { visible: navVisible } = useScrollDirection();
   const phoneMapActive = isPhone && showMap;
+  // Whether a pin's MerchantMapCard popup is currently open — see
+  // LeafletMap's `PopupWatcher` doc comment for why this has to live here
+  // (raising the fixed map layer's own z-index) rather than something inside
+  // Leaflet's DOM: the layer below is `position: fixed` with an explicit
+  // `z-*` class, so it's its own stacking context, and nothing inside it can
+  // ever out-rank a sibling outside it (PhoneNav, z-30) no matter what
+  // z-index Leaflet gives the popup pane internally.
+  const [pinCardOpen, setPinCardOpen] = useState(false);
 
   useEffect(() => {
     setMapModeActive(phoneMapActive);
@@ -75,7 +83,15 @@ export function MapToggleSection({
     <>
       <button
         type="button"
-        onClick={() => onToggle(!showMap)}
+        onClick={() => {
+          // Stale-state guard, done here (not an effect — setState directly
+          // inside an effect body is a lint error, see
+          // react-hooks/set-state-in-effect): closing the map shouldn't carry
+          // a "card was open" flag into the next time it's opened, which
+          // would render the layer z-elevated from the start.
+          if (showMap) setPinCardOpen(false);
+          onToggle(!showMap);
+        }}
         aria-pressed={showMap}
         className={cn(
           "fixed inset-x-0 z-30 mx-auto flex w-fit items-center gap-2 rounded-full border border-border bg-nav pl-[15px] pr-[18px] py-[11px] text-[14px] font-semibold text-foreground shadow-nav backdrop-blur-md transition-[transform,opacity] duration-300",
@@ -90,8 +106,26 @@ export function MapToggleSection({
       </button>
 
       {showMap ? (
-        <div className="fixed inset-x-0 top-20 bottom-0 z-20">
-          <MapPanel merchants={merchants} showLabels variant="fullscreen" />
+        <div
+          className={cn(
+            "fixed inset-x-0 top-20 bottom-0",
+            // z-20 normally (under PhoneNav's z-30, matching every other
+            // floating pill on this screen). While a pin's card is open, the
+            // whole layer rises to z-[100] — comfortably above PhoneNav
+            // (z-30), the "Mapa/Lista" toggle above (also z-30), and every
+            // other z-index used anywhere else in this app (the next-highest
+            // is Sheet.tsx's z-50) — so the card is never clipped by any of
+            // them. See the `pinCardOpen` doc comment above for why this
+            // can't be scoped to just the card.
+            pinCardOpen ? "z-[100]" : "z-20",
+          )}
+        >
+          <MapPanel
+            merchants={merchants}
+            showLabels
+            variant="fullscreen"
+            onPopupOpenChange={setPinCardOpen}
+          />
         </div>
       ) : null}
     </>

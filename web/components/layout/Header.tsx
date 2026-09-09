@@ -2,14 +2,15 @@
 
 // Global phone header — logo wordmark + "Activar ubicación" pill, straight
 // off the top of every mobile view in the design reference
-// (docs/design-reference/Fudo App.dc.html, ~line 175: `isHome`'s header row;
-// the same row is the correct chrome for Buscar/Detalle too — this was a
-// real gap confirmed by visual QA, not something the reference happened to
-// only draw once — see docs/visual-qa-report.md, "Resumen de hallazgos
-// transversales": "Falta el header global ... en todas las páginas mobile
-// revisadas"). Missing entirely from the real app before this change, which
-// is also why every card showed a hardcoded "0 km" — there was no button to
-// ever grant location.
+// (docs/design-reference/Fudo App.dc.html, ~line 175: `isHome`'s header row).
+// Missing entirely from the real app before this change, which is also why
+// every card showed a hardcoded "0 km" — there was no button to ever grant
+// location.
+//
+// NOT rendered on /buscar (phone): confirmed against the design reference's
+// own `isList`/`isMap` views, which start directly with the search bar —
+// no logo/location row above it (unlike `isHome`). Used only by Inicio and
+// Detalle on phone; see those pages' own `<Header />` usage.
 //
 // Phone-only by design: at >=900px WideNav already renders this same logo +
 // location pill (plus its own "Iniciar sesión" CTA) inline in its own sticky
