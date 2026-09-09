@@ -58,6 +58,35 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
 
   void _apply() => Navigator.of(context).pop(_draft);
 
+  /// Per-category active-filter count for the tab badges — mirrors web's
+  /// `countActiveFiltersByCategory` (`filter-rows.ts`), counting how many
+  /// independent filtering decisions are active within each category (a
+  /// multi-select row like diet tags still counts once, same as
+  /// `SearchFilters.activeCount`'s own doc comment). "Platos" has no
+  /// filterable state in this sheet (see [_PlatosCategory]'s doc), so it's
+  /// always 0. "Ocultar visitados" sits outside every category (its own row
+  /// below the tabs), so it's intentionally excluded here too.
+  Map<_FilterCategory, int> get _categoryCounts {
+    final filters = _draft;
+    return {
+      _FilterCategory.basico:
+          (filters.sort != SortOption.relevance ? 1 : 0) +
+          (filters.merchantType != null ? 1 : 0) +
+          (filters.openNowOnly ? 1 : 0),
+      _FilterCategory.precio:
+          (filters.minPricePerPerson != null ||
+                  filters.maxPricePerPerson != null
+              ? 1
+              : 0) +
+          (filters.dietTagIds.isNotEmpty ? 1 : 0),
+      _FilterCategory.platos: 0,
+      _FilterCategory.ubicacion:
+          (filters.neighborhood != null ? 1 : 0) +
+          (filters.maxDistanceKm != null ? 1 : 0),
+      _FilterCategory.premios: filters.rewardAvailableOnly ? 1 : 0,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
@@ -108,6 +137,7 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
               _CategoryTabs(
                 selected: _category,
                 onSelect: (category) => setState(() => _category = category),
+                counts: _categoryCounts,
               ),
               const SizedBox(height: 4),
               Expanded(
@@ -157,10 +187,18 @@ class _FiltersSheetState extends ConsumerState<FiltersSheet> {
 }
 
 class _CategoryTabs extends StatelessWidget {
-  const _CategoryTabs({required this.selected, required this.onSelect});
+  const _CategoryTabs({
+    required this.selected,
+    required this.onSelect,
+    required this.counts,
+  });
 
   final _FilterCategory selected;
   final ValueChanged<_FilterCategory> onSelect;
+
+  /// Active-filter count per category, shown as a small numeral badge next
+  /// to the tab label (omitted when 0) — see `_FiltersSheetState._categoryCounts`.
+  final Map<_FilterCategory, int> counts;
 
   @override
   Widget build(BuildContext context) {
@@ -174,8 +212,18 @@ class _CategoryTabs extends StatelessWidget {
         itemBuilder: (context, index) {
           final category = _FilterCategory.values[index];
           final isSelected = category == selected;
+          final count = counts[category] ?? 0;
           return ChoiceChip(
-            label: Text(category.label),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(category.label),
+                if (count > 0) ...[
+                  const SizedBox(width: 6),
+                  _CategoryCountBadge(isSelected: isSelected, count: count),
+                ],
+              ],
+            ),
             selected: isSelected,
             onSelected: (_) => onSelect(category),
             selectedColor: AppTheme.accent,
@@ -188,6 +236,46 @@ class _CategoryTabs extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Small rounded-full numeral badge for a category tab's active-filter
+/// count — same accent-background/white-text convention as the design's
+/// other small count badges, distinct from the bigger "N filtros activos"
+/// pill in [_BottomActions]. When the tab itself is selected (already
+/// accent-filled), the badge switches to a translucent white fill so it
+/// stays legible against the same-color background, mirroring web's
+/// `FilterCategoryTabs.tsx` (`isActive ? "bg-white/25 text-white" :
+/// "bg-accent text-white"`).
+class _CategoryCountBadge extends StatelessWidget {
+  const _CategoryCountBadge({required this.isSelected, required this.count});
+
+  final bool isSelected;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 16,
+      constraints: const BoxConstraints(minWidth: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isSelected
+            ? Colors.white.withValues(alpha: 0.25)
+            : AppTheme.accent,
+        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+      ),
+      child: Text(
+        '$count',
+        style: AppTheme.body.copyWith(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          height: 1,
+        ),
       ),
     );
   }
@@ -403,9 +491,39 @@ class _DietTagChips extends StatelessWidget {
   final SearchFilters filters;
   final ValueChanged<SearchFilters> onChanged;
 
+  /// The 5 real diet tags a merchant can carry (`backend/db/seeds.rb`:
+  /// `sin_tacc vegano vegetariano picante economico`), in display order —
+  /// mirrors `DIET_TAG_KEYS` in the web app's `filter-rows.ts`. [tags] (from
+  /// `tagsProvider`, the app's full tag catalog) also carries unrelated
+  /// values like "para_llevar"/"con_delivery", so this row filters down to
+  /// just these instead of rendering every known tag as a "diet" option.
+  static const List<String> _dietTagOrder = [
+    'vegano',
+    'sin_tacc',
+    'picante',
+    'economico',
+    'vegetariano',
+  ];
+
+  /// Spanish display labels for [_dietTagOrder], matching web's `TAG_LABELS`
+  /// (`web/lib/mock/merchants.ts`) — the catalog stores tag names as raw
+  /// snake_case identifiers, not display-ready text.
+  static const Map<String, String> _dietTagLabels = {
+    'vegano': 'Vegano',
+    'sin_tacc': 'Sin TACC',
+    'picante': 'Picante',
+    'economico': 'Económico',
+    'vegetariano': 'Vegetariano',
+  };
+
   @override
   Widget build(BuildContext context) {
-    if (tags.isEmpty) {
+    final byName = {for (final tag in tags) tag.name: tag};
+    final dietTags = [
+      for (final name in _dietTagOrder)
+        if (byName[name] != null) byName[name]!,
+    ];
+    if (dietTags.isEmpty) {
       return Text(
         'No hay etiquetas de dieta cargadas todavía.',
         style: AppTheme.bodySecondary,
@@ -414,10 +532,10 @@ class _DietTagChips extends StatelessWidget {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: tags.map((tag) {
+      children: dietTags.map((tag) {
         final isSelected = filters.dietTagIds.contains(tag.id);
         return _FilterChoiceChip(
-          label: tag.name,
+          label: _dietTagLabels[tag.name] ?? tag.name,
           selected: isSelected,
           onTap: () {
             final next = {...filters.dietTagIds};
