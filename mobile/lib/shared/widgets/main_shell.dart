@@ -260,7 +260,6 @@ class _FloatingBottomNav extends StatelessWidget {
                       Expanded(
                         child: _NavItem(
                           icon: Symbols.home,
-                          label: 'Inicio',
                           selected: currentIndex == 0,
                           onTap: () => onTap(0),
                         ),
@@ -268,7 +267,6 @@ class _FloatingBottomNav extends StatelessWidget {
                       Expanded(
                         child: _NavItem(
                           icon: Symbols.search,
-                          label: 'Buscar',
                           selected: currentIndex == 1,
                           onTap: () => onTap(1),
                         ),
@@ -283,7 +281,6 @@ class _FloatingBottomNav extends StatelessWidget {
                       Expanded(
                         child: _NavItem(
                           icon: Symbols.card_giftcard,
-                          label: 'Regalar',
                           selected: currentIndex == 3,
                           onTap: () => onTap(3),
                         ),
@@ -291,7 +288,6 @@ class _FloatingBottomNav extends StatelessWidget {
                       Expanded(
                         child: _NavItem(
                           icon: isLoggedIn ? Symbols.person : Symbols.login,
-                          label: isLoggedIn ? 'Perfil' : 'Ingresar',
                           selected: currentIndex == 2,
                           onTap: () => onTap(2),
                         ),
@@ -308,28 +304,26 @@ class _FloatingBottomNav extends StatelessWidget {
   }
 }
 
-/// A single tab destination. The label only takes up space and becomes
-/// visible when [selected] is true — otherwise it collapses to just the
-/// icon, animating width and opacity together via [AnimatedAlign] +
-/// [AnimatedOpacity] on the same always-mounted [Text], so the transition
-/// interpolates smoothly instead of popping in/out.
+/// A single tab destination. Icon-only, always — never a text label, active
+/// or inactive (product correction, 2026-09-09: an earlier version revealed
+/// a white label next to the icon on the active tab; the product owner
+/// wants icons only, ever, with just the orange illumination signaling the
+/// active tab).
 ///
-/// Selected styling matches `PhoneNav.tsx`'s `TabLink` active state exactly:
-/// a `bg-gradient-to-b from-cta-from to-cta-to` pill ([AppTheme.ctaGradient]
-/// — its stops are the same `#ff6337`/`#e8431a` as the web tokens in
-/// `web/app/globals.css`) with `shadow-cta`'s warm glow and white
-/// icon+label text, vs. the flat/borderless muted `text-foreground-faint`
+/// Selected styling matches `PhoneNav.tsx`'s `TabLink` active state's icon
+/// treatment: a `bg-gradient-to-b from-cta-from to-cta-to` pill
+/// ([AppTheme.ctaGradient] — its stops are the same `#ff6337`/`#e8431a` as
+/// the web tokens in `web/app/globals.css`) with `shadow-cta`'s warm glow
+/// and a white icon, vs. the flat/borderless muted `text-foreground-faint`
 /// ([AppTheme.textTertiary]) treatment when inactive.
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
-    required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
-  final String label;
   final bool selected;
   final VoidCallback onTap;
 
@@ -339,63 +333,46 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? Colors.white : AppTheme.textTertiary;
 
+    // InkWell fills the whole equal-width `Expanded` slot the parent Row
+    // gives each tab (same generous tap target as before) — but `Center`
+    // hands its child LOOSE constraints instead of forwarding that slot's
+    // tight width down, so the decorated pill itself shrink-wraps to just
+    // the icon + padding instead of stretching edge-to-edge across the
+    // slot. Without `Center` here, an icon-only `AnimatedContainer` (no
+    // intrinsic width preference of its own) would be forced to the full
+    // slot width by those tight constraints and paint as an oddly-wide
+    // rectangle behind a single centered icon — exactly the pill shape
+    // that was sized to fit icon+text before, now wrong with text gone.
     return InkWell(
       onTap: onTap,
       customBorder: const StadiumBorder(),
-      child: AnimatedContainer(
-        duration: _duration,
-        curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        padding: EdgeInsets.symmetric(horizontal: selected ? 16 : 12),
-        decoration: BoxDecoration(
-          gradient: selected ? AppTheme.ctaGradient : null,
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          // `--shadow-cta: 0 8px 20px rgba(255, 80, 35, 0.34), inset 0 1px 0
-          // rgba(255, 255, 255, 0.26)` (web/app/globals.css) — the outer
-          // warm glow only; Flutter's BoxShadow has no inset variant, so the
-          // inner highlight isn't reproduced.
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.accent.withValues(alpha: 0.34),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            ClipRect(
-              child: AnimatedAlign(
-                duration: _duration,
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.centerLeft,
-                widthFactor: selected ? 1 : 0,
-                child: AnimatedOpacity(
-                  duration: _duration,
-                  opacity: selected ? 1 : 0,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.clip,
-                      style: AppTheme.body.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+      child: Center(
+        child: AnimatedContainer(
+          duration: _duration,
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: selected ? AppTheme.ctaGradient : null,
+            // A square 48x48 box (24px icon + 12px padding each side) at
+            // [AppTheme.radiusPill] (999) renders as a true circle, not a
+            // stadium — matches "icon lights up orange" instead of an
+            // odd icon-in-a-pill look.
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            // `--shadow-cta: 0 8px 20px rgba(255, 80, 35, 0.34), inset 0 1px 0
+            // rgba(255, 255, 255, 0.26)` (web/app/globals.css) — the outer
+            // warm glow only; Flutter's BoxShadow has no inset variant, so the
+            // inner highlight isn't reproduced.
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: AppTheme.accent.withValues(alpha: 0.34),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+                  ]
+                : null,
+          ),
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
