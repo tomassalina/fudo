@@ -204,8 +204,8 @@ CREATE TABLE public.consumers (
     last_name character varying(100) NOT NULL,
     email character varying(255) NOT NULL,
     password_hash character varying(255) NOT NULL,
-    dni_encrypted text NOT NULL,
-    dni_bidx character varying(255) NOT NULL,
+    dni_encrypted text,
+    dni_bidx character varying(255),
     phone character varying(30),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     created_by uuid NOT NULL,
@@ -1104,6 +1104,7 @@ ALTER TABLE ONLY public.merchants_tags
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260909071702'),
 ('20260908122100'),
 ('20260908122000'),
 ('20260908121900'),

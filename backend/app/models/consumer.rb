@@ -45,5 +45,12 @@ class Consumer < ApplicationRecord
   validates :first_name, presence: true
   validates :last_name, presence: true
   validates :email, presence: true, uniqueness: true
-  validates :dni, presence: true, uniqueness: true
+  # `dni` is intentionally NOT required at registration: per design.md
+  # (Decisión 1), the DNI is loaded by the waiter at checkout in the
+  # physical restaurant, not by the consumer when they sign up in the app.
+  # It stays unique whenever it IS present — `allow_nil: true` skips the
+  # uniqueness check for nil, and `idx_consumers_dni_bidx` (a plain, non-
+  # partial unique index) doesn't collide across multiple NULLs either,
+  # since Postgres treats each NULL as distinct for uniqueness purposes.
+  validates :dni, uniqueness: true, allow_nil: true
 end

@@ -34,7 +34,7 @@ RSpec.describe "Registrations", type: :request do
               dni: { type: :string },
               phone: { type: :string }
             },
-            required: %w[email password password_confirmation first_name last_name dni]
+            required: %w[email password password_confirmation first_name last_name]
           }
         },
         required: %w[registration]

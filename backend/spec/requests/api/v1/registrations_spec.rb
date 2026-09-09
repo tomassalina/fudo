@@ -19,6 +19,24 @@ RSpec.describe "Api::V1::Registrations", type: :request do
       expect(json_response["consumer"]).not_to have_key("dni")
     end
 
+    it "creates a consumer without a dni (loaded later by the waiter at checkout, not at registration)" do
+      post "/api/v1/registrations", params: { registration: valid_attrs.except(:dni) }
+
+      expect(response).to have_http_status(:created)
+      expect(json_response["token"]).to be_present
+      consumer = Consumer.find(json_response["consumer"]["id"])
+      expect(consumer.dni).to be_nil
+    end
+
+    it "allows multiple consumers to register without a dni" do
+      post "/api/v1/registrations", params: { registration: valid_attrs.except(:dni) }
+      expect(response).to have_http_status(:created)
+
+      post "/api/v1/registrations",
+        params: { registration: valid_attrs.except(:dni).merge(email: "another-consumer@example.com") }
+      expect(response).to have_http_status(:created)
+    end
+
     it "stamps the new consumer as its own created_by (self-registration)" do
       post "/api/v1/registrations", params: { registration: valid_attrs }
 

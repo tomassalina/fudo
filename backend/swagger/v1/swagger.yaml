@@ -2521,7 +2521,6 @@ paths:
                   - password_confirmation
                   - first_name
                   - last_name
-                  - dni
               required:
               - registration
   "/api/v1/search_histories":
