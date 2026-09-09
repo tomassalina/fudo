@@ -2,6 +2,8 @@
 # "sin_tacc", "con_delivery"). Not DB-unique on `name`, so callers that want
 # to avoid duplicates (e.g. seeds) should use `find_or_create_by!`.
 class Tag < ApplicationRecord
+  include SoftDeletable
+
   has_many :merchants_tags, dependent: :destroy
   has_many :merchants, through: :merchants_tags
 

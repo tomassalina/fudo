@@ -1,4 +1,6 @@
 class Merchant < ApplicationRecord
+  include SoftDeletable
+
   # The `type` column is a native Postgres enum (merchant_type_enum), not a
   # Rails STI discriminator. Disable STI so `type=` behaves like any other
   # attribute.
@@ -41,4 +43,40 @@ class Merchant < ApplicationRecord
   validates :city, presence: true
   validates :latitude, presence: true
   validates :longitude, presence: true
+
+  # Shared filtering logic used by both Api::V1::MerchantsController#index
+  # (raw query params) and Api::V1::SearchController#create (filters parsed
+  # from natural language via SearchQueryParser). Callers own parsing their
+  # own input into this shape — in particular, `tags` here is expected to
+  # already be an array of tag names, not a comma-separated string.
+  def self.search(neighborhood: nil, type: nil, tags: [], price_per_person: nil)
+    scope = all
+    scope = scope.where(neighborhood: neighborhood) if neighborhood.present?
+    scope = scope.where(type: type) if type.present?
+    scope = filter_by_tags(scope, tags)
+    scope = filter_by_price_per_person(scope, price_per_person)
+    scope
+  end
+
+  def self.filter_by_tags(scope, tags)
+    tag_names = Array(tags).map(&:to_s).map(&:strip).reject(&:blank?)
+    return scope if tag_names.empty?
+
+    # Case-insensitive on purpose: tags here can come straight from Gemini's
+    # parsed output (see SearchQueryParser), which is prompted to use
+    # lowercase tags but never guaranteed to — an exact `where(name: ...)`
+    # match would silently drop matches on any casing difference.
+    scope.joins(:tags).where("LOWER(tags.name) IN (?)", tag_names.map(&:downcase)).distinct
+  end
+  private_class_method :filter_by_tags
+
+  def self.filter_by_price_per_person(scope, price_per_person)
+    return scope if price_per_person.blank?
+
+    scope.where(
+      "price_per_person_min <= :price AND price_per_person_max >= :price",
+      price: price_per_person
+    )
+  end
+  private_class_method :filter_by_price_per_person
 end

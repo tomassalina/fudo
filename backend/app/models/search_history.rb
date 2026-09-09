@@ -1,6 +1,8 @@
 # The table is named `search_history` (singular) rather than the Rails-default
 # pluralized `search_histories`, so the table name is set explicitly.
 class SearchHistory < ApplicationRecord
+  include SoftDeletable
+
   self.table_name = "search_history"
 
   belongs_to :consumer

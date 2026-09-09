@@ -45,5 +45,8 @@ module Backend
     # relies on native Postgres enum types (see db/structure.sql), which schema.rb
     # cannot represent faithfully.
     config.active_record.schema_format = :sql
+
+    # Rate limiting / abuse protection (see config/initializers/rack_attack.rb).
+    config.middleware.use Rack::Attack
   end
 end
