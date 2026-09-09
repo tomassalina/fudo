@@ -14,7 +14,12 @@ RSpec.describe "Api::V1::Search", type: :request do
     "un café tranquilo en Recoleta",
     "pizza vegetariana en Belgrano sin importar el precio",
     "un bar con buena onda",
-    "un bar abierto ahora que tenga premio por visitas"
+    "un bar abierto ahora que tenga premio por visitas",
+    # Exercises the "query"/"result_mode" fields: a dish/ingredient name
+    # ("milanesa") and a specific merchant name ("la parrilla de Borges"),
+    # neither of which maps to a fixed type/tags enum value.
+    "quiero comer milanesa",
+    "busco la parrilla de Borges"
   ].freeze
 
   describe "POST /api/v1/search" do
@@ -39,7 +44,7 @@ RSpec.describe "Api::V1::Search", type: :request do
         structured_output = search_history.structured_output
         expect(structured_output).to be_a(Hash).or be_a(ActiveSupport::HashWithIndifferentAccess)
         expect(structured_output.keys).to include(
-          "neighborhood", "type", "tags", "price_per_person", "open", "reward"
+          "neighborhood", "type", "tags", "price_per_person", "open", "reward", "query", "result_mode"
         )
         expect(structured_output["neighborhood"]).to be_a(String).or be_nil
         expect(structured_output["type"]).to be_a(String).or be_nil
@@ -56,6 +61,8 @@ RSpec.describe "Api::V1::Search", type: :request do
         expect(structured_output["price_per_person"]).to be_a(Numeric).or be_nil
         expect(structured_output["open"]).to be_in([ true, false, nil ])
         expect(structured_output["reward"]).to be_in([ true, false, nil ])
+        expect(structured_output["query"]).to be_a(String).or be_nil
+        expect(structured_output["result_mode"]).to be_in([ "lugares", "platos", nil ])
 
         # The response's `filters` must be the exact same structured output
         # persisted to search_history — a client builds the shareable

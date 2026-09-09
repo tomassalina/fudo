@@ -10,11 +10,26 @@
 #
 #   { "neighborhood" => String|nil, "type" => String|nil,
 #     "tags" => Array<String>, "price_per_person" => Numeric|nil,
-#     "open" => true|false|nil, "reward" => true|false|nil }
+#     "open" => true|false|nil, "reward" => true|false|nil,
+#     "query" => String|nil, "result_mode" => String|nil }
+#
+# `query` and `result_mode` close a real gap: this parser is a structured-
+# output FILTER extractor only — it never itself does name/dish matching —
+# but a query naming a specific dish/ingredient (e.g. "quiero comer huevo")
+# or a specific merchant (e.g. "busco la parrilla de Juan") doesn't map to
+# any fixed `type`/`tags` enum at all, and previously fell through with
+# nothing matched. `query` carries that free-text fragment through
+# unstructured, and `result_mode` says whether it's about a place or a dish,
+# so both can flow straight into /buscar's own `q`/`mode` params (see
+# web/lib/search/resolve-ai-search.ts) — /buscar's OWN search bar (tab-aware:
+# `merchant.name` on "Lugares", dish `item.name`/`item.description`/
+# `item.section`/`merchant.name` on "Platos", see
+# web/lib/data/menu-items.ts's `getDishSearchResults`) does the actual
+# free-text matching, never this parser.
 #
 # Deliberately NOT covered: `dist` (needs the visitor's live geolocation,
-# not derivable from text — unlike neighborhood/type/price), `sort`, and
-# `mode` (display/UX choices, not filter constraints).
+# not derivable from text — unlike neighborhood/type/price) and `sort`
+# (a display/UX choice, not a filter constraint).
 #
 # Gemini REST API shape verified on 2026-09-08 against:
 #   - https://ai.google.dev/api/generate-content
@@ -81,9 +96,23 @@ class SearchQueryParser
         # client-only derived field, see app/buscar/page.tsx's own comment on
         # it), so this also just flows through to the client's existing
         # client-side reward filter.
-        reward: { type: "BOOLEAN", nullable: true }
+        reward: { type: "BOOLEAN", nullable: true },
+        # Free-text fragment naming a specific dish/ingredient or merchant
+        # that doesn't map to the fixed `type`/`tags` enums (e.g. "milanesa",
+        # "la parrilla de Borges"). Deliberately unstructured — this parser
+        # never itself matches it against anything; it's returned in
+        # `filters` purely for the client to forward onto /buscar's own `q`
+        # param, which /buscar's own search bar already matches for free
+        # (see resolve-ai-search.ts).
+        query: { type: "STRING", nullable: true },
+        # Whether the query is about a PLACE ("lugares") or a DISH
+        # ("platos") — /buscar's `mode` param. No Merchant.search-side filter
+        # exists for this either (it's a display/tab choice, same situation
+        # as `open`/`reward` above), so it also just flows through to the
+        # client's existing `mode` param (see resolve-ai-search.ts).
+        result_mode: { type: "STRING", nullable: true, enum: %w[lugares platos] }
       },
-      required: %w[neighborhood type tags price_per_person open reward]
+      required: %w[neighborhood type tags price_per_person open reward query result_mode]
     }
   end
 
@@ -117,6 +146,24 @@ class SearchQueryParser
       reward/perk for visiting (e.g. "que tenga premio por visitas",
       "con recompensas"), false if they explicitly say they don't care
       about that, or null if not mentioned at all.
+    - "query": a free-text fragment naming a SPECIFIC dish, ingredient, or
+      merchant that the user mentions and that does NOT map to the "type"
+      or "tags" enums above, or null if the query is fully covered by the
+      other structured fields (or names nothing specific at all). Do not
+      extract neighborhood, type, or tag words into this field — only the
+      leftover specific name. Examples:
+        - "quiero comer huevo" -> query: "huevo"
+        - "busco la parrilla de Borges" -> query: "la parrilla de Borges"
+        - "milanesa napolitana" -> query: "milanesa napolitana"
+        - "algo picante y barato en Palermo" -> query: null (fully covered
+          by tags/price_per_person/neighborhood already)
+    - "result_mode": "platos" if the query is about a specific DISH or
+      ingredient, "lugares" if it's about a specific PLACE/merchant, or
+      null if "query" is null or the query doesn't clearly lean either way.
+      Examples:
+        - "quiero comer huevo" -> result_mode: "platos"
+        - "busco la parrilla de Borges" -> result_mode: "lugares"
+        - "milanesa napolitana" -> result_mode: "platos"
   PROMPT
 
   def self.call(query_text)
@@ -235,7 +282,9 @@ class SearchQueryParser
       valid_tags?(structured["tags"]) &&
       valid_optional_number?(structured["price_per_person"]) &&
       valid_optional_boolean?(structured["open"]) &&
-      valid_optional_boolean?(structured["reward"])
+      valid_optional_boolean?(structured["reward"]) &&
+      valid_optional_string?(structured["query"]) &&
+      valid_result_mode?(structured["result_mode"])
   end
 
   def valid_optional_string?(value)
@@ -244,6 +293,10 @@ class SearchQueryParser
 
   def valid_type?(value)
     value.nil? || (value.is_a?(String) && Merchant.types.key?(value))
+  end
+
+  def valid_result_mode?(value)
+    value.nil? || %w[lugares platos].include?(value)
   end
 
   # Shape-only check (array of strings) — membership in the real tag
