@@ -1,21 +1,21 @@
 # Fudo Consumers API
 
-Rails API-only backend scaffold for **Fudo Consumers**, a restaurant loyalty
-app prototype. This is a scaffolding step only: no business models, real
-endpoints, or hand-written migrations exist yet — that comes in a later
-phase. What's here is the boot-ready application shell (Rails 7.2, Ruby 3.3,
-PostgreSQL, Docker, RSpec, CORS).
+Rails API-only backend for **Fudo Consumers**, a restaurant loyalty app. See
+the root [`README.md`](../README.md) for the full project pitch and the
+[`AGENTS.md`](../AGENTS.md) stack table for canonical versions.
 
 ## Stack
 
-- Ruby 3.3.12 / Rails 7.2 (API-only mode)
-- PostgreSQL 16
-- RSpec (instead of Minitest) for testing
+- Ruby 3.4.10 / Rails 8.1.3.1 (API-only mode)
+- PostgreSQL 18
+- RSpec for testing (`spec/`, including `spec/integration/` request specs)
 - Docker + docker-compose for local development
 - `rack-cors` for cross-origin requests (Flutter / Next.js dev frontends)
 - `bcrypt` for `has_secure_password`
 - `lockbox` + `blind_index` for encrypting/searching sensitive attributes
-  (e.g. national ID fields) in a later phase
+  (e.g. national ID fields)
+- `rswag-api` / `rswag-ui` / `rswag-specs` — OpenAPI docs generated from
+  `spec/integration/`, served at `/api-docs`
 
 ## Requirements
 
@@ -63,22 +63,11 @@ docker-compose will both pick it up.
 docker-compose run --rm web bundle exec rspec
 ```
 
-There are no example specs yet (RSpec is installed and configured via
-`rails generate rspec:install`).
-
 ## Project layout notes
 
-- `app/services/` and `app/serializers/` exist as empty scaffolding
-  (`.keep` files only) — service objects and serialization logic land in
-  the next phase.
 - `config/initializers/cors.rb` allows any `localhost` origin (any port),
   over http or https, for all resources/methods — meant for local frontend
   development only.
-
-## Verification status
-
-Docker build and boot were verified on this machine: `docker-compose up
---build` was run, `GET /up` returned `200 OK`, `bundle exec rspec` ran
-successfully (0 examples, 0 failures), and the containers/volumes were torn
-down (`docker-compose down -v`) afterwards, so no local state is left behind
-by this scaffold.
+- `spec/integration/api/v1/` holds the rswag request specs that double as
+  the source for the OpenAPI doc served at `/api-docs` — see the root
+  [`README.md`](../README.md#documentación-de-la-api).

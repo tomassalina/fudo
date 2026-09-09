@@ -121,14 +121,23 @@ Datos 100% ficticios pensados solo para probar la app, no son de una persona rea
 - El consumer de demo tiene 116 visitas registradas, repartidas en 27 locales distintos, con fidelización (`loyalty_rules`) ya activa en los 30 merchants.
 - 3 favoritos y 3 regalos enviados de ejemplo para ese mismo consumer (todavía no hay regalos recibidos sembrados).
 
-## Documentación
+## Documentación — leer en este orden
 
 1. [`PRD.md`](./PRD.md) — problema, ventaja injusta, alcance y fuera de alcance del producto.
 2. [`PLAN.md`](./PLAN.md) — plan técnico en 6 fases, cómo se trabajó en paralelo (worktrees de git).
 3. [`backend/db/structure.sql`](./backend/db/structure.sql) — fuente de verdad ejecutable del esquema de base de datos, generada por Rails.
 4. [`docs/database-schema.drawio`](./docs/database-schema.drawio) — diagrama visual del esquema, hecho a mano.
 5. [`openspec/changes/fudo-consumers-mvp/design.md`](./openspec/changes/fudo-consumers-mvp/design.md) — decision log técnico (13 decisiones, con su "por qué").
-6. [`AGENTS.md`](./AGENTS.md) — contexto canónico para cualquier persona o agente que trabaje en el repo (`CLAUDE.md` es un alias que apunta acá).
+6. [`openspec/changes/fudo-consumers-mvp/learnings.md`](./openspec/changes/fudo-consumers-mvp/learnings.md) — aprendizajes y decisiones no triviales tomadas durante la implementación.
+7. [`openspec/changes/fudo-consumers-mvp/decisions-index.md`](./openspec/changes/fudo-consumers-mvp/decisions-index.md) — índice de decisiones del change activo.
+
+Adicional: [`AGENTS.md`](./AGENTS.md) — contexto canónico para cualquier persona o agente que trabaje en el repo (`CLAUDE.md` es un alias que apunta acá).
+
+## Documentación de la API
+
+Con el backend arriba (`docker compose up`), la API expone Swagger UI en [`http://localhost:3000/api-docs`](http://localhost:3000/api-docs).
+
+El documento OpenAPI (`swagger.yaml`) se genera a partir de los request specs en [`backend/spec/integration/`](./backend/spec/integration/) vía `rswag-specs` (`bundle exec rails rswag:specs:swaggerize`), y se sirve en runtime con `rswag-api` + `rswag-ui`. La documentación de cada endpoint vive junto a su spec, no se escribe a mano por separado — si el spec no refleja el comportamiento real, la documentación tampoco.
 
 ## Convenciones
 
