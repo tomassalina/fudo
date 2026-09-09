@@ -101,6 +101,22 @@ abstract class DataSource {
   /// Gift cards sent by the demo consumer ("Regalar" history, if surfaced).
   Future<List<Gift>> getGifts();
 
+  /// Buys and sends a gift card ("Regalar" tab CTA) — the authenticated
+  /// consumer is always the sender.
+  ///
+  /// `expires_at` is a required field on the real API, but the "Regalar" UI
+  /// (`features/gifting/gifting_screen.dart`) has no expiration concept
+  /// today. **Unconfirmed product decision, taken here for lack of anyone
+  /// else to ask**: gift cards default to expiring exactly one year after
+  /// purchase (`now + 365 days`), matching common gift-card practice. Revisit
+  /// if product ever wants this configurable/visible in the UI.
+  Future<Gift> createGift({
+    required GiftType type,
+    required double amount,
+    required String recipientPhone,
+    String? message,
+  });
+
   /// The demo consumer's past searches (home screen "Continuar búsqueda").
   Future<List<SearchHistory>> getSearchHistory();
 }

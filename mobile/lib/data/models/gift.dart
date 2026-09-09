@@ -117,6 +117,17 @@ extension GiftStatusJson on GiftStatus {
 /// NOTE: `gifts.id` is a `bigint` (serial) primary key, NOT a uuid — only
 /// `sender_consumer_id`/`recipient_consumer_id` are uuids (foreign keys
 /// into `consumers`). Confirmed against `backend/db/structure.sql`.
+///
+/// ⚠️ `GET /api/v1/gifts` (list) confirmed live to omit `recipient_phone`
+/// entirely from each row — only `POST /api/v1/gifts`'s 201 response
+/// includes it. Found by review: without the `?? ''` fallback below,
+/// `Gift.fromJson` would throw a null-cast error the instant
+/// `RemoteDataSource.getGifts()` is called (nothing in the UI reads a
+/// list-sourced gift's `recipientPhone` today, so `''` is a safe
+/// placeholder rather than a real data loss — same "default the missing
+/// field, document it" pattern already used on `Merchant`'s
+/// address/country/state for the same reason: the list endpoint returning
+/// a slimmer shape than the show/create endpoints).
 @immutable
 class Gift {
   const Gift({
@@ -153,8 +164,8 @@ class Gift {
       senderConsumerId: json['sender_consumer_id'] as String,
       recipientConsumerId: json['recipient_consumer_id'] as String?,
       type: GiftTypeJson.fromJson(json['type'] as String),
-      amount: (json['amount'] as num).toDouble(),
-      recipientPhone: json['recipient_phone'] as String,
+      amount: _parseAmount(json['amount']),
+      recipientPhone: json['recipient_phone'] as String? ?? '',
       message: json['message'] as String?,
       expiresAt: DateTime.parse(json['expires_at'] as String),
       status: GiftStatusJson.fromJson(json['status'] as String),
@@ -179,3 +190,15 @@ class Gift {
     };
   }
 }
+
+/// Parses `amount`, which arrives as a [num] from local JSON fixtures but as
+/// a [String] from the real backend API (a Postgres `numeric` column,
+/// serialized as a string to avoid floating-point precision loss — confirmed
+/// live against `POST /api/v1/gifts`, e.g. `"amount": "12000.0"`; same quirk
+/// as `price`/`price_per_person_min/max` documented on
+/// `MenuItem`/`Merchant`).
+double _parseAmount(Object? value) => switch (value) {
+  num n => n.toDouble(),
+  String s => double.parse(s),
+  _ => throw ArgumentError('Expected num or String for amount, got: $value'),
+};

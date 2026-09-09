@@ -1,25 +1,41 @@
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+// `flutter_riverpod` exports its own `Consumer` widget, which clashes with
+// our domain `Consumer` model — hidden the same way
+// `features/my_places/my_places_screen.dart` does, even though this file
+// doesn't need the domain model directly (keeps the convention consistent).
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Consumer;
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/formatting/currency_format.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/connection_mode.dart';
 import '../../data/models/gift.dart';
+import '../../data/providers.dart';
 
 /// "Regalar" tab: buy and send a Fudo gift card to another person.
 ///
-/// No backend / payment gateway exists yet (see `docs/design-brief.md`
-/// §2.6 and §3) — "buying" a gift card is entirely local UI state that
-/// culminates in a success overlay, matching the Claude Design prototype.
-class GiftingScreen extends StatefulWidget {
+/// In [ConnectionMode.local] (the default), "buying" a gift card is entirely
+/// local UI state that culminates in a success overlay, matching the Claude
+/// Design prototype (see `docs/design-brief.md` §2.6 and §3) — no backend
+/// call is ever made.
+///
+/// In [ConnectionMode.remote], the CTA calls the real
+/// `DataSource.createGift` (`POST /api/v1/gifts`) before showing the success
+/// overlay — same "real call gated by connection mode, with loading/error
+/// handling" pattern as `features/my_places/my_places_screen.dart`'s login
+/// flow. On failure, the success overlay is never shown and the form is
+/// never reset.
+class GiftingScreen extends ConsumerStatefulWidget {
   const GiftingScreen({super.key});
 
   @override
-  State<GiftingScreen> createState() => _GiftingScreenState();
+  ConsumerState<GiftingScreen> createState() => _GiftingScreenState();
 }
 
-class _GiftingScreenState extends State<GiftingScreen> {
+class _GiftingScreenState extends ConsumerState<GiftingScreen> {
   // Card + inter-card spacing, used to center a tapped card programmatically
   // (see [_selectTier]).
   static const _cardWidth = 250.0;
@@ -32,6 +48,16 @@ class _GiftingScreenState extends State<GiftingScreen> {
   final TextEditingController _messageController = TextEditingController();
 
   int _selectedIndex = 0;
+
+  /// `true` while a real [ConnectionMode.remote] `createGift` request is in
+  /// flight. Always `false` in [ConnectionMode.local] — that path never
+  /// awaits anything, same as `my_places_screen.dart`'s login flow.
+  bool _isSubmitting = false;
+
+  /// Set when a real remote `createGift` attempt fails — shown under the CTA
+  /// button, cleared on the next submit attempt. Always `null` in
+  /// [ConnectionMode.local].
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -86,7 +112,7 @@ class _GiftingScreenState extends State<GiftingScreen> {
   // the phone is optional (an empty phone just changes the success
   // overlay's copy to "Lista para compartir por WhatsApp" instead of
   // "Enviada a {phone}", it never blocks the purchase itself).
-  bool get _canSubmit => _resolvedAmount != null;
+  bool get _canSubmit => _resolvedAmount != null && !_isSubmitting;
 
   String get _ctaLabel {
     if (_isCustomAmount) {
@@ -112,11 +138,42 @@ class _GiftingScreenState extends State<GiftingScreen> {
     );
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (!_canSubmit) return;
     final amount = _resolvedAmount!;
     final phone = _phoneController.text.trim();
     final type = _selectedType;
+    final message = _messageController.text.trim();
+
+    if (ref.read(connectionModeProvider) == ConnectionMode.remote) {
+      setState(() {
+        _isSubmitting = true;
+        _errorMessage = null;
+      });
+      try {
+        await ref
+            .read(dataSourceProvider)
+            .createGift(
+              type: type,
+              amount: amount,
+              recipientPhone: phone,
+              message: message.isEmpty ? null : message,
+            );
+      } on DioException catch (error) {
+        if (!mounted) return;
+        setState(() => _errorMessage = _remoteCreateGiftErrorMessage(error));
+        return;
+      } catch (_) {
+        if (!mounted) return;
+        setState(
+          () => _errorMessage = 'No pudimos conectarnos. Revisá tu conexión.',
+        );
+        return;
+      } finally {
+        if (mounted) setState(() => _isSubmitting = false);
+      }
+      if (!mounted) return;
+    }
 
     showDialog<void>(
       context: context,
@@ -132,6 +189,23 @@ class _GiftingScreenState extends State<GiftingScreen> {
         },
       ),
     );
+  }
+
+  /// Reads the backend's `{"errors": {...}}` body on a 422 (per the
+  /// confirmed `POST /gifts` contract) into a single line; falls back to a
+  /// generic connectivity message for anything else — same shape as
+  /// `my_places_screen.dart`'s `_remoteLoginErrorMessage`.
+  String _remoteCreateGiftErrorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final errors = data['errors'];
+      if (errors is Map<String, dynamic> && errors.isNotEmpty) {
+        return errors.entries
+            .map((entry) => '${entry.key}: ${entry.value}')
+            .join(', ');
+      }
+    }
+    return 'No pudimos conectarnos. Revisá tu conexión.';
   }
 
   void _resetForm() {
@@ -252,10 +326,19 @@ class _GiftingScreenState extends State<GiftingScreen> {
               const SizedBox(height: 28),
               _GiftCtaButton(
                 key: const ValueKey('giftCtaButton'),
-                label: _ctaLabel,
+                label: _isSubmitting ? 'Enviando…' : _ctaLabel,
                 enabled: _canSubmit,
                 onTap: _handleSubmit,
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  key: const ValueKey('giftErrorMessage'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),

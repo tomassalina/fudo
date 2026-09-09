@@ -5,6 +5,7 @@
 // screen's form state.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mobile/core/theme/app_theme.dart';
@@ -12,8 +13,15 @@ import 'package:mobile/features/gifting/gifting_screen.dart';
 
 void main() {
   Future<void> pumpGiftingScreen(WidgetTester tester) async {
+    // `GiftingScreen` is now a `ConsumerStatefulWidget` (it reads
+    // `connectionModeProvider`/`dataSourceProvider` on submit — see
+    // `gifting_screen.dart`), so it needs a `ProviderScope` ancestor even in
+    // these tests, which never override anything and so keep exercising the
+    // default `ConnectionMode.local` behavior.
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.dark, home: const GiftingScreen()),
+      ProviderScope(
+        child: MaterialApp(theme: AppTheme.dark, home: const GiftingScreen()),
+      ),
     );
     await tester.pumpAndSettle();
   }

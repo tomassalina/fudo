@@ -34,11 +34,12 @@ import '../models/visit_summary.dart';
 ///   `LocalDataSource`) is "give me everything", so [_getAllPages] loops
 ///   until `current_page == total_pages` and concatenates.
 /// - **Numeric fields as strings**: `latitude`/`longitude`/
-///   `price_per_person_min/max` (merchants) and `price` (menu items) are
-///   serialized as JSON strings, not numbers (Postgres `numeric`/`decimal`
-///   columns, to avoid float precision loss). This is handled inside
-///   `Merchant.fromJson`/`MenuItem.fromJson` themselves (a JSON-parsing
-///   concern, not a remote-vs-local one), not here.
+///   `price_per_person_min/max` (merchants), `price` (menu items) and
+///   `amount` (gifts) are serialized as JSON strings, not numbers (Postgres
+///   `numeric`/`decimal` columns, to avoid float precision loss). This is
+///   handled inside `Merchant.fromJson`/`MenuItem.fromJson`/`Gift.fromJson`
+///   themselves (a JSON-parsing concern, not a remote-vs-local one), not
+///   here.
 ///
 /// [connectionMode] (`data/connection_mode.dart`) still defaults to `local`
 /// — this class is only reachable with an explicit
@@ -324,9 +325,49 @@ class RemoteDataSource implements DataSource {
     await _dio.delete<void>('/favorites/${favorite.id}');
   }
 
+  /// `GET /api/v1/gifts` (confirmed live) omits `recipient_phone`/`message`
+  /// from every row — [Gift.fromJson] defaults `recipientPhone` to `''` for
+  /// exactly that reason (see that class's doc comment). Don't rely on
+  /// either field being meaningful on a [Gift] that came from this method;
+  /// they're only real on the object [createGift] returns from the 201.
   @override
   Future<List<Gift>> getGifts() {
     return _getAllPages('/gifts', Gift.fromJson);
+  }
+
+  /// `POST /api/v1/gifts`, body `{"gift": {"type", "amount",
+  /// "recipient_phone", "expires_at", "message"?}}` (confirmed via the
+  /// OpenAPI doc). `sender_consumer_id` always comes from the authenticated
+  /// consumer server-side — this never sends `recipient_consumer_id`, since
+  /// the "Regalar" UI only ever collects a phone number, not a consumer id.
+  /// 201 on success, parsed straight into a [Gift]; 422 (validation errors,
+  /// per the OpenAPI doc) is left as a thrown [DioException] for the caller
+  /// to decide what to do with, same posture as [addFavorite].
+  ///
+  /// See [DataSource.createGift]'s doc for the `expires_at` default — this
+  /// method itself just sends whatever `expiresAt` it's given the ISO 8601
+  /// way the API expects.
+  @override
+  Future<Gift> createGift({
+    required GiftType type,
+    required double amount,
+    required String recipientPhone,
+    String? message,
+  }) async {
+    final expiresAt = DateTime.now().add(const Duration(days: 365));
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/gifts',
+      data: {
+        'gift': {
+          'type': type.toJson(),
+          'amount': amount,
+          'recipient_phone': recipientPhone,
+          'expires_at': expiresAt.toIso8601String(),
+          'message': ?message,
+        },
+      },
+    );
+    return Gift.fromJson(response.data!);
   }
 
   @override

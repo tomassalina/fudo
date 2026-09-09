@@ -318,6 +318,37 @@ class LocalDataSource implements DataSource {
     return gifts;
   }
 
+  /// Adds a fake [Gift] to the in-memory cache, same "mutate the cached list
+  /// directly" approach as [addFavorite] — no real persistence behind it.
+  /// `expiresAt` defaults to one year from now; see [DataSource.createGift]'s
+  /// doc for why (unconfirmed product decision).
+  @override
+  Future<Gift> createGift({
+    required GiftType type,
+    required double amount,
+    required String recipientPhone,
+    String? message,
+  }) async {
+    final gifts = await getGifts();
+    final consumer = await getCurrentConsumer();
+    final nextId = gifts.isEmpty
+        ? 1
+        : gifts.map((g) => g.id).reduce((a, b) => a > b ? a : b) + 1;
+    final now = DateTime.now();
+    final gift = Gift(
+      id: nextId,
+      senderConsumerId: consumer.id,
+      type: type,
+      amount: amount,
+      recipientPhone: recipientPhone,
+      message: message,
+      expiresAt: now.add(const Duration(days: 365)),
+      status: GiftStatus.pending,
+    );
+    _gifts = [...gifts, gift];
+    return gift;
+  }
+
   @override
   Future<List<SearchHistory>> getSearchHistory() async {
     final cached = _searchHistory;
