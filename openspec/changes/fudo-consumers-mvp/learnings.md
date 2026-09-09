@@ -119,6 +119,25 @@ La solución elegida fue: `LeafletMap` reporta `popupopen`/`popupclose` (vía un
 
 **Confirmado con Playwright/CDP (1440×900, `/buscar`):** con 3 columnas reales y 10 cards visibles (`10 % 3 = 1`), aparecieron exactamente 2 skeletons a la derecha de la última card; con 2 columnas reales (viewport 1120px) y 10 cards (`10 % 2 = 0`), aparecieron exactamente 2 skeletons formando una fila nueva completa. El comportamiento de phone (`RowSkeleton`, contenedor flex separado, cantidad fija de 3) no se tocó.
 
+## Decisión 24: Gotcha CSS — `aspect-ratio` en un ítem flex necesita `overflow-hidden` propio, no alcanza con el del contenedor (`MerchantCard.tsx`, layout `card`)
+
+**Fecha:** 2026-09-09
+**Estado:** Aceptada, implementada (commit `3703399`)
+
+**Bug reportado:** en `/buscar` desktop, las cards de merchant del grid renderizaban con alturas inconsistentes — algunas visiblemente más altas que sus hermanas en la misma fila, según la relación de aspecto natural de la foto de portada (una foto vertical-ish de comida rompía la altura de toda la card).
+
+**Causa real (no la esperada):** el wrapper de la imagen (`<Link>` con `aspect-[16/10] w-full`) ya tenía la relación de aspecto fija desde el primer commit de esta card (`eab9471`) — no era un `aspect-ratio`/`object-cover` faltante como parecía a simple vista, y confirmado con Playwright las cards de una misma fila SÍ tenían la misma altura entre sí; el problema era fila-a-fila. La causa real: `Card` (el `<article>` contenedor) es `flex flex-col`, y ese `<Link>` es su ítem flex directo. Un ítem flex sin `min-height` explícito tiene por spec un **`min-height: auto`** que, cuando el ítem contiene un elemento reemplazado (el `<img>`, dimensionado con `h-full w-full` en porcentaje) y su propio `overflow` es `visible`, resuelve al tamaño mínimo de contenido — que para una foto usa la relación de aspecto **natural** de la imagen, no la declarada por `aspect-ratio`. Si esa altura de contenido (derivada de la imagen natural) superaba la altura calculada por `aspect-[16/10]`, el layout de flexbox estiraba el ítem (y la card entera) para acomodarla. Confirmado con Playwright midiendo el wrapper de la imagen directamente: una foto de `1200×1800` (portrait) medía `304×455px` en vez de los `304×190px` esperados por `16/10`, mientras que fotos landscape (`1200×800`) medían `304×202px` — todas midiendo, en la práctica, la altura que les daría su propia relación de aspecto natural a ese ancho, como si `aspect-ratio` no existiera.
+
+`Card` ya tiene `overflow-hidden` en su propio className, pero eso solo recorta visualmente *después* de que el `<Link>` ya creció más allá de su caja — el `overflow` que importa para el cálculo de `min-height: auto` de un ítem flex es el del ítem mismo, no el de un ancestro.
+
+**Fix:** agregar `overflow-hidden` al `<Link>` (el wrapper de la imagen), no solo al `<Card>`. Por spec, cuando el `overflow` de un ítem flex no es `visible`, su `min-height: auto` resuelve a `0` en vez de al tamaño mínimo de contenido — con eso `aspect-[16/10]` + `object-cover` vuelven a ser los únicos que deciden el tamaño de la caja, sin importar las dimensiones naturales de la foto. Un diff de una sola línea.
+
+**Por qué no era una regresión:** se revisó `git log -p` de `MerchantCard.tsx` completo — la línea `aspect-[16/10]` nunca tuvo `overflow-hidden` propio desde el commit original que creó esta card; el layout `row` (mobile, caja fija `h-[88px] w-[88px]`) sí tuvo `overflow-hidden` desde siempre porque no depende de `aspect-ratio`. Era un bug latente desde el día uno, recién visible con datos mock que incluyeran una foto de relación de aspecto marcadamente distinta a 16:10 — no un fix anterior que se haya roto.
+
+**Confirmado contra el diseño de referencia:** `docs/design-reference/Fudo Customers.dc.html` (línea 353-355, el card real de `places`, no el skeleton) usa el mismo patrón — imagen con `position: relative; aspect-ratio: 16/10` — pero el card contenedor ahí es HTML/CSS plano (`div` en flujo normal, sin `display: flex`), así que el bug de `min-height: auto` de flexbox nunca aparece en la referencia; solo se manifestó al traducir ese layout a un `Card` con `flex flex-col` en React.
+
+**Por qué importa para quien toque más cards con imágenes de tamaño fijo:** cualquier caja con `aspect-ratio` + un `<img>`/elemento reemplazado adentro, si es (o puede llegar a ser) ítem directo de un contenedor `flex` o `grid`, necesita su propio `overflow-hidden` (o `min-h-0` explícito) — no alcanza con que el contenedor tenga `overflow-hidden`. Vale también para `MerchantMapCard` y cualquier otra card nueva que reutilice este patrón de imagen recortada.
+
 ## Nota operativa: colisión de puertos entre worktrees de Docker Compose
 
 **Fecha:** 2026-09-08
