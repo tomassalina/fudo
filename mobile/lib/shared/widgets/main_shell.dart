@@ -12,15 +12,43 @@ import '../../features/loyalty/qr_sheet.dart';
 /// `tab_name` analytics property (see [AnalyticsService.trackTabChanged]).
 const List<String> _tabNames = ['Inicio', 'Buscar', 'Mis Lugares', 'Regalar'];
 
+/// How many logical pixels the content must scroll in one direction before
+/// that direction "counts" toward hiding/showing the nav — mirrors the
+/// default `threshold` in the web reference's scroll-direction hook
+/// (`web/lib/hooks/use-scroll-direction.ts`), so both platforms feel the
+/// same on a shared demo device.
+const double _scrollHideThreshold = 8;
+
+/// While the scrollable is within this many pixels of the top, the nav
+/// always stays visible regardless of direction — same as the web hook's
+/// `topOffset` default (there's no content above to have scrolled past).
+const double _scrollHideTopOffset = 0;
+
 /// Bottom navigation shell shared by the four main tabs (Inicio, Search,
 /// My Places, Gifting). Wraps whatever branch go_router is currently
 /// showing and drives navigation via [onTap].
 ///
-/// Visually this is the design brief's "pill" bottom nav (§2.10): a floating,
-/// blurred pill — not a standard Material [BottomNavigationBar] pinned flush
-/// to the screen edge — with a raised central QR action that opens
-/// [LoyaltyQrSheet] instead of taking part in tab navigation.
-class MainShell extends ConsumerWidget {
+/// Visually this is the design brief's "pill" bottom nav (§2.10), rebuilt to
+/// match the web mobile nav (`web/components/layout/nav/PhoneNav.tsx`,
+/// commit `5e0fbd3` and the auto-hide follow-up): every item — including
+/// the QR action — sits flat at the same level (no raised/elevated FAB
+/// anymore), and the whole pill hides on scroll-down / reappears on
+/// scroll-up.
+///
+/// **Known gap vs. the web reference (intentionally left out of this
+/// change):** the web nav's 5th slot is an always-visible Perfil/Login item
+/// (`nav-items.ts`'s `phoneNavRight`) that swaps between a profile route and
+/// `/login` depending on auth state. Flutter has no profile or login screen
+/// yet (only `features/auth/register_screen.dart` exists) and its 4th
+/// routable tab is "Mis Lugares", which has no equivalent in the web nav or
+/// the design reference's `tabDefs` (`docs/design-reference/Fudo App.dc.html`).
+/// Porting the Perfil/Login behavior would mean either fabricating a
+/// destination for a screen that doesn't exist, or removing "Mis Lugares"
+/// outright — both are product decisions, not implementation details, so
+/// they're left for the product owner rather than guessed under time
+/// pressure. `isLoggedInProvider` (`data/providers.dart`) is already
+/// available for whoever picks this up next.
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({
     required this.currentIndex,
     required this.onTap,
@@ -32,6 +60,14 @@ class MainShell extends ConsumerWidget {
   final ValueChanged<int> onTap;
   final Widget child;
 
+  @override
+  ConsumerState<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends ConsumerState<MainShell> {
+  bool _navVisible = true;
+  double _lastScrollY = 0;
+
   void _openQrSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -40,66 +76,106 @@ class MainShell extends ConsumerWidget {
     );
   }
 
-  void _handleTap(WidgetRef ref, int index) {
+  void _handleTap(int index) {
     ref.read(analyticsServiceProvider).trackTabChanged(_tabNames[index]);
-    onTap(index);
+    widget.onTap(index);
+  }
+
+  /// Direction-based show/hide, ported from the web reference's
+  /// `useScrollDirection` (`web/lib/hooks/use-scroll-direction.ts`): stays
+  /// visible near the top of the scrollable, hides once the content
+  /// scrolls down past [_scrollHideThreshold], and reappears the moment it
+  /// scrolls back up. Only vertical scroll notifications count, so a nested
+  /// horizontal carousel (e.g. a featured-places row) bubbling its own
+  /// [ScrollNotification] doesn't flicker the nav.
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is! ScrollUpdateNotification) return false;
+    if (notification.metrics.axis != Axis.vertical) return false;
+
+    final currentY = notification.metrics.pixels;
+    final delta = currentY - _lastScrollY;
+
+    if (currentY <= _scrollHideTopOffset) {
+      _lastScrollY = currentY;
+      if (!_navVisible) setState(() => _navVisible = true);
+      return false;
+    }
+
+    if (delta.abs() < _scrollHideThreshold) return false;
+
+    final goingDown = delta > 0;
+    _lastScrollY = currentY;
+    if (_navVisible == goingDown) {
+      setState(() => _navVisible = !goingDown);
+    }
+    return false;
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       // The pill floats over the content instead of pushing it up — the
       // body draws behind the nav bar's transparent margins.
       extendBody: true,
-      body: child,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: widget.child,
+      ),
       bottomNavigationBar: _FloatingBottomNav(
-        currentIndex: currentIndex,
-        onTap: (index) => _handleTap(ref, index),
+        currentIndex: widget.currentIndex,
+        visible: _navVisible,
+        onTap: _handleTap,
         onQrTap: () => _openQrSheet(context),
       ),
     );
   }
 }
 
-/// The floating pill itself: a blurred, semi-transparent bar holding the
-/// three tab destinations, with the circular QR action raised above it.
+/// The floating pill itself: a blurred, semi-transparent bar holding all 5
+/// destinations flat — 4 routable tabs plus the QR quick action, none
+/// raised above the others (see `PhoneNav.tsx`'s `TabLink`/`TabButton`) —
+/// and animated in/out of view per [visible].
 class _FloatingBottomNav extends StatelessWidget {
   const _FloatingBottomNav({
     required this.currentIndex,
+    required this.visible,
     required this.onTap,
     required this.onQrTap,
   });
 
   final int currentIndex;
+  final bool visible;
   final ValueChanged<int> onTap;
   final VoidCallback onQrTap;
 
   static const double _pillHeight = 64;
-  static const double _qrDiameter = 60;
-
-  /// How much of the QR button's circle dips into the pill's top edge.
-  /// Kept small on purpose: tab icons sit vertically centered in the pill,
-  /// so anything past ~20px would start covering the middle tab's icon.
-  static const double _qrOverlapIntoPill = 16;
+  static const Duration _visibilityDuration = Duration(milliseconds: 300);
 
   @override
   Widget build(BuildContext context) {
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        0,
-        20,
-        bottomSafeArea > 0 ? bottomSafeArea + 8 : 20,
-      ),
-      child: SizedBox(
-        height: _pillHeight + (_qrDiameter - _qrOverlapIntoPill),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            ClipRRect(
+    // pointer-events-none while hidden (web's `translate-y-24 opacity-0
+    // pointer-events-none`) — IgnorePointer keeps a hidden pill from eating
+    // taps on content underneath it.
+    return IgnorePointer(
+      ignoring: !visible,
+      child: AnimatedSlide(
+        duration: _visibilityDuration,
+        curve: Curves.easeOut,
+        offset: visible ? Offset.zero : const Offset(0, 1.6),
+        child: AnimatedOpacity(
+          duration: _visibilityDuration,
+          curve: Curves.easeOut,
+          opacity: visible ? 1 : 0,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              bottomSafeArea > 0 ? bottomSafeArea + 8 : 20,
+            ),
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(AppTheme.radiusPill),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
@@ -135,6 +211,7 @@ class _FloatingBottomNav extends StatelessWidget {
                           onTap: () => onTap(1),
                         ),
                       ),
+                      _FlatQrButton(onTap: onQrTap),
                       Expanded(
                         child: _NavItem(
                           icon: Symbols.storefront,
@@ -156,11 +233,7 @@ class _FloatingBottomNav extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              bottom: _pillHeight - _qrOverlapIntoPill,
-              child: _QrButton(onTap: onQrTap),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -234,44 +307,31 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// Central quick-action button: opens [LoyaltyQrSheet] directly, it does not
-/// change [MainShell.currentIndex] or participate in tab navigation.
-class _QrButton extends StatelessWidget {
-  const _QrButton({required this.onTap});
+/// QR quick action, flat at the same level as the other nav items — no
+/// raised/elevated circular FAB treatment. An earlier version raised this
+/// as a circle dipping above the pill; the real reference design has no
+/// such elevation (see `PhoneNav.tsx`'s doc comment and `TabButton`, and
+/// `openspec/changes/fudo-consumers-mvp/learnings.md` Decisión 19, which
+/// documents this exact product correction on the web side). Opens
+/// [LoyaltyQrSheet] directly — it does not change [MainShell.currentIndex]
+/// or participate in tab navigation, so unlike [_NavItem] it never renders
+/// a label or an active/selected state.
+class _FlatQrButton extends StatelessWidget {
+  const _FlatQrButton({required this.onTap});
 
   final VoidCallback onTap;
 
-  static const double diameter = 60;
-
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: diameter,
-      height: diameter,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: Ink(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: AppTheme.ctaGradient,
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.accent.withValues(alpha: 0.38),
-                blurRadius: 22,
-                offset: const Offset(0, 9),
-              ),
-            ],
-          ),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: const Icon(
-              Symbols.qr_code_scanner,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
+    return InkWell(
+      onTap: onTap,
+      customBorder: const StadiumBorder(),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+        child: Icon(
+          Symbols.qr_code_scanner,
+          color: AppTheme.textTertiary,
+          size: 24,
         ),
       ),
     );
