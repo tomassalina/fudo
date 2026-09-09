@@ -674,7 +674,20 @@ class _AiChip extends StatelessWidget {
 }
 
 /// "Lugares"/"Platos" result-mode pill (design-brief §2.9/backlog item 5 —
-/// analogue of `web/components/features/buscar/ResultModeToggle.tsx`).
+/// analogue of `web/components/features/buscar/ResultModeToggle.tsx`, which
+/// renders both halves as an even 50/50 split spanning the full toolbar
+/// width).
+///
+/// Bug fix 2026-09-09 (product-reported, screenshot showed "Lugares" and
+/// "Platos" as two content-sized pills bunched on the left with dead empty
+/// space after them): the outer [Row] here was already stretched to the
+/// full toolbar width by the parent `_ResultsHeader`'s
+/// `CrossAxisAlignment.stretch` Column, but with no `Expanded` on either
+/// button, `Row`'s default `mainAxisAlignment.start` just packed both
+/// intrinsically-sized buttons against the left edge — the width was
+/// already there, it just wasn't being *given* to the buttons. Wrapping
+/// each [_ResultModeButton] in `Expanded(flex: 1)` makes them share that
+/// width evenly instead, matching web's `flex-1` halves exactly.
 class _ResultModeToggle extends StatelessWidget {
   const _ResultModeToggle({required this.mode, required this.onChanged});
 
@@ -691,19 +704,22 @@ class _ResultModeToggle extends StatelessWidget {
         border: Border.all(color: AppTheme.border),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _ResultModeButton(
-            label: 'Lugares',
-            icon: Symbols.storefront,
-            selected: mode == _ResultMode.lugares,
-            onTap: () => onChanged(_ResultMode.lugares),
+          Expanded(
+            child: _ResultModeButton(
+              label: 'Lugares',
+              icon: Symbols.storefront,
+              selected: mode == _ResultMode.lugares,
+              onTap: () => onChanged(_ResultMode.lugares),
+            ),
           ),
-          _ResultModeButton(
-            label: 'Platos',
-            icon: Symbols.restaurant_menu,
-            selected: mode == _ResultMode.platos,
-            onTap: () => onChanged(_ResultMode.platos),
+          Expanded(
+            child: _ResultModeButton(
+              label: 'Platos',
+              icon: Symbols.restaurant_menu,
+              selected: mode == _ResultMode.platos,
+              onTap: () => onChanged(_ResultMode.platos),
+            ),
           ),
         ],
       ),
@@ -711,6 +727,12 @@ class _ResultModeToggle extends StatelessWidget {
   }
 }
 
+/// One half of [_ResultModeToggle] — always rendered inside an `Expanded`
+/// slot by its parent now, so it fills that slot's full width (a
+/// `Container`/`AnimatedContainer` with no explicit width takes on whatever
+/// tight width its parent hands it) and only needs `mainAxisAlignment
+/// .center` to center its icon+label within that width instead of hugging
+/// one edge.
 class _ResultModeButton extends StatelessWidget {
   const _ResultModeButton({
     required this.label,
@@ -736,7 +758,7 @@ class _ResultModeButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
