@@ -8,6 +8,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { QrSheetContent } from "@/components/features/perfil/QrSheetContent";
 import { cn } from "@/lib/utils/cn";
 import { useScrollDirection } from "@/lib/hooks/use-scroll-direction";
+import { useMapModeActive } from "@/lib/hooks/use-map-mode";
 import { NAV_LEFT, phoneNavRight, type NavItemDef } from "./nav-items";
 import { isActiveHref } from "./is-active-href";
 
@@ -74,7 +75,12 @@ export function PhoneNav() {
   const { isAuthenticated } = useSession();
   const [qrOpen, setQrOpen] = useState(false);
   const navRight = phoneNavRight(isAuthenticated);
-  const { visible } = useScrollDirection();
+  const { visible: scrollVisible } = useScrollDirection();
+  // /buscar's full-screen map view (MapToggleSection) locks this true while
+  // open — see use-map-mode.ts's doc comment for why the nav must never
+  // auto-hide there, unlike the results list.
+  const mapModeActive = useMapModeActive();
+  const visible = scrollVisible || mapModeActive;
 
   // A logged-out visitor has no personal QR to show — the phone design
   // reference's `openQr` redirects to the profile tab instead of opening

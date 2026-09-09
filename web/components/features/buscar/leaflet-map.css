@@ -1,31 +1,91 @@
 /* Leaflet popup classes are global, non-scoped DOM classes Leaflet itself
  * generates — can't be styled via Tailwind utility classes or CSS Modules,
- * so this small override sheet gives the popup the app's dark surface
- * instead of Leaflet's default white card. Imported only by LeafletMap.tsx,
- * which is client-only, so it never reaches the SSR'd part of the app. */
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
-  background: #1f2130;
-  color: #ffffff;
+ * so this override sheet strips Leaflet's own white-card popup chrome down
+ * to nothing, letting MerchantMapCard's own rounded/bordered dark card (see
+ * that component) be the entire visible popup instead of sitting inside a
+ * second white wrapper. Imported only by LeafletMap.tsx, which is
+ * client-only, so it never reaches the SSR'd part of the app. */
+.leaflet-popup-content-wrapper {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
 }
 
 .leaflet-popup-content {
-  margin: 8px 12px;
+  margin: 0;
+  width: auto !important;
 }
 
-.leaflet-popup-close-button {
-  color: rgba(255, 255, 255, 0.62) !important;
+/* Leaflet's speech-bubble tail and default close button are dropped — the
+ * card floats above the pin the way Airbnb/Google Maps' pin-tap card does,
+ * with its own close button (see MerchantMapCard, rendered via
+ * `<Popup closeButton={false}>` in LeafletMap.tsx) instead of Leaflet's. */
+.leaflet-popup-tip-container {
+  display: none;
 }
 
 /* leaflet.css sets `.leaflet-container a { color: #0078A8 }`, a
- * (class + tag) selector that beats Tailwind's single-class arbitrary-value
- * utility on specificity — confirmed live (getComputedStyle returned
- * Leaflet's blue, not the accent color, until this was added). Match on
- * `.leaflet-container` too so specificity wins outright. */
+ * (class + tag) selector that beats a plain single-class Tailwind utility on
+ * specificity — confirmed live (getComputedStyle returned Leaflet's blue,
+ * not the app's own text color, until this was added). `inherit` (not a
+ * fixed accent color) so MerchantMapCard's own `text-foreground`/
+ * `hover:text-accent-light` utility classes control the actual color. */
 .leaflet-container .leaflet-popup-content a {
-  color: #ff5023;
+  color: inherit;
 }
 
-.leaflet-container .leaflet-popup-content a:hover {
-  color: #ff7a55;
+/* --- Merchant type pins (LeafletMap.tsx's createMerchantIcon) --- */
+
+.fudo-map-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* The icon's iconSize is wider than the visible circle (room for the type
+   * label pill's text) — this keeps the empty flanking space from eating
+   * clicks meant for the map underneath it; the circle/label re-enable
+   * pointer events on just themselves below. */
+  pointer-events: none;
+}
+
+.fudo-map-pin__circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: var(--fudo-pin-color);
+  border: 2px solid #101119;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.fudo-map-pin__circle .material-symbols {
+  font-size: 18px;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.fudo-map-pin__tail {
+  width: 0;
+  height: 0;
+  margin-top: -2px;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--fudo-pin-color);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+}
+
+.fudo-map-pin__label {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(16, 17, 25, 0.85);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: auto;
 }

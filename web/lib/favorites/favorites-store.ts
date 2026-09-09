@@ -86,8 +86,18 @@ function getSnapshot(): number[] {
   return cachedIds;
 }
 
+// A stable module-level constant, not a fresh `[]` literal per call — same
+// fix, same reason, as `lib/location/use-location.ts`'s `SERVER_SNAPSHOT`:
+// `useSyncExternalStore` compares consecutive `getServerSnapshot()` results
+// with `Object.is`, and a new array every call fails that check. Confirmed
+// live: this was firing React's "The result of getServerSnapshot should be
+// cached to avoid an infinite loop" warning specifically wherever enough
+// `FavoriteButton`s hydrate at once for the timing to surface it (e.g.
+// /buscar's merchant list), not on every page that renders one.
+const SERVER_SNAPSHOT: number[] = [];
+
 function getServerSnapshot(): number[] {
-  return [];
+  return SERVER_SNAPSHOT;
 }
 
 function setEntries(next: FavoriteEntry[]) {

@@ -10,6 +10,7 @@
 // wrapper.
 import dynamic from "next/dynamic";
 import type { Merchant } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 const LeafletMap = dynamic(
   () => import("./LeafletMap").then((mod) => mod.LeafletMap),
@@ -23,10 +24,28 @@ const LeafletMap = dynamic(
   },
 );
 
-export function MapPanel({ merchants }: { merchants: Merchant[] }) {
+export interface MapPanelProps {
+  merchants: Merchant[];
+  /** Type-label pill under each pin — see LeafletMap's own doc comment on `showLabels`. */
+  showLabels?: boolean;
+  /**
+   * "panel" (default) — rounded, bordered box: the desktop split view's map
+   * column. "fullscreen" — edge-to-edge, no rounding/border: the phone
+   * full-screen map view (MapToggleSection), which is meant to visually
+   * bleed to the screen edges rather than sit in a boxed card.
+   */
+  variant?: "panel" | "fullscreen";
+}
+
+export function MapPanel({ merchants, showLabels = false, variant = "panel" }: MapPanelProps) {
   return (
-    <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-border bg-[#101119]">
-      <LeafletMap merchants={merchants} />
+    <div
+      className={cn(
+        "relative h-full min-h-[280px] overflow-hidden bg-[#101119]",
+        variant === "panel" && "rounded-2xl border border-border",
+      )}
+    >
+      <LeafletMap merchants={merchants} showLabels={showLabels} />
     </div>
   );
 }

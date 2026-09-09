@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { useLocation } from "@/lib/location/use-location";
@@ -14,6 +14,7 @@ import { FilterSidebar } from "./FilterSidebar";
 import { PhoneFilterSheet } from "./PhoneFilterSheet";
 import { SearchResultsGrid } from "./SearchResultsGrid";
 import { MapToggleSection } from "./MapToggleSection";
+import { DesktopMapSplit } from "./DesktopMapSplit";
 import { SortMenu } from "./SortMenu";
 
 export interface BuscarViewProps {
@@ -75,6 +76,13 @@ export function BuscarView({
   const { coords } = useLocation();
   const latitude = coords?.latitude;
   const longitude = coords?.longitude;
+  // Lifted out of MapToggleSection: on wide viewports this flag now decides
+  // between two entirely different layouts below (sidebar+grid vs.
+  // DesktopMapSplit's compact-list+big-map), not just whether one section's
+  // own panel is visible — see MapToggleSection's doc comment.
+  const [showMap, setShowMap] = useState(false);
+  const showDesktopMapSplit = mode === "lugares" && showMap && !isPhone;
+  const hidePhoneListWhileMapping = mode === "lugares" && showMap && isPhone;
 
   // The Server Component (app/buscar/page.tsx) has no access to the
   // browser's geolocation on its own, so once the visitor activates it via
@@ -129,41 +137,87 @@ export function BuscarView({
       <div
         className="grid items-start gap-6"
         style={
-          isPhone
+          isPhone || showDesktopMapSplit
             ? undefined
             : { gridTemplateColumns: "minmax(220px,280px) minmax(0,1fr)" }
         }
       >
-        {!isPhone ? <FilterSidebar {...filterFieldsProps} /> : null}
-
-        <div className="flex min-w-0 flex-col gap-4">
-          {mode === "lugares" ? <MapToggleSection merchants={merchants} /> : null}
-
-          <div className="flex items-baseline justify-between px-0.5">
-            <span className="text-[13px] text-foreground-muted">{countLabel}</span>
-            <SortMenu current={current} />
-          </div>
-
-          <SearchResultsGrid
-            // Remounts (resetting the infinite-scroll reveal window) on any
-            // filter/query change instead of patching state via an effect —
-            // see the component's own doc comment. `lat`/`lng` are excluded
-            // (JSON.stringify drops `undefined`-valued keys) for the same
-            // reason countActiveFilters (lib/utils/buscar-href.ts) excludes
-            // them from the filter badge: they're position data synced
-            // automatically by the effect above, not a filter the visitor
-            // picked. Without this exclusion, activating geolocation
-            // mid-session — or any later lat/lng drift — would remount the
-            // grid and silently reset the visibleCount the visitor already
-            // revealed via infinite scroll.
-            key={JSON.stringify({ ...current, lat: undefined, lng: undefined })}
-            mode={mode}
+        {showDesktopMapSplit ? (
+          // Desktop map view: replaces the [FilterSidebar | grid] pair
+          // entirely instead of nesting a map into it — see
+          // DesktopMapSplit's own doc comment for why (matches the design
+          // reference: filters hidden, a compact list + a big always-visible
+          // map instead).
+          <DesktopMapSplit
             merchants={merchants}
-            dishes={dishes}
-            emptyTitle={emptyTitle}
-            clearHref={clearHref}
+            countLabel={countLabel}
+            onExit={() => setShowMap(false)}
           />
-        </div>
+        ) : (
+          <>
+            {!isPhone ? <FilterSidebar {...filterFieldsProps} /> : null}
+
+            <div className="flex min-w-0 flex-col gap-4">
+              {mode === "lugares" ? (
+                <MapToggleSection
+                  merchants={merchants}
+                  showMap={showMap}
+                  onToggle={setShowMap}
+                />
+              ) : null}
+
+              {hidePhoneListWhileMapping ? null : (
+                <>
+                  <div className="flex items-baseline justify-between px-0.5">
+                    <span className="text-[13px] text-foreground-muted">{countLabel}</span>
+                    <div className="flex items-center gap-2">
+                      {mode === "lugares" && !isPhone ? (
+                        // Desktop's own "Ver mapa" toggle — plain in-flow
+                        // button (unlike the phone pill, no map-mode lock or
+                        // full-screen layer to own; MapToggleSection is
+                        // phone-only, see its doc comment) sitting right next
+                        // to SortMenu so this reads as one row — "N lugares
+                        // encontrados · Relevancia ▾ · Ver mapa" — matching
+                        // the design reference instead of its own line above.
+                        <button
+                          type="button"
+                          onClick={() => setShowMap(true)}
+                          className="flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:border-accent/50"
+                        >
+                          <span aria-hidden className="material-symbols text-[17px]">
+                            map
+                          </span>
+                          Ver mapa
+                        </button>
+                      ) : null}
+                      <SortMenu current={current} />
+                    </div>
+                  </div>
+
+                  <SearchResultsGrid
+                    // Remounts (resetting the infinite-scroll reveal window) on any
+                    // filter/query change instead of patching state via an effect —
+                    // see the component's own doc comment. `lat`/`lng` are excluded
+                    // (JSON.stringify drops `undefined`-valued keys) for the same
+                    // reason countActiveFilters (lib/utils/buscar-href.ts) excludes
+                    // them from the filter badge: they're position data synced
+                    // automatically by the effect above, not a filter the visitor
+                    // picked. Without this exclusion, activating geolocation
+                    // mid-session — or any later lat/lng drift — would remount the
+                    // grid and silently reset the visibleCount the visitor already
+                    // revealed via infinite scroll.
+                    key={JSON.stringify({ ...current, lat: undefined, lng: undefined })}
+                    mode={mode}
+                    merchants={merchants}
+                    dishes={dishes}
+                    emptyTitle={emptyTitle}
+                    clearHref={clearHref}
+                  />
+                </>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
