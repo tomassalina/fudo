@@ -20,13 +20,18 @@ class HomeHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'fudo',
-          style: AppTheme.title.copyWith(
-            fontSize: 22,
-            fontStyle: FontStyle.italic,
-            color: AppTheme.accent,
-          ),
+        // Real logo asset (`assets/images/fudo-logo.png`, copied verbatim
+        // from `web/public/fudo-logo.png`, 200x50) — web renders this same
+        // PNG via `next/image` at `className="h-5 w-auto"`
+        // (`components/layout/Header.tsx`), i.e. 20px tall with width
+        // following the asset's real 4:1 aspect ratio (80px). This used to
+        // be a stylized italic "fudo" text wordmark here, which web never
+        // renders at all — that mismatch was the bug.
+        Image.asset(
+          'assets/images/fudo-logo.png',
+          height: 20,
+          width: 80,
+          fit: BoxFit.contain,
         ),
         const _LocationPill(),
       ],
