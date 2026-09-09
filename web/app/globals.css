@@ -228,10 +228,19 @@
 @keyframes fudoSheen {
   0% {
     transform: translateX(-120%) rotate(12deg);
+    opacity: 0;
   }
-  60%,
-  100% {
+  15%,
+  55% {
+    opacity: 1;
+  }
+  60% {
     transform: translateX(320%) rotate(12deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-120%) rotate(12deg);
+    opacity: 0;
   }
 }
 @keyframes fudoCardWin {

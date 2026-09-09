@@ -62,10 +62,7 @@ export function GiftTierPicker({
           >
             <span
               aria-hidden="true"
-              className={cn(
-                "pointer-events-none absolute inset-y-[-40%] w-[70px] animate-fudo-sheen bg-gradient-to-r from-transparent via-white/[0.22] to-transparent",
-                tier.key === "black" ? "[animation-duration:4.4s]" : "[animation-duration:3.6s]",
-              )}
+              className="pointer-events-none absolute inset-y-[-40%] w-[70px] animate-fudo-sheen [animation-duration:3.6s] bg-gradient-to-r from-transparent via-white/[0.22] to-transparent"
             />
             <span className="relative flex items-center justify-between">
               <Image
