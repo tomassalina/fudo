@@ -1,16 +1,30 @@
 "use client";
 
+import { useContext } from "react";
+import { SessionContext, type SessionContextValue } from "./session-provider";
+
+export type {
+  Consumer,
+  ConsumerProfileInput,
+  ConsumerUpdateInput,
+  SessionContextValue,
+} from "./session-provider";
+
 /**
- * Placeholder session accessor. Auth isn't wired up yet — see
- * `lib/api/README.md`'s "Out of scope: auth" section and
- * `openspec/changes/fudo-consumers-mvp/design.md` (email+password only,
- * no OAuth) — this only exists so layout/nav code has one place to ask
- * "is there a logged-in consumer?" instead of hardcoding `false` inline.
+ * Real session accessor, backed by `SessionProvider`
+ * (lib/session/session-provider.tsx, mounted once in app/layout.tsx) instead
+ * of the earlier hardcoded `{ isAuthenticated: false }` stub.
  *
- * Swap the body of this hook for a real check (cookie/session read, a
- * Riverpod-equivalent provider, etc.) when auth lands; every call site below
- * already reacts to `isAuthenticated` correctly.
+ * Returns the full session shape (consumer, isAuthenticated, login, logout,
+ * updateProfile) — a superset of the old `{ isAuthenticated: boolean }`
+ * return, so existing
+ * call sites that only destructure `isAuthenticated` (PhoneNav, WideNav,
+ * RegalarPage) keep working unchanged.
  */
-export function useSession(): { isAuthenticated: boolean } {
-  return { isAuthenticated: false };
+export function useSession(): SessionContextValue {
+  const context = useContext(SessionContext);
+  if (!context) {
+    throw new Error("useSession must be used within a SessionProvider");
+  }
+  return context;
 }

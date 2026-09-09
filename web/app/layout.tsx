@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Barlow, Inter } from "next/font/google";
 import { AppNav } from "@/components/layout/nav/AppNav";
+import { SessionProvider } from "@/lib/session/session-provider";
 import { PostHogProvider } from "@/components/analytics/PostHogProvider";
 import { PostHogPageview } from "@/components/analytics/PostHogPageview";
 import "./globals.css";
@@ -50,15 +51,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <PostHogProvider>
-          {/* useSearchParams requires a Suspense boundary so prerendered
-              routes aren't forced into fully client-side rendering. */}
-          <Suspense fallback={null}>
-            <PostHogPageview />
-          </Suspense>
-          <AppNav />
-          {children}
-        </PostHogProvider>
+        <SessionProvider>
+          <PostHogProvider>
+            {/* useSearchParams requires a Suspense boundary so prerendered
+                routes aren't forced into fully client-side rendering. */}
+            <Suspense fallback={null}>
+              <PostHogPageview />
+            </Suspense>
+            <AppNav />
+            {children}
+          </PostHogProvider>
+        </SessionProvider>
       </body>
     </html>
   );
