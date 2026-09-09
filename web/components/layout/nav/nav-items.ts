@@ -21,10 +21,12 @@ export const NAV_LEFT: readonly NavItemDef[] = [
 ];
 
 /**
- * Regalar is always visible; Perfil only renders once there's a session —
- * see `(st.user ? tabDefs.slice(2) : [tabDefs[2]])` in
- * Fudo Customers.dc.html. Callers filter this list by `useSession()` instead
- * of baking the gate in here, so both nav layouts apply it identically.
+ * Regalar is always visible. Perfil's visibility differs by layout: `WideNav`
+ * hides it entirely while logged out (see `visibleNavRight`, mirroring
+ * `(st.user ? tabDefs.slice(2) : [tabDefs[2]])` in Fudo Customers.dc.html) —
+ * it already shows a separate "Iniciar sesión" CTA button instead. `PhoneNav`
+ * keeps the 5th slot always visible and swaps it for a login prompt instead
+ * (see `phoneNavRight`), since the bottom nav has no other login entry point.
  */
 export const NAV_RIGHT: readonly NavItemDef[] = [
   { key: "regalar", label: "Regalar", icon: "redeem", href: "/regalar" },
@@ -33,4 +35,30 @@ export const NAV_RIGHT: readonly NavItemDef[] = [
 
 export function visibleNavRight(isAuthenticated: boolean): NavItemDef[] {
   return isAuthenticated ? [...NAV_RIGHT] : NAV_RIGHT.filter((item) => item.key !== "perfil");
+}
+
+/**
+ * Logged-out stand-in for the Perfil tab, used only where the 5th slot must
+ * stay visible with or without a session (the phone bottom nav — see the
+ * reference screenshot this fixes). Same `key` as Perfil so `isActiveHref`
+ * keeps working, but points at `/login` with a "walk through the door"
+ * glyph instead of the profile icon.
+ */
+const LOGIN_ITEM: NavItemDef = {
+  key: "perfil",
+  label: "Ingresar",
+  icon: "login",
+  href: "/login",
+};
+
+/**
+ * Phone bottom nav's right-hand items: Regalar plus a 5th slot that's
+ * *always* present, unlike {@link visibleNavRight} (used by `WideNav`,
+ * which already has a separate "Iniciar sesión" CTA button and so hides the
+ * Perfil link entirely while logged out). Swaps to {@link LOGIN_ITEM} when
+ * there's no session instead of disappearing, so the bottom nav always has
+ * 5 icons at a fixed layout — see `PhoneNav.tsx`.
+ */
+export function phoneNavRight(isAuthenticated: boolean): NavItemDef[] {
+  return isAuthenticated ? [...NAV_RIGHT] : [NAV_RIGHT[0], LOGIN_ITEM];
 }

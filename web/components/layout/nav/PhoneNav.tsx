@@ -7,7 +7,8 @@ import { useSession } from "@/lib/session/use-session";
 import { Sheet } from "@/components/ui/Sheet";
 import { QrSheetContent } from "@/components/features/perfil/QrSheetContent";
 import { cn } from "@/lib/utils/cn";
-import { NAV_LEFT, visibleNavRight, type NavItemDef } from "./nav-items";
+import { useScrollDirection } from "@/lib/hooks/use-scroll-direction";
+import { NAV_LEFT, phoneNavRight, type NavItemDef } from "./nav-items";
 import { isActiveHref } from "./is-active-href";
 
 function TabLink({ item, active }: { item: NavItemDef; active: boolean }) {
@@ -32,11 +33,38 @@ function TabLink({ item, active }: { item: NavItemDef; active: boolean }) {
   );
 }
 
+/** Same flat, unelevated treatment as {@link TabLink}'s inactive state, for
+ * the QR trigger — it's an action button rather than a route, so it never
+ * has an `active` pill state of its own. */
+function TabButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="flex items-center gap-1.5 rounded-full px-3 py-2.5 text-foreground-faint transition-colors duration-200 hover:text-foreground"
+    >
+      <span className="material-symbols text-[21px]">{icon}</span>
+    </button>
+  );
+}
+
 /**
  * Floating bottom pill nav for phone widths (< 900px) — see
- * `docs/design-reference/Fudo App.dc.html`'s bottom nav and
- * `mobile/lib/shared/widgets/main_shell.dart`'s `_FloatingBottomNav` for the
- * raised central QR action this mirrors. Positioned `fixed`, so it floats
+ * `docs/design-reference/Fudo App.dc.html`'s bottom nav. All 5 destinations
+ * (Inicio, Buscar, QR, Regalar, Perfil/login) sit flat at the same level —
+ * an earlier version raised the QR action as a circular FAB for visual
+ * consistency with `mobile/lib/shared/widgets/main_shell.dart`'s
+ * `_FloatingBottomNav`, but the real reference screenshot has no such
+ * elevation, so that treatment was removed. Positioned `fixed`, so it floats
  * over page content rather than reserving layout space (same intent as the
  * Flutter shell's `extendBody: true`).
  */
@@ -45,14 +73,14 @@ export function PhoneNav() {
   const router = useRouter();
   const { isAuthenticated } = useSession();
   const [qrOpen, setQrOpen] = useState(false);
-  const navRight = visibleNavRight(isAuthenticated);
+  const navRight = phoneNavRight(isAuthenticated);
+  const { visible } = useScrollDirection();
 
   // A logged-out visitor has no personal QR to show — the phone design
   // reference's `openQr` redirects to the profile tab instead of opening
-  // this sheet in that case (`Fudo App.dc.html`); WideNav mirrors the same
-  // intent by hiding its QR trigger entirely while logged out. Redirecting
-  // straight to /login here (rather than /perfil) skips the extra hop,
-  // since /perfil itself redirects unauthenticated visitors to /login.
+  // this sheet in that case (`Fudo App.dc.html`). Redirecting straight to
+  // /login here (rather than /perfil) skips the extra hop, since /perfil
+  // itself redirects unauthenticated visitors to /login.
   function handleOpenQr() {
     if (isAuthenticated) {
       setQrOpen(true);
@@ -63,8 +91,15 @@ export function PhoneNav() {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-6 z-30 flex justify-center px-5">
-        <div className="relative flex items-center gap-0.5 rounded-full border border-border bg-nav p-1.5 shadow-nav backdrop-blur-md">
+      <nav
+        className={cn(
+          "fixed inset-x-0 bottom-6 z-30 flex justify-center px-5 transition-[transform,opacity] duration-300 ease-out",
+          visible
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-24 opacity-0",
+        )}
+      >
+        <div className="flex items-center gap-0.5 rounded-full border border-border bg-nav p-1.5 shadow-nav backdrop-blur-md">
           {NAV_LEFT.map((item) => (
             <TabLink
               key={item.key}
@@ -73,24 +108,7 @@ export function PhoneNav() {
             />
           ))}
 
-          {/* Reserves room for the QR button, which overlaps this span —
-              centering on this element (rather than the whole pill) keeps
-              the button aligned with the gap even when NAV_LEFT and
-              navRight hold an uneven number of items (e.g. Perfil hidden
-              while logged out), which would otherwise pull the pill's own
-              midpoint off-center and hide the item next to it. */}
-          <span className="relative w-11" aria-hidden>
-            <button
-              type="button"
-              onClick={handleOpenQr}
-              aria-label="Mi código QR"
-              className="absolute left-1/2 top-1/2 flex h-15 w-15 -translate-x-1/2 -translate-y-[58%] items-center justify-center rounded-full bg-gradient-to-b from-cta-from to-cta-to shadow-qr transition-transform duration-200 active:scale-95"
-            >
-              <span className="material-symbols text-2xl text-white">
-                qr_code_scanner
-              </span>
-            </button>
-          </span>
+          <TabButton icon="qr_code_scanner" label="Mi código QR" onClick={handleOpenQr} />
 
           {navRight.map((item) => (
             <TabLink
