@@ -7,7 +7,13 @@ import { buscarHref, countActiveFilters, type BuscarParams } from "@/lib/utils/b
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
 import { FilterCategoryTabs } from "./FilterCategoryTabs";
-import { buildFilterRows, clearedDraft, type FilterCategoryKey } from "./filter-rows";
+import { FilterToggleRow } from "./FilterToggleRow";
+import {
+  buildFilterRows,
+  clearedDraft,
+  countActiveFiltersByCategory,
+  type FilterCategoryKey,
+} from "./filter-rows";
 
 // The wide-layout, always-visible sticky filter column — `position: sticky;
 // top: 96px` in `docs/design-reference/Fudo Customers.dc.html`'s isList
@@ -64,6 +70,7 @@ export function FilterSidebar({
   const isDirty = JSON.stringify(draft) !== JSON.stringify(current);
   const rowsByCategory = buildFilterRows(availableTypes, availableHoods);
   const rows = rowsByCategory[cat];
+  const categoryCounts = countActiveFiltersByCategory(rowsByCategory, draft);
 
   function apply() {
     router.push(buscarHref(draft));
@@ -113,10 +120,25 @@ export function FilterSidebar({
           </button>
         ) : null}
 
-        <FilterCategoryTabs active={cat} onChange={setCat} variant="sidebar" />
+        <FilterCategoryTabs
+          active={cat}
+          onChange={setCat}
+          variant="sidebar"
+          counts={categoryCounts}
+        />
 
         <div className="flex flex-col">
           {rows.map((row) => {
+            if (row.kind === "toggle") {
+              return (
+                <FilterToggleRow
+                  key={row.id}
+                  row={row}
+                  draft={draft}
+                  onToggle={(value) => setDraft((prev) => row.toggleValue(prev, value))}
+                />
+              );
+            }
             const value = row.getValue(draft);
             return (
               <label

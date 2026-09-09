@@ -53,7 +53,18 @@ export interface FilterOptionDef {
   label: string;
 }
 
-export interface FilterRowDef {
+/** Every row here is single-select (a value picked replaces the previous
+ * one) except the "Apto para" diet row (see `dietRow` below), which is
+ * toggle-membership (each option is independently on/off). `kind`
+ * discriminates the two so each rendering surface knows which chrome to
+ * use, instead of overloading `getValue`/`setValue`'s single-string shape
+ * to also mean "one of possibly several" — a new row shape was the
+ * least-duplication option here: it keeps every existing single-select row
+ * (and both surfaces' existing chrome for them) completely untouched, and
+ * gives the multi-select row its own explicit, typed contract instead of
+ * smuggling array semantics through string-shaped fields. */
+export interface FilterSelectRowDef {
+  kind: "select";
   id: string;
   cat: FilterCategoryKey;
   icon: string;
@@ -61,6 +72,32 @@ export interface FilterRowDef {
   options: FilterOptionDef[];
   getValue: (draft: BuscarParams) => string;
   setValue: (draft: BuscarParams, value: string) => BuscarParams;
+}
+
+/** A toggle-membership row: every option in `options` is independently
+ * on/off, backed by `getValues`/`toggleValue` instead of the single-string
+ * `getValue`/`setValue` pair. See `dietRow` below — currently the only row
+ * of this kind. */
+export interface FilterToggleRowDef {
+  kind: "toggle";
+  id: string;
+  cat: FilterCategoryKey;
+  icon: string;
+  label: string;
+  /** No "Cualquiera"/"" entry — unlike a select row, "no filter" here is
+   * just every badge unselected, not a pickable option of its own. */
+  options: FilterOptionDef[];
+  getValues: (draft: BuscarParams) => string[];
+  toggleValue: (draft: BuscarParams, value: string) => BuscarParams;
+}
+
+export type FilterRowDef = FilterSelectRowDef | FilterToggleRowDef;
+
+/** Whether a row counts as an active filter — a select row is active when
+ * it has a non-default value, a toggle row is active when it has at least
+ * one selected value. Used by `countActiveFiltersByCategory` below. */
+export function isRowActive(row: FilterRowDef, draft: BuscarParams): boolean {
+  return row.kind === "toggle" ? row.getValues(draft).length > 0 : row.getValue(draft) !== "";
 }
 
 const SORT_OPTIONS: FilterOptionDef[] = [
@@ -92,20 +129,13 @@ const DISTANCE_OPTIONS: FilterOptionDef[] = [
   { value: "5", label: "Hasta 5 km" },
 ];
 
-/** The dietary subset of TAG_LABELS — the "Apto para" row in the Platos tab
- * is a single-select convenience over the same `tags` param the AiChips row
+/** The dietary subset of TAG_LABELS — all 5 real tag values in the DB (see
+ * TAG_LABELS in lib/mock/merchants.ts). The "Apto para" row in the Platos
+ * tab toggles these independently in the same `tags` param the AiChips row
  * already multi-selects (the design reference has this exact overlap too:
  * its own `dishDiet`/`diet` picker rows sit alongside the `aiChips` pill
- * row). Picking here replaces only these three tags in `current.tags`,
- * leaving any other active tag (e.g. "economico") untouched. */
-const DIET_TAG_KEYS = ["vegano", "sin_tacc", "picante", "vegetariano"] as const;
-
-function dietOptions(): FilterOptionDef[] {
-  return [
-    { value: "", label: "Cualquiera" },
-    ...DIET_TAG_KEYS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] })),
-  ];
-}
+ * row) — toggling one of these leaves any other active tag untouched. */
+const DIET_TAG_KEYS = ["vegano", "sin_tacc", "picante", "economico", "vegetariano"] as const;
 
 const REWARD_OPTIONS: FilterOptionDef[] = [
   { value: "", label: "Cualquiera" },
@@ -119,8 +149,9 @@ function simpleRow(
   label: string,
   paramKey: "sort" | "type" | "open" | "price" | "hood" | "dist" | "reward",
   options: FilterOptionDef[],
-): FilterRowDef {
+): FilterSelectRowDef {
   return {
+    kind: "select",
     id,
     cat,
     icon,
@@ -150,24 +181,24 @@ export function buildFilterRows(
     ...availableHoods.map((hood) => ({ value: hood, label: hood })),
   ];
 
-  const dietRow: FilterRowDef = {
+  const dietRow: FilterToggleRowDef = {
+    kind: "toggle",
     id: "diet",
     cat: "platos",
     icon: "eco",
     label: "Apto para",
-    options: dietOptions(),
-    getValue: (draft) =>
+    options: DIET_TAG_KEYS.map((tag) => ({ value: tag, label: TAG_LABELS[tag] })),
+    getValues: (draft) =>
       draft.tags
         .split(",")
-        .find((tag): tag is (typeof DIET_TAG_KEYS)[number] =>
+        .filter((tag): tag is (typeof DIET_TAG_KEYS)[number] =>
           (DIET_TAG_KEYS as readonly string[]).includes(tag),
-        ) ?? "",
-    setValue: (draft, value) => {
-      const rest = draft.tags
-        .split(",")
-        .filter(Boolean)
-        .filter((tag) => !(DIET_TAG_KEYS as readonly string[]).includes(tag));
-      const next = value ? [...rest, value] : rest;
+        ),
+    toggleValue: (draft, value) => {
+      const current = draft.tags.split(",").filter(Boolean);
+      const next = current.includes(value)
+        ? current.filter((tag) => tag !== value)
+        : [...current, value];
       return { ...draft, tags: next.join(",") };
     },
   };
@@ -192,6 +223,27 @@ export function buildFilterRows(
       simpleRow("reward", "premios", "redeem", "Premio por visitas", "reward", REWARD_OPTIONS),
     ],
   };
+}
+
+/** Per-category active-filter count for the desktop sidebar's category tabs
+ * (`FilterCategoryTabs`, `variant="sidebar"`) — a small badge per tab, not
+ * the single total already shown by `countActiveFilters` (buscar-href.ts)
+ * on the sidebar header pill and the phone sheet's "tune" button. Counts
+ * ROWS, not raw values: the toggle-membership diet row counts as at most 1
+ * (via `isRowActive`) even with several tags selected, same as every
+ * select row counts as at most 1 — one badge per category, not one per
+ * underlying `tags` entry. Takes an already-built `rowsByCategory` (from
+ * `buildFilterRows`) instead of raw availableTypes/availableHoods so a
+ * caller that already built rows for rendering doesn't build them twice. */
+export function countActiveFiltersByCategory(
+  rowsByCategory: Record<FilterCategoryKey, FilterRowDef[]>,
+  draft: BuscarParams,
+): Record<FilterCategoryKey, number> {
+  const counts = {} as Record<FilterCategoryKey, number>;
+  for (const cat of FILTER_CATEGORIES) {
+    counts[cat.key] = rowsByCategory[cat.key].filter((row) => isRowActive(row, draft)).length;
+  }
+  return counts;
 }
 
 /** Clears every filter dimension the sheet controls, same set the

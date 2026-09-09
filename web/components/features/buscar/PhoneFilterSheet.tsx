@@ -9,7 +9,13 @@ import { cn } from "@/lib/utils/cn";
 import { buscarHref, countActiveFilters, type BuscarParams } from "@/lib/utils/buscar-href";
 import { FilterCategoryTabs } from "./FilterCategoryTabs";
 import { FilterOptionSheet } from "./FilterOptionSheet";
-import { buildFilterRows, clearedDraft, type FilterCategoryKey } from "./filter-rows";
+import { FilterToggleRow } from "./FilterToggleRow";
+import {
+  buildFilterRows,
+  clearedDraft,
+  type FilterCategoryKey,
+  type FilterSelectRowDef,
+} from "./filter-rows";
 
 // Phone-layout filters: a "tune" trigger button (with the active-filter-
 // count badge) that opens the full-height "Filtros" bottom sheet from the
@@ -52,7 +58,7 @@ export function PhoneFilterSheet({
   const activeRow = optionRowId
     ? Object.values(rowsByCategory)
         .flat()
-        .find((row) => row.id === optionRowId)
+        .find((row): row is FilterSelectRowDef => row.kind === "select" && row.id === optionRowId)
     : null;
 
   function openSheet() {
@@ -160,6 +166,16 @@ export function PhoneFilterSheet({
 
           <div className="flex flex-col">
             {rows.map((row) => {
+              if (row.kind === "toggle") {
+                return (
+                  <FilterToggleRow
+                    key={row.id}
+                    row={row}
+                    draft={draft}
+                    onToggle={(value) => setDraft((prev) => row.toggleValue(prev, value))}
+                  />
+                );
+              }
               const value = row.getValue(draft);
               const label = row.options.find((o) => o.value === value)?.label ?? "Cualquiera";
               const isDefault = value === "";

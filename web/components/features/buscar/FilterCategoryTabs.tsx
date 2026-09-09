@@ -16,23 +16,41 @@ import { FILTER_CATEGORIES, type FilterCategoryKey } from "./filter-rows";
 //   off, so this variant matches the task's reference screenshot instead —
 //   a 2-column grid of icon-then-label pills, wrapping to a 3rd row for the
 //   5th (odd) tab.
+//
+// `counts` (sidebar-only, product-owner request — neither `.dc.html`
+// reference shows a per-tab count, only the single total "N filtros
+// activos" pill FilterSidebar/PhoneFilterSheet already render elsewhere; see
+// filter-rows.ts's `countActiveFiltersByCategory` doc comment) adds a small
+// numeral badge per tab showing how many filters are active in that
+// category. Modeled on this app's own existing small-numeral-badge
+// convention (the phone "tune" trigger's active-count badge in
+// PhoneFilterSheet.tsx — accent background, white text, rounded-full)
+// rather than the bigger "N filtros activos" pill, since that pill's shape
+// (border + padding + label text) doesn't fit as an unlabeled per-tab
+// numeral. Optional and sheet-ignored on purpose: PhoneFilterSheet doesn't
+// pass it, so mobile's tabs render exactly as before — the product owner's
+// ask was desktop-only, and the sheet's already-scrollable pill row has less
+// room to spare per tab than the sidebar's 2-column grid.
 
 interface FilterCategoryTabsProps {
   active: FilterCategoryKey;
   onChange: (key: FilterCategoryKey) => void;
   variant?: "sheet" | "sidebar";
+  counts?: Partial<Record<FilterCategoryKey, number>>;
 }
 
 export function FilterCategoryTabs({
   active,
   onChange,
   variant = "sheet",
+  counts,
 }: FilterCategoryTabsProps) {
   if (variant === "sidebar") {
     return (
       <div className="grid grid-cols-2 gap-2">
         {FILTER_CATEGORIES.map((cat) => {
           const isActive = cat.key === active;
+          const count = counts?.[cat.key] ?? 0;
           return (
             <button
               key={cat.key}
@@ -50,6 +68,16 @@ export function FilterCategoryTabs({
                 {cat.icon}
               </span>
               <span className="truncate text-[12.5px] font-semibold">{cat.label}</span>
+              {count > 0 ? (
+                <span
+                  className={cn(
+                    "ml-auto flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[9.5px] font-bold",
+                    isActive ? "bg-white/25 text-white" : "bg-accent text-white",
+                  )}
+                >
+                  {count}
+                </span>
+              ) : null}
             </button>
           );
         })}
