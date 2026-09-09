@@ -6,10 +6,15 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/merchant.dart';
 import '../../../data/providers.dart';
 import 'search_utils.dart';
+
+/// Size (px) of the "you are here" marker's hit box — matches web's
+/// `USER_LOCATION_ICON_SIZE` in `LeafletMap.tsx` (post `966b371`).
+const double _userLocationMarkerSize = 34;
 
 /// Map view for the "Buscar" tab (design-brief §2.4): extends the existing
 /// `FlutterMap` (CartoDB Dark Matter tiles) with one marker per filtered
@@ -49,73 +54,119 @@ class _SearchMapViewState extends ConsumerState<SearchMapView> {
           });
         }
 
-        return Stack(
-          children: [
-            FlutterMap(
-              options: MapOptions(
-                initialCenter: AppConstants.defaultMapCenter,
-                initialZoom: AppConstants.defaultMapZoom,
-                onTap: (_, _) => setState(() => _selected = null),
-              ),
+        // FlutterMap keeps the same State (and its internal MapController)
+        // across rebuilds as long as this widget isn't remounted — nothing
+        // below assigns it a new `key` or recreates it on filter/query
+        // changes, so re-filtering `filtered` only replaces the
+        // `MarkerLayer.markers` list in place; pan/zoom survive, matching
+        // web's fix (966b371) of not remounting `LeafletMap` while
+        // searching/filtering in map mode.
+        return ValueListenableBuilder<LatLng?>(
+          // Reuses the app's single existing geolocation source
+          // (`core/location/location_service.dart`'s app-wide
+          // `userLocationController`, already populated by the home
+          // header's "Activar ubicación" flow) — this view only ever reads
+          // it, it never calls `requestLocation()` itself. `null` (never
+          // requested, denied, or a platform failure — see
+          // `UserLocationController`'s doc comment) just renders the map
+          // with no "you are here" marker: no fake position, no forced
+          // re-prompt, no crash. Mirrors web's `userLocation` prop contract
+          // in `LeafletMap.tsx` post-966b371.
+          valueListenable: userLocationController,
+          builder: (context, userLocation, _) {
+            return Stack(
               children: [
-                TileLayer(
-                  urlTemplate: AppConstants.cartoDarkMatterTileUrl,
-                  userAgentPackageName: 'com.fudo.mobile',
-                ),
-                MarkerLayer(
-                  markers: [
-                    for (final merchant in filtered)
-                      Marker(
-                        point: LatLng(merchant.latitude, merchant.longitude),
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.topCenter,
-                        child: _MapPin(
-                          merchant: merchant,
-                          selected: _selected?.id == merchant.id,
-                          onTap: () => setState(() => _selected = merchant),
+                FlutterMap(
+                  options: MapOptions(
+                    initialCenter: AppConstants.defaultMapCenter,
+                    initialZoom: AppConstants.defaultMapZoom,
+                    onTap: (_, _) => setState(() => _selected = null),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: AppConstants.cartoDarkMatterTileUrl,
+                      userAgentPackageName: 'com.fudo.mobile',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        for (final merchant in filtered)
+                          Marker(
+                            point: LatLng(
+                              merchant.latitude,
+                              merchant.longitude,
+                            ),
+                            width: 40,
+                            height: 40,
+                            alignment: Alignment.topCenter,
+                            child: _MapPin(
+                              merchant: merchant,
+                              selected: _selected?.id == merchant.id,
+                              onTap: () => setState(() => _selected = merchant),
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Its own layer, painted after the merchants' layer, so
+                    // it always renders above every pin — analogous to
+                    // web's `zIndexOffset={1000}` on the equivalent
+                    // `Marker`.
+                    if (userLocation != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: userLocation,
+                            width: _userLocationMarkerSize,
+                            height: _userLocationMarkerSize,
+                            alignment: Alignment.center,
+                            // Purely informational, never a tap target —
+                            // same intent as web's `interactive={false}`.
+                            child: const IgnorePointer(
+                              child: _UserLocationMarker(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution(
+                          'CARTO',
+                          onTap: () =>
+                              _openLink('https://carto.com/attributions'),
                         ),
-                      ),
-                  ],
-                ),
-                RichAttributionWidget(
-                  attributions: [
-                    TextSourceAttribution(
-                      'CARTO',
-                      onTap: () => _openLink('https://carto.com/attributions'),
-                    ),
-                    TextSourceAttribution(
-                      'OpenStreetMap contributors',
-                      onTap: () => _openLink(
-                        'https://www.openstreetmap.org/copyright',
-                      ),
+                        TextSourceAttribution(
+                          'OpenStreetMap contributors',
+                          onTap: () => _openLink(
+                            'https://www.openstreetmap.org/copyright',
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: FloatingActionButton(
+                    heroTag: 'search-map-back-to-list',
+                    onPressed: widget.onBackToList,
+                    backgroundColor: AppTheme.surface,
+                    foregroundColor: AppTheme.textPrimary,
+                    child: const Icon(Symbols.view_list),
+                  ),
+                ),
+                if (_selected != null)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 88,
+                    child: _MiniCard(
+                      merchant: _selected!,
+                      onTap: () => widget.onOpenMerchant(_selected!.id),
+                    ),
+                  ),
               ],
-            ),
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: FloatingActionButton(
-                heroTag: 'search-map-back-to-list',
-                onPressed: widget.onBackToList,
-                backgroundColor: AppTheme.surface,
-                foregroundColor: AppTheme.textPrimary,
-                child: const Icon(Symbols.view_list),
-              ),
-            ),
-            if (_selected != null)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 88,
-                child: _MiniCard(
-                  merchant: _selected!,
-                  onTap: () => widget.onOpenMerchant(_selected!.id),
-                ),
-              ),
-          ],
+            );
+          },
         );
       },
       loading: () =>
@@ -132,6 +183,89 @@ class _SearchMapViewState extends ConsumerState<SearchMapView> {
   Future<void> _openLink(String url) async {
     final uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+}
+
+/// "You are here" marker — a Google-Maps-style blue dot with a pulsing
+/// accuracy halo. Deliberately distinct from [_MapPin] (no merchant-type
+/// color, no tail, no label): it isn't a merchant, and blue isn't used by
+/// any [MerchantType] color, so it never reads as "just another pin".
+/// Mirrors web's `createUserLocationIcon` + `.fudo-map-user-location*` CSS
+/// (`leaflet-map.css`, post-966b371) — same 34px box, 14px dot, animated
+/// halo scaling 0.55→1 while fading out over ~2.4s, looping.
+class _UserLocationMarker extends StatefulWidget {
+  const _UserLocationMarker();
+
+  @override
+  State<_UserLocationMarker> createState() => _UserLocationMarkerState();
+}
+
+class _UserLocationMarkerState extends State<_UserLocationMarker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _userLocationMarkerSize,
+      height: _userLocationMarkerSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (context, child) {
+              final t = _pulseController.value;
+              return Opacity(
+                opacity: (1 - t) * 0.9,
+                child: Transform.scale(
+                  scale: 0.55 + (0.45 * t),
+                  child: Container(
+                    width: _userLocationMarkerSize,
+                    height: _userLocationMarkerSize,
+                    decoration: const BoxDecoration(
+                      color: Color(0x594285F4), // rgba(66, 133, 244, 0.35)
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              color: const Color(0xFF4285F4),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 5,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
