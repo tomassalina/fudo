@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session/use-session";
 import { Sheet } from "@/components/ui/Sheet";
+import { QrSheetContent } from "@/components/features/perfil/QrSheetContent";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { FluidContainer } from "@/components/ui/FluidContainer";
 import { cn } from "@/lib/utils/cn";
@@ -101,9 +102,7 @@ export function WideNav() {
       </header>
 
       <Sheet open={qrOpen} onClose={() => setQrOpen(false)} title="Tu código Fudo">
-        <p className="text-[13.5px] text-foreground-muted">
-          Mostrale este código al mesero para validar tu visita.
-        </p>
+        <QrSheetContent />
       </Sheet>
     </>
   );

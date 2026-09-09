@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/session/use-session";
 import { Sheet } from "@/components/ui/Sheet";
+import { QrSheetContent } from "@/components/features/perfil/QrSheetContent";
 import { cn } from "@/lib/utils/cn";
 import { NAV_LEFT, visibleNavRight, type NavItemDef } from "./nav-items";
 import { isActiveHref } from "./is-active-href";
@@ -41,9 +42,24 @@ function TabLink({ item, active }: { item: NavItemDef; active: boolean }) {
  */
 export function PhoneNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated } = useSession();
   const [qrOpen, setQrOpen] = useState(false);
   const navRight = visibleNavRight(isAuthenticated);
+
+  // A logged-out visitor has no personal QR to show — the phone design
+  // reference's `openQr` redirects to the profile tab instead of opening
+  // this sheet in that case (`Fudo App.dc.html`); WideNav mirrors the same
+  // intent by hiding its QR trigger entirely while logged out. Redirecting
+  // straight to /login here (rather than /perfil) skips the extra hop,
+  // since /perfil itself redirects unauthenticated visitors to /login.
+  function handleOpenQr() {
+    if (isAuthenticated) {
+      setQrOpen(true);
+    } else {
+      router.push("/login");
+    }
+  }
 
   return (
     <>
@@ -71,7 +87,7 @@ export function PhoneNav() {
 
           <button
             type="button"
-            onClick={() => setQrOpen(true)}
+            onClick={handleOpenQr}
             aria-label="Mi código QR"
             className="absolute left-1/2 top-1/2 flex h-15 w-15 -translate-x-1/2 -translate-y-[58%] items-center justify-center rounded-full bg-gradient-to-b from-cta-from to-cta-to shadow-qr transition-transform duration-200 active:scale-95"
           >
@@ -83,9 +99,7 @@ export function PhoneNav() {
       </nav>
 
       <Sheet open={qrOpen} onClose={() => setQrOpen(false)} title="Tu código Fudo">
-        <p className="text-[13.5px] text-foreground-muted">
-          Mostrale este código al mesero para validar tu visita.
-        </p>
+        <QrSheetContent />
       </Sheet>
     </>
   );
