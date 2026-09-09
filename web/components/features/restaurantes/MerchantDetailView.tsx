@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useState } from "react";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { useOpenStatus } from "@/lib/hooks/use-open-status";
 import { useMerchantDistanceKm } from "@/lib/location/use-merchant-distance";
@@ -53,10 +53,10 @@ export interface MerchantDetailViewProps {
  * below — a sticky `position: sticky; top: 96px` left rail (hours + price/
  * distance/contact) next to the tabs (loyalty/menu) in the wider column.
  *
- * The hours list is always rendered fully expanded in both layouts (no
- * collapse/expand accordion) — same simplification already made for the
- * phone layout (see this component's `hoursCard`), since this is static SSG
- * output with no client state to back a toggle.
+ * The hours pill toggles the "Horarios" section below it (accordion), same
+ * `hoursOpen`/`toggleHours`/`chevron` pattern (`expand_more`/`expand_less`)
+ * both `.dc.html` references already specify for this exact pill. See
+ * `hoursOpen` below for the desktop-open/mobile-closed default.
  */
 export function MerchantDetailView({
   merchant,
@@ -75,17 +75,24 @@ export function MerchantDetailView({
   // `null` until the browser supplies real "now" (see the hook's doc
   // comment) — the pill below simply isn't rendered until then.
   const openStatus = useOpenStatus(weekHours);
-  // Target for the pill's chevron: the "Horarios" section already rendered
-  // further down the page (fully expanded, see this component's top doc
-  // comment). The reference's chevron toggles an accordion that doesn't
-  // exist here — this project already made the deliberate call to always
-  // render the full week instead of an accordion, so re-introducing a
-  // second, separately-toggled copy of the same table right under the pill
-  // would just duplicate it. Scrolling to the existing table keeps a single
-  // source of truth and still gives the chevron a real affordance.
-  const hoursSectionRef = useRef<HTMLElement>(null);
-  function scrollToHours() {
-    hoursSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // Accordion state for the "Horarios" section, shared between the pill
+  // (trigger) and the weekly list (panel) below it. `manualOpen` is `null`
+  // until the visitor toggles the pill for the first time — while it's
+  // `null`, the rendered state tracks `!isPhone` directly instead of being
+  // captured once via a lazy `useState` initializer, which would go stale:
+  // `useIsPhoneViewport()`'s server/first-paint snapshot is always `false`
+  // (see that hook's doc comment), so a one-time `useState(() => !isPhone)`
+  // would freeze `hoursOpen` at `true` even on a phone-width client, since
+  // the hydration-correction re-render doesn't re-run the initializer.
+  // Deriving it on every render from `isPhone` instead keeps the desktop
+  // (>=900px) default open / mobile (<900px) default closed correct through
+  // that correction, and still lets one manual toggle "stick" afterwards
+  // regardless of further viewport changes — see learnings.md.
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  const hoursOpen = manualOpen ?? !isPhone;
+  function toggleHours() {
+    setManualOpen(!hoursOpen);
   }
 
   // Item cards themselves are identical between layouts; only the group's
@@ -187,16 +194,40 @@ export function MerchantDetailView({
     </div>
   );
 
+  const HOURS_PANEL_ID = "merchant-hours-panel";
+
+  // The "Horarios" section (heading + `hoursCard`) — the accordion's panel,
+  // toggled by `openNowPill` below. Unmounted entirely while closed (rather
+  // than kept in the DOM under `aria-hidden`/`hidden`): it's static SSG
+  // content with no internal state worth preserving across a collapse, so
+  // there's nothing a "keep it mounted" approach would buy here, and
+  // unmounting is what actually keeps it out of the accessibility tree and
+  // tab order for free. `animate-fudo-fade` matches both `.dc.html`
+  // references' `animation: fudoFade .2s ease both` on this exact panel.
+  const hoursSection = hoursOpen ? (
+    <section id={HOURS_PANEL_ID} className="animate-fudo-fade">
+      <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
+        Horarios
+      </h2>
+      {hoursCard}
+    </section>
+  ) : null;
+
   // "Abierto ahora" / "Cerrado" pill — mirrors `Fudo App.dc.html`'s hours
   // pill (clock icon + colored status + today's hours + chevron) between
   // the address and the price/distance row. Green/success for open, the
   // same accent-light/soft treatment the price pill already uses for
   // closed — both are existing design tokens (see app/globals.css), not new
-  // colors introduced for this.
+  // colors introduced for this. Doubles as the accordion trigger for
+  // `hoursSection`: `aria-expanded` + `aria-controls` point screen readers
+  // at the panel, and the chevron swaps `expand_more`/`expand_less` — same
+  // icon pair both `.dc.html` references use for `hours.chevron`.
   const openNowPill = openStatus ? (
     <button
       type="button"
-      onClick={scrollToHours}
+      onClick={toggleHours}
+      aria-expanded={hoursOpen}
+      aria-controls={HOURS_PANEL_ID}
       className="flex w-full items-center gap-2.5 rounded-2xl border border-border bg-surface px-3.5 py-3 text-left shadow-inner shadow-white/5"
     >
       <span
@@ -218,8 +249,8 @@ export function MerchantDetailView({
       <span className="flex-1 truncate text-[12.5px] text-foreground-faint">
         {openStatus.todayLabel}
       </span>
-      <span className="material-symbols text-[18px] text-foreground-faint">
-        expand_more
+      <span aria-hidden className="material-symbols text-[18px] text-foreground-faint">
+        {hoursOpen ? "expand_less" : "expand_more"}
       </span>
     </button>
   ) : null;
@@ -326,12 +357,7 @@ export function MerchantDetailView({
         >
           <div className="sticky top-24 flex min-w-0 flex-col gap-3.5">
             {openNowPill}
-            <section ref={hoursSectionRef}>
-              <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
-                Horarios
-              </h2>
-              {hoursCard}
-            </section>
+            {hoursSection}
 
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-inner shadow-white/5">
               {priceRange ? (
@@ -431,12 +457,7 @@ export function MerchantDetailView({
 
         {contactButtons(false)}
 
-        <section ref={hoursSectionRef}>
-          <h2 className="pb-2.5 text-[11px] font-bold uppercase tracking-widest text-foreground-faint">
-            Horarios
-          </h2>
-          {hoursCard}
-        </section>
+        {hoursSection}
 
         <div className="pt-2">{tabs}</div>
       </div>
