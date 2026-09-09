@@ -45,6 +45,7 @@ puts "Clearing previously seeded data..."
 puts "Creating tags..."
 TAG_NAMES = %w[
   sin_tacc vegano vegetariano apto_celiacos con_delivery pet_friendly con_terraza wifi_gratis
+  picante economico
 ].freeze
 
 tags = TAG_NAMES.index_with do |name|
@@ -261,9 +262,20 @@ MERCHANT_TAGS_BY_TYPE = {
   "cafe" => %w[wifi_gratis pet_friendly],
   "bar" => %w[con_terraza pet_friendly],
   "pizzeria" => %w[con_delivery],
-  "dark_kitchen" => %w[con_delivery vegano],
+  # dark_kitchen's own dish pool already leans spicy (e.g. "Ramen picante
+  # para llevar", "Tacos de carnitas (x3)") — "picante" here is a coherent
+  # merchant-level tag, not a random pick. Covers the /buscar "Apto para"
+  # row's hardcoded picante option (filter-rows.ts DIET_TAG_KEYS), which
+  # otherwise had zero matching tags in the DB (no seed merchant/menu_item
+  # carried "picante" before this).
+  "dark_kitchen" => %w[con_delivery vegano picante],
   "brewery" => %w[con_delivery con_terraza],
-  "food_truck" => %w[con_delivery]
+  # food_truck is the seed's cheapest price band by a wide margin (Food
+  # Truck El Zaguán: $7.000-$12.500 vs. the next-cheapest cafe at
+  # $8.500-$14.000+) — "economico" here is the natural real merchant for
+  # that tag, covering the /buscar AI-chips "Económico" option, which
+  # otherwise had zero matching tags in the DB.
+  "food_truck" => %w[con_delivery economico]
 }.freeze
 
 # A handful of merchants (regardless of type) additionally cater to
@@ -335,7 +347,11 @@ DISH_TAG_RULES = {
   "vegano" => [ "vegana", "quinoa", "garbanzos", "vegetales" ],
   "vegetariano" => [ "vegetariano", "acelga", "quinoa" ],
   "sin_tacc" => [ "provoleta", "rabas", "milanesa" ],
-  "apto_celiacos" => [ "ensalada césar", "papas fritas artesanales" ]
+  "apto_celiacos" => [ "ensalada césar", "papas fritas artesanales" ],
+  # Matches dishes whose own name says "picante" ("Ramen picante para
+  # llevar", "Alitas picantes") — real dishes, not a random pick, and the
+  # menu_item-level complement to the dark_kitchen merchant-level tag above.
+  "picante" => [ "picante" ]
 }.freeze
 
 def tags_for_dish(name, tags)
