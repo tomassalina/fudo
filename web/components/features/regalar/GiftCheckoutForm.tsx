@@ -66,7 +66,7 @@ export function GiftCheckoutForm({
       {canPay ? (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-[-40%] left-0 w-10 animate-fudo-sheen [animation-duration:3.6s] bg-gradient-to-r from-transparent via-white/40 to-transparent"
+          className="pointer-events-none absolute inset-y-[-40%] left-0 w-1/3 animate-fudo-sheen [animation-duration:3.6s] bg-gradient-to-r from-transparent via-white/40 to-transparent"
         />
       ) : null}
       <span className="relative">{buyLabel}</span>
