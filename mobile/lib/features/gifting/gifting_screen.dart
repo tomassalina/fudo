@@ -825,15 +825,24 @@ class _GiftSuccessOverlayState extends State<_GiftSuccessOverlay>
       insetPadding: EdgeInsets.zero,
       child: AnimatedBuilder(
         animation: _controller,
-        builder: (context, child) {
+        // NOTE: `_buildCard` is built inline here (not passed as
+        // `AnimatedBuilder.child`) on purpose. `child:` is only built once
+        // and reused across every tick — but `_buildCard` reads the
+        // animation's current value to drive its own elastic scale-in and
+        // the delayed "¡Gift card enviada!" stamp fade-in, so it needs a
+        // fresh rebuild every frame. Passing it as `child:` previously froze
+        // it at its very first frame (t≈0: 60% scale, invisible headline)
+        // forever — the rings/confetti still played and faded correctly, so
+        // the end state looked like a small, plain, title-less card with no
+        // celebration at all, matching the reported screenshot exactly.
+        builder: (context, _) {
           final t = _controller.value;
           return Stack(
             alignment: Alignment.center,
             clipBehavior: Clip.none,
-            children: [..._buildRings(t), ..._buildConfetti(t), child!],
+            children: [..._buildRings(t), ..._buildConfetti(t), _buildCard(context, t)],
           );
         },
-        child: _buildCard(context),
       ),
     );
   }
@@ -886,11 +895,9 @@ class _GiftSuccessOverlayState extends State<_GiftSuccessOverlay>
     }).toList();
   }
 
-  Widget _buildCard(BuildContext context) {
-    final cardT = Curves.elasticOut.transform(
-      _delayed(_controller.value, 0.1, 0.6),
-    );
-    final stampT = _delayed(_controller.value, 0.45, 0.4).clamp(0, 1);
+  Widget _buildCard(BuildContext context, double t) {
+    final cardT = Curves.elasticOut.transform(_delayed(t, 0.1, 0.6));
+    final stampT = _delayed(t, 0.45, 0.4).clamp(0, 1);
 
     return Transform.scale(
       scale: 0.6 + 0.4 * cardT.clamp(0.0, 1.4),
