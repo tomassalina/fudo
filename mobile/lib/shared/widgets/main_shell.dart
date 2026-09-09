@@ -2,15 +2,20 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/router/app_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/providers.dart';
 import '../../features/loyalty/qr_sheet.dart';
 
 /// Tab labels in [MainShell.currentIndex] order, also used as the
 /// `tab_name` analytics property (see [AnalyticsService.trackTabChanged]).
-const List<String> _tabNames = ['Inicio', 'Buscar', 'Mis Lugares', 'Regalar'];
+/// Index 2 ("Perfil"/"Ingresar" nav slot) is auth-dependent — see
+/// [_MainShellState._handleTap], which swaps in the live label before
+/// tracking — this static entry is only the logged-out-friendly fallback.
+const List<String> _tabNames = ['Inicio', 'Buscar', 'Perfil', 'Regalar'];
 
 /// How many logical pixels the content must scroll in one direction before
 /// that direction "counts" toward hiding/showing the nav — mirrors the
@@ -35,19 +40,21 @@ const double _scrollHideTopOffset = 0;
 /// anymore), and the whole pill hides on scroll-down / reappears on
 /// scroll-up.
 ///
-/// **Known gap vs. the web reference (intentionally left out of this
-/// change):** the web nav's 5th slot is an always-visible Perfil/Login item
-/// (`nav-items.ts`'s `phoneNavRight`) that swaps between a profile route and
-/// `/login` depending on auth state. Flutter has no profile or login screen
-/// yet (only `features/auth/register_screen.dart` exists) and its 4th
-/// routable tab is "Mis Lugares", which has no equivalent in the web nav or
-/// the design reference's `tabDefs` (`docs/design-reference/Fudo App.dc.html`).
-/// Porting the Perfil/Login behavior would mean either fabricating a
-/// destination for a screen that doesn't exist, or removing "Mis Lugares"
-/// outright — both are product decisions, not implementation details, so
-/// they're left for the product owner rather than guessed under time
-/// pressure. `isLoggedInProvider` (`data/providers.dart`) is already
-/// available for whoever picks this up next.
+/// Matches the web nav's 5-slot composition and order exactly
+/// (`web/components/layout/nav/PhoneNav.tsx` + `nav-items.ts`): Inicio,
+/// Buscar, QR (a button, not a route), Regalar, then Perfil as the always
+/// -visible 5th slot. The old "Mis Lugares" tab (index 2, still routes to
+/// [AppRoutes.myPlaces] — the feature folder/route are intentionally
+/// unrenamed) is that Perfil slot: its label/icon swap on [isLoggedInProvider]
+/// — "Perfil"/[Symbols.person] when logged in, "Ingresar"/[Symbols.login]
+/// when logged out — same pattern as web's `phoneNavRight(isAuthenticated)`.
+/// Flutter has no standalone `/login` route (unlike web); [AppRoutes.myPlaces]
+/// already embeds the login form for a logged-out consumer (see
+/// `features/my_places/my_places_screen.dart`), so it doubles as both
+/// destinations without inventing a new route. The QR button
+/// ([_MainShellState._openQrSheet]) is auth-gated the same way: logged in
+/// opens [LoyaltyQrSheet], logged out redirects to [AppRoutes.myPlaces]
+/// instead of opening anything, mirroring web's `handleOpenQr`.
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({
     required this.currentIndex,
@@ -68,7 +75,15 @@ class _MainShellState extends ConsumerState<MainShell> {
   bool _navVisible = true;
   double _lastScrollY = 0;
 
+  /// Auth-gated QR quick action, mirroring web's `handleOpenQr`: a logged-in
+  /// consumer sees their own loyalty QR; a logged-out visitor has no QR to
+  /// show, so this redirects to [AppRoutes.myPlaces] (the embedded-login
+  /// screen — see the class doc comment) instead of opening anything.
   void _openQrSheet(BuildContext context) {
+    if (!ref.read(isLoggedInProvider)) {
+      context.go(AppRoutes.myPlaces);
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -77,7 +92,13 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   void _handleTap(int index) {
-    ref.read(analyticsServiceProvider).trackTabChanged(_tabNames[index]);
+    // Index 2 is the auth-dependent Perfil/Ingresar slot (see class doc
+    // comment) — track the label the user actually saw, not the static
+    // logged-out fallback in [_tabNames].
+    final tabName = index == 2 && ref.read(isLoggedInProvider)
+        ? 'Perfil'
+        : _tabNames[index];
+    ref.read(analyticsServiceProvider).trackTabChanged(tabName);
     widget.onTap(index);
   }
 
@@ -124,6 +145,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       bottomNavigationBar: _FloatingBottomNav(
         currentIndex: widget.currentIndex,
         visible: _navVisible,
+        isLoggedIn: ref.watch(isLoggedInProvider),
         onTap: _handleTap,
         onQrTap: () => _openQrSheet(context),
       ),
@@ -139,12 +161,14 @@ class _FloatingBottomNav extends StatelessWidget {
   const _FloatingBottomNav({
     required this.currentIndex,
     required this.visible,
+    required this.isLoggedIn,
     required this.onTap,
     required this.onQrTap,
   });
 
   final int currentIndex;
   final bool visible;
+  final bool isLoggedIn;
   final ValueChanged<int> onTap;
   final VoidCallback onQrTap;
 
@@ -212,20 +236,26 @@ class _FloatingBottomNav extends StatelessWidget {
                         ),
                       ),
                       _FlatQrButton(onTap: onQrTap),
-                      Expanded(
-                        child: _NavItem(
-                          icon: Symbols.storefront,
-                          label: 'Mis Lugares',
-                          selected: currentIndex == 2,
-                          onTap: () => onTap(2),
-                        ),
-                      ),
+                      // Order matches web's `phoneNavRight` exactly: Regalar
+                      // before the always-visible Perfil/Ingresar slot (see
+                      // class doc comment) — visual order only, [onTap]
+                      // still passes each item's real tab index (3 for
+                      // Regalar, 2 for Perfil/Mis Lugares) so routing in
+                      // `app_router.dart` is untouched.
                       Expanded(
                         child: _NavItem(
                           icon: Symbols.card_giftcard,
                           label: 'Regalar',
                           selected: currentIndex == 3,
                           onTap: () => onTap(3),
+                        ),
+                      ),
+                      Expanded(
+                        child: _NavItem(
+                          icon: isLoggedIn ? Symbols.person : Symbols.login,
+                          label: isLoggedIn ? 'Perfil' : 'Ingresar',
+                          selected: currentIndex == 2,
+                          onTap: () => onTap(2),
                         ),
                       ),
                     ],
