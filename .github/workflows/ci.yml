@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (RSpec)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: fudo
+          POSTGRES_PASSWORD: fudo_password
+          POSTGRES_DB: fudo_consumers_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fudo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      POSTGRES_USER: fudo
+      POSTGRES_PASSWORD: fudo_password
+      POSTGRES_DB: fudo_consumers_test
+      POSTGRES_TEST_DB: fudo_consumers_test
+      # CI-only dummy secrets — never used outside the test database, safe to keep in the workflow file.
+      JWT_SECRET: ci-test-jwt-secret-do-not-use-in-production
+      LOCKBOX_MASTER_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      BLIND_INDEX_MASTER_KEY: "1111111111111111111111111111111111111111111111111111111111111111"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4.10"
+          bundler-cache: true
+          working-directory: backend
+
+      - name: Set up database
+        run: bin/rails db:schema:load
+
+      - name: Run RSpec
+        run: bundle exec rspec
+
+  web:
+    name: Web (lint, typecheck, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.21.0"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm exec tsc --noEmit
+
+      - run: pnpm test
+
+  mobile:
+    name: Mobile (flutter analyze)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter analyze
