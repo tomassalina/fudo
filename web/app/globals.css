@@ -1,31 +1,86 @@
 @import "tailwindcss";
 
 /*
- * Visual design is a placeholder. Real design comes from a Claude Design
- * prototype (not yet shared as of this scaffold). Dark background + violet
- * accent is a rough approximation — replace when the real design is
- * integrated.
+ * Design tokens extracted from the real design reference
+ * (docs/design-reference/Fudo App.dc.html — a Claude Design canvas export of the
+ * mobile app's Buscar/Mis Lugares/Regalar screens). Dark theme with an
+ * orange-red accent (not violet, as the earlier placeholder guessed).
+ *
+ * Source values (see the reference's inline `themeVars`):
+ *   --bg: #14151F   --surf: #1F2130   --surf2: #2A2C3D
+ *   --line: rgba(255,255,255,0.09)
+ *   --ink: #FFFFFF  --ink2: rgba(255,255,255,0.62)  --ink3: rgba(255,255,255,0.38)
+ *   accent: #FF5023 (link hover #D03F00, soft-bg text #FF7A55)
+ *   reward/success green: #8FD46A
  */
 :root {
-  --background: #0a0a0f;
-  --foreground: #f4f2f8;
-  --accent: #8b5cf6;
-  --accent-light: #a78bfa;
-  --accent-dark: #6d28d9;
+  --background: #14151f;
+  --surface: #1f2130;
+  --surface-2: #2a2c3d;
+  --border: rgba(255, 255, 255, 0.09);
+
+  --foreground: #ffffff;
+  --foreground-muted: rgba(255, 255, 255, 0.62);
+  --foreground-faint: rgba(255, 255, 255, 0.38);
+
+  --accent: #ff5023;
+  --accent-dark: #d03f00;
+  --accent-light: #ff7a55;
+  --accent-soft: rgba(255, 80, 35, 0.16);
+
+  --success: #8fd46a;
+  --success-soft: rgba(143, 212, 106, 0.14);
+
+  --shadow: rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-faint: var(--foreground-faint);
+
   --color-accent: var(--accent);
-  --color-accent-light: var(--accent-light);
   --color-accent-dark: var(--accent-dark);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-accent-light: var(--accent-light);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-barlow);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Material Symbols Outlined icon glyphs — same family/axes as the design
+ * reference (see the layout <head> stylesheet link). Usage: a <span> whose
+ * text content is the glyph name, e.g. `<span className="material-symbols">
+ * location_on</span>`. Keeps icons as clean monochrome line-glyphs instead
+ * of platform-inconsistent color emoji. */
+.material-symbols {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 300,
+    "GRAD" 0,
+    "opsz" 24;
 }

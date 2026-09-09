@@ -1,30 +1,59 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { Barlow, Inter } from "next/font/google";
+import { Header } from "@/components/layout/Header";
+import { PostHogProvider } from "@/components/analytics/PostHogProvider";
+import { PostHogPageview } from "@/components/analytics/PostHogPageview";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Typography per the design reference: Barlow (heavy weights, incl. the
+// italic cut used for the "Ganá descuentos" emphasis) for headings, Inter
+// for body/UI text.
+const barlow = Barlow({
+  variable: "--font-barlow",
   subsets: ["latin"],
+  weight: ["700", "800", "900"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Fudo Consumers",
-  description: "Fudo Consumers — próximamente.",
+  description:
+    "Encontrá dónde comer. Ganá descuentos por cada visita — buscá restaurantes, bares y cafés en Palermo.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${barlow.variable} ${inter.variable} h-full antialiased`}
     >
+      <head>
+        {/* Material Symbols Outlined — the exact icon font the design
+            reference uses for every glyph (location pins, delivery, chat,
+            reward, etc.). Loaded the same way the reference does: a plain
+            Google Fonts stylesheet (not in next/font's curated Google set). */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- this rule targets the Pages Router's _document.js; the App Router's root layout *is* the once-per-app shell, so it applies here on every page already. */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
+        <PostHogProvider>
+          {/* useSearchParams requires a Suspense boundary so prerendered
+              routes aren't forced into fully client-side rendering. */}
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          <Header />
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   );
