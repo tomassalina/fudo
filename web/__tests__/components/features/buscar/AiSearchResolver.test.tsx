@@ -39,6 +39,8 @@ describe("AiSearchResolver", () => {
       neighborhood: "Palermo",
       tags: ["picante"],
       priceBand: "0-20000",
+      q: null,
+      mode: null,
     });
 
     render(<AiSearchResolver query="algo picante y barato en Palermo" presetType="" />);
@@ -50,10 +52,29 @@ describe("AiSearchResolver", () => {
     expect(href).toContain("hood=Palermo");
     expect(href).toContain("tags=picante");
     expect(href).toContain("price=0-20000");
-    // Never a `q`/`ai` text param on success — the result is filters, not a
-    // name search (see this component's own header comment).
+    // No `q`/`ai`/`mode` param when Gemini found nothing beyond the
+    // structured filters above (fully covered by type/hood/tags/price).
     expect(href).not.toContain("q=");
     expect(href).not.toContain("ai=");
+    expect(href).not.toContain("mode=");
+  });
+
+  it("forwards `q`/`mode` on success when Gemini names a specific dish/merchant", async () => {
+    resolveAiSearchFiltersMock.mockResolvedValue({
+      type: null,
+      neighborhood: null,
+      tags: [],
+      priceBand: null,
+      q: "milanesa napolitana",
+      mode: "platos",
+    });
+
+    render(<AiSearchResolver query="quiero comer milanesa napolitana" presetType="" />);
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledTimes(1));
+    const href = replaceMock.mock.calls[0][0] as string;
+    expect(href).toContain("q=milanesa");
+    expect(href).toContain("mode=platos");
   });
 
   it("prefers an explicitly selected type over the one Gemini inferred", async () => {
@@ -62,6 +83,8 @@ describe("AiSearchResolver", () => {
       neighborhood: null,
       tags: [],
       priceBand: null,
+      q: null,
+      mode: null,
     });
 
     render(<AiSearchResolver query="medialunas" presetType="bar" />);

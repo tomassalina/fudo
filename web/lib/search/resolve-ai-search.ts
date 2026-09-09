@@ -21,6 +21,16 @@ export interface ResolvedAiFilters {
   open: "now" | null;
   /** Already mapped to /buscar's `reward` param shape: "1" or null. */
   reward: "1" | null;
+  /** The free-text dish/merchant fragment Gemini extracted, straight
+   * through to /buscar's own `q` param — /buscar's own search bar (tab-
+   * aware, see lib/data/menu-items.ts's `getDishSearchResults`) does the
+   * actual name matching, never this resolver. `null` when Gemini found
+   * nothing beyond the other structured fields. */
+  q: string | null;
+  /** Already mapped to /buscar's `mode` param shape: "platos" or null —
+   * never the literal "lugares", since that's the default/absence of the
+   * param (same convention as ResultModeToggle.tsx's own href builder). */
+  mode: "platos" | null;
 }
 
 /**
@@ -49,5 +59,7 @@ export async function resolveAiSearchFilters(
     priceBand: priceBandForAmount(filters.price_per_person),
     open: filters.open === true ? "now" : null,
     reward: filters.reward === true ? "1" : null,
+    q: filters.query || null,
+    mode: filters.result_mode === "platos" ? "platos" : null,
   };
 }

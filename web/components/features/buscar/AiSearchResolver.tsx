@@ -18,9 +18,11 @@
 // and this is what's on screen the moment it lands.
 //
 // Once resolved, replaces the URL with the plain filter params
-// (`type`/`hood`/`tags`/`price`/`open`/`reward`) this app's other filters
-// already use — a shareable link, same convention as
-// `?sort=distancia`/`?open=now` (see lib/utils/buscar-href.ts). On ANY
+// (`type`/`hood`/`tags`/`price`/`open`/`reward`, plus `q`/`mode` when Gemini
+// named a specific dish/merchant — see resolve-ai-search.ts's `q`/`mode`
+// doc comments) this app's other filters already use — a shareable link,
+// same convention as `?sort=distancia`/`?open=now` (see
+// lib/utils/buscar-href.ts). On ANY
 // failure — network error, Gemini itself erroring/timing out (bounded by
 // apiFetch's own REQUEST_TIMEOUT_MS, see lib/api/client.ts, so this never
 // hangs waiting on the network past ~5s), or mock/local mode with no real
@@ -91,12 +93,14 @@ export function AiSearchResolver({
         if (cancelled) return;
         router.replace(
           buscarHref(DEFAULT_BUSCAR_PARAMS, {
+            q: filters.q,
             type: presetType || filters.type,
             hood: filters.neighborhood,
             tags: filters.tags.length > 0 ? filters.tags.join(",") : null,
             price: filters.priceBand,
             open: filters.open,
             reward: filters.reward,
+            mode: filters.mode,
           }),
         );
       })

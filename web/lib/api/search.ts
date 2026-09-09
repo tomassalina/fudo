@@ -40,6 +40,16 @@ export interface SearchQueryFilters {
   /** "Premio por visitas" — maps onto /buscar's `reward=1` param. Same
    * no-backend-filter-yet situation as `open` above. */
   reward: boolean | null;
+  /** Free-text fragment naming a specific dish/ingredient or merchant that
+   * doesn't map to `type`/`tags` (e.g. "milanesa", "la parrilla de
+   * Borges") — maps onto /buscar's own `q` param, which /buscar's own
+   * search bar matches for free (tab-aware, see
+   * lib/data/menu-items.ts's `getDishSearchResults`). This parser never
+   * matches it against anything itself. */
+  query: string | null;
+  /** Whether `query` is about a PLACE ("lugares") or a DISH ("platos") —
+   * maps onto /buscar's `mode` param. */
+  result_mode: "lugares" | "platos" | null;
 }
 
 interface RawSearchResponse {

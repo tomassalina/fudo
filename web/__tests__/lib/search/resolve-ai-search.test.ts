@@ -48,6 +48,8 @@ describe("resolveAiSearchFilters", () => {
             price_per_person: 8000,
             open: null,
             reward: null,
+            query: null,
+            result_mode: null,
           },
         }),
     } as Response);
@@ -61,6 +63,8 @@ describe("resolveAiSearchFilters", () => {
       priceBand: "0-20000",
       open: null,
       reward: null,
+      q: null,
+      mode: null,
     });
   });
 
@@ -83,6 +87,8 @@ describe("resolveAiSearchFilters", () => {
             price_per_person: null,
             open: null,
             reward: null,
+            query: null,
+            result_mode: null,
           },
         }),
     } as Response);
@@ -111,6 +117,8 @@ describe("resolveAiSearchFilters", () => {
             price_per_person: null,
             open: true,
             reward: true,
+            query: null,
+            result_mode: null,
           },
         }),
     } as Response);
@@ -140,6 +148,8 @@ describe("resolveAiSearchFilters", () => {
             price_per_person: null,
             open: false,
             reward: false,
+            query: null,
+            result_mode: null,
           },
         }),
     } as Response);
@@ -148,5 +158,67 @@ describe("resolveAiSearchFilters", () => {
 
     expect(resolved.open).toBeNull();
     expect(resolved.reward).toBeNull();
+  });
+
+  it("maps `query`/`result_mode` onto the resolver's `q`/`mode` fields when Gemini names a specific dish", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: {
+            neighborhood: null,
+            type: null,
+            tags: [],
+            price_per_person: null,
+            open: null,
+            reward: null,
+            query: "milanesa napolitana",
+            result_mode: "platos",
+          },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("quiero comer milanesa napolitana");
+
+    expect(resolved.q).toBe("milanesa napolitana");
+    expect(resolved.mode).toBe("platos");
+  });
+
+  it("maps `result_mode: \"lugares\"` to a null `mode` (default/absence of the param)", async () => {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://localhost:3000/api/v1";
+    vi.resetModules();
+    const { resolveAiSearchFilters } = await import("@/lib/search/resolve-ai-search");
+
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          data: [],
+          meta: { current_page: 1, total_pages: 1, total_count: 0, per_page: 20 },
+          filters: {
+            neighborhood: null,
+            type: null,
+            tags: [],
+            price_per_person: null,
+            open: null,
+            reward: null,
+            query: "la parrilla de Borges",
+            result_mode: "lugares",
+          },
+        }),
+    } as Response);
+
+    const resolved = await resolveAiSearchFilters("busco la parrilla de Borges");
+
+    expect(resolved.q).toBe("la parrilla de Borges");
+    expect(resolved.mode).toBeNull();
   });
 });
