@@ -255,25 +255,33 @@ export function MerchantDetailView({
     </button>
   ) : null;
 
-  // `fullWidth` matches the wide reference's `flex: 1` buttons (share the
-  // card's width evenly); the phone reference lets them hug their content —
-  // same two `<a>`s, just a different className, so this stays one function
-  // instead of two near-duplicate JSX blocks.
-  function contactButtons(fullWidth: boolean) {
+  // `variant` picks between the two references' distinct button dimensions
+  // — phone (`Fudo App.dc.html` line ~474: 12.5px text, 16px icon, hug-
+  // content padding, 8px gaps) vs wide (`Fudo Customers.dc.html` line ~565:
+  // 13.5px text, 17px icon, `flex: 1` buttons with only vertical padding
+  // since the centered content fills the flexed width, 9px gaps) — same two
+  // `<a>`s either way, so this stays one function instead of two near-
+  // duplicate JSX blocks.
+  function contactButtons(variant: "phone" | "wide") {
     if (!merchant.whatsapp_number && !merchant.delivery_url) return null;
+    const wide = variant === "wide";
     return (
-      <div className="flex gap-2">
+      <div className={cn("flex", wide ? "gap-[9px]" : "gap-2")}>
         {merchant.whatsapp_number ? (
           <a
             href={whatsappLink(merchant.whatsapp_number)}
             target="_blank"
             rel="noreferrer"
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-foreground shadow-inner shadow-white/5",
-              fullWidth && "flex-1",
+              "flex items-center justify-center rounded-full border border-border bg-surface font-semibold text-foreground shadow-inner shadow-white/5",
+              wide
+                ? "flex-1 gap-[7px] py-3 text-[13.5px]"
+                : "gap-1.5 px-3.5 py-2 text-[12.5px]",
             )}
           >
-            <span className="material-symbols text-[16px]">chat</span>
+            <span className={cn("material-symbols", wide ? "text-[17px]" : "text-[16px]")}>
+              chat
+            </span>
             WhatsApp
           </a>
         ) : null}
@@ -283,11 +291,13 @@ export function MerchantDetailView({
             target="_blank"
             rel="noreferrer"
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-full bg-linear-to-b from-accent-light to-accent-dark px-3.5 py-2 text-[12.5px] font-semibold text-white shadow-lg shadow-accent/30",
-              fullWidth && "flex-1",
+              "flex items-center justify-center rounded-full bg-linear-to-b from-accent-light to-accent-dark font-semibold text-white shadow-lg shadow-accent/30",
+              wide
+                ? "flex-1 gap-[7px] py-3 text-[13.5px]"
+                : "gap-1.5 px-3.5 py-2 text-[12.5px]",
             )}
           >
-            <span className="material-symbols text-[16px]">
+            <span className={cn("material-symbols", wide ? "text-[17px]" : "text-[16px]")}>
               delivery_dining
             </span>
             Delivery
@@ -375,7 +385,7 @@ export function MerchantDetailView({
                 {distanceKm.toLocaleString("es-AR")} km de tu
                 ubicación
               </span>
-              {contactButtons(true)}
+              {contactButtons("wide")}
             </div>
           </div>
 
@@ -455,7 +465,7 @@ export function MerchantDetailView({
           </span>
         </div>
 
-        {contactButtons(false)}
+        {contactButtons("phone")}
 
         {hoursSection}
 
