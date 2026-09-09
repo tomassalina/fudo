@@ -28,6 +28,7 @@ RSpec.describe "Api::V1::Search", type: :request do
         expect(response).to have_http_status(:ok)
         expect(json_response).to have_key("data")
         expect(json_response).to have_key("meta")
+        expect(json_response).to have_key("filters")
 
         search_history = SearchHistory.order(:id).last
         expect(search_history.consumer_id).to eq(consumer.id)
@@ -45,6 +46,12 @@ RSpec.describe "Api::V1::Search", type: :request do
         expect(structured_output["tags"]).to be_a(Array)
         expect(structured_output["tags"]).to all(be_a(String))
         expect(structured_output["price_per_person"]).to be_a(Numeric).or be_nil
+
+        # The response's `filters` must be the exact same structured output
+        # persisted to search_history — a client builds the shareable
+        # /buscar URL straight from this field, so it must never drift from
+        # what was actually parsed/saved.
+        expect(json_response["filters"]).to eq(structured_output.as_json)
       end
     end
 

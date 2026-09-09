@@ -2830,9 +2830,44 @@ paths:
                       - longitude
                   meta:
                     "$ref": "#/components/schemas/pagination_meta"
+                  filters:
+                    type: object
+                    description: The structured filters Gemini derived from the free-text
+                      query (same shape as SearchHistory#structured_output) — lets
+                      a client build a shareable /buscar?type=...&hood=... URL out
+                      of a natural-language search.
+                    properties:
+                      neighborhood:
+                        type: string
+                        nullable: true
+                      type:
+                        type: string
+                        nullable: true
+                        enum:
+                        - restaurant
+                        - cafe
+                        - bar
+                        - dark_kitchen
+                        - pizzeria
+                        - brewery
+                        - food_truck
+                        - other
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                      price_per_person:
+                        type: number
+                        nullable: true
+                    required:
+                    - neighborhood
+                    - type
+                    - tags
+                    - price_per_person
                 required:
                 - data
                 - meta
+                - filters
         '401':
           description: not authenticated
           content:

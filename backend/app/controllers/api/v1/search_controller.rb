@@ -19,7 +19,14 @@ module Api
 
         render json: {
           data: MerchantBlueprint.render_as_hash(merchants, view: :list),
-          meta: pagination_meta(merchants)
+          meta: pagination_meta(merchants),
+          # The filters Gemini actually derived (same shape SearchQueryParser
+          # returns and SearchHistory#structured_output persists) — without
+          # this, a client has no way to know which neighborhood/type/tags/
+          # price this response's merchants were filtered by, so it can't
+          # build a shareable "/buscar?type=...&hood=..." URL out of a
+          # natural-language search (see web/lib/api/search.ts).
+          filters: structured_output
         }
       rescue SearchQueryParser::ConfigurationError, SearchQueryParser::GeminiError => e
         Rails.logger.error("SearchQueryParser failed: #{e.class}: #{e.message}")

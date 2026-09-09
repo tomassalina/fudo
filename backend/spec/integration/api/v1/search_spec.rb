@@ -42,9 +42,22 @@ RSpec.describe "Search", type: :request do
         schema type: :object,
           properties: {
             data: { type: :array, items: merchant_list_item },
-            meta: { "$ref" => "#/components/schemas/pagination_meta" }
+            meta: { "$ref" => "#/components/schemas/pagination_meta" },
+            filters: {
+              type: :object,
+              description: "The structured filters Gemini derived from the free-text query " \
+                "(same shape as SearchHistory#structured_output) — lets a client build a " \
+                "shareable /buscar?type=...&hood=... URL out of a natural-language search.",
+              properties: {
+                neighborhood: { type: :string, nullable: true },
+                type: { type: :string, nullable: true, enum: Merchant.types.keys },
+                tags: { type: :array, items: { type: :string } },
+                price_per_person: { type: :number, nullable: true }
+              },
+              required: %w[neighborhood type tags price_per_person]
+            }
           },
-          required: %w[data meta]
+          required: %w[data meta filters]
 
         let(:consumer) { create_consumer }
         let(:Authorization) { auth_headers_for(consumer)["Authorization"] }
