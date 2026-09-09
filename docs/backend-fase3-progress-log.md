@@ -152,6 +152,6 @@ Real ones fixed: gifts recipient could inflate amount/self-mark redeemed via PAT
 ## Notes
 - Repo is a monorepo; this worktree tracks branch `backend-rails`. Root docs (PRD.md, PLAN.md, AGENTS.md, openspec/) present after the ff-merge.
 - `.env` reads are hard-blocked by this session's permission policy (even indirect awk/ruby probes blocked) — GEMINI_API_KEY presence/validity can only be confirmed by running the actual app/specs (ENV[...] inside Rails), never by inspecting the file directly. Same will apply to any other secret in `.env` (JWT secret, etc.) going forward.
-- User is now awake and actively engaged (not asleep) — this task is marked urgent. Still keep working end-to-end without unnecessary check-ins; only surface a real blocker (e.g., Gemini key invalid/missing with no way to fix it myself).
+- This task is marked urgent, with the project owner actively engaged. Keep working end-to-end without unnecessary check-ins; only surface a real blocker (e.g., Gemini key invalid/missing with no way to fix it).
 
 </details>
