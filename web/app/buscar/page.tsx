@@ -269,6 +269,7 @@ export default async function BuscarPage({
     type: firstString(rawParams.type),
     tags: parseTags(firstString(rawParams.tags)).join(","),
     mode: firstString(rawParams.mode),
+    tab: firstString(rawParams.tab) === "map" ? "map" : "",
     price: firstString(rawParams.price),
     hood: firstString(rawParams.hood),
     dist: firstString(rawParams.dist),

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Merchant } from "@/lib/types";
+import type { Coordinates } from "@/lib/location/use-location";
 import { MapPanel } from "./MapPanel";
 import { MerchantCard } from "./MerchantCard";
 
@@ -8,6 +9,13 @@ export interface DesktopMapSplitProps {
   merchants: Merchant[];
   countLabel: string;
   onExit: () => void;
+  /** The visitor's own live position, if already granted — threaded straight
+   * through to `MapPanel`/`LeafletMap`. `LeafletMap` is the one shared map
+   * implementation for both the phone full-screen view and this desktop
+   * split (see MapToggleSection's doc comment), so the "you are here" marker
+   * applies here too. See `LeafletMap`'s own doc comment for why this is a
+   * dedicated prop rather than a synthetic `Merchant`. */
+  userLocation?: Coordinates | null;
 }
 
 /**
@@ -22,7 +30,12 @@ export interface DesktopMapSplitProps {
  * can't collide with whoever owns FilterSidebar.tsx/SearchResultsGrid.tsx's
  * own internals.
  */
-export function DesktopMapSplit({ merchants, countLabel, onExit }: DesktopMapSplitProps) {
+export function DesktopMapSplit({
+  merchants,
+  countLabel,
+  onExit,
+  userLocation,
+}: DesktopMapSplitProps) {
   return (
     <div className="grid h-[calc(100vh-220px)] min-h-[520px] grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-stretch gap-4">
       <div className="flex min-h-0 flex-col gap-3">
@@ -54,7 +67,7 @@ export function DesktopMapSplit({ merchants, countLabel, onExit }: DesktopMapSpl
         )}
       </div>
 
-      <MapPanel merchants={merchants} />
+      <MapPanel merchants={merchants} userLocation={userLocation} />
     </div>
   );
 }

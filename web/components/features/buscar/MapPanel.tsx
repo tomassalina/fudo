@@ -10,6 +10,7 @@
 // wrapper.
 import dynamic from "next/dynamic";
 import type { Merchant } from "@/lib/types";
+import type { Coordinates } from "@/lib/location/use-location";
 import { cn } from "@/lib/utils/cn";
 
 const LeafletMap = dynamic(
@@ -37,6 +38,12 @@ export interface MapPanelProps {
   variant?: "panel" | "fullscreen";
   /** See LeafletMap's `PopupWatcher` doc comment — only wired up by the phone full-screen map view. */
   onPopupOpenChange?: (open: boolean) => void;
+  /** The visitor's own live position (from `useLocation()`'s `coords`), if
+   * already granted — passively consumed, never requested from here. `null`/
+   * omitted just renders the map with no "you are here" marker, same as
+   * today. See LeafletMap's own doc comment on why this is a dedicated prop
+   * instead of a synthetic `Merchant`. */
+  userLocation?: Coordinates | null;
 }
 
 export function MapPanel({
@@ -44,6 +51,7 @@ export function MapPanel({
   showLabels = false,
   variant = "panel",
   onPopupOpenChange,
+  userLocation,
 }: MapPanelProps) {
   return (
     <div
@@ -56,6 +64,7 @@ export function MapPanel({
         merchants={merchants}
         showLabels={showLabels}
         onPopupOpenChange={onPopupOpenChange}
+        userLocation={userLocation}
       />
     </div>
   );

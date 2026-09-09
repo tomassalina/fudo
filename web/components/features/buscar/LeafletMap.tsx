@@ -11,6 +11,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./leaflet-map.css";
 import type { Merchant, MerchantType } from "@/lib/types";
+import type { Coordinates } from "@/lib/location/use-location";
 import {
   MERCHANT_TYPE_BADGE,
   MERCHANT_TYPE_LABELS,
@@ -85,6 +86,32 @@ function createMerchantIcon(type: MerchantType, withLabel: boolean): L.DivIcon {
     iconSize: [PIN_WIDTH, totalHeight],
     iconAnchor: [PIN_WIDTH / 2, anchorY],
     popupAnchor: [0, -anchorY],
+  });
+}
+
+const USER_LOCATION_ICON_SIZE = 34;
+
+/**
+ * The "you are here" marker — a Google-Maps-style blue dot with a soft
+ * pulsing accuracy halo (`.fudo-map-user-location*` in leaflet-map.css),
+ * deliberately DOM- and visually distinct from `createMerchantIcon`'s
+ * type-colored pin/tail/label shape above: no `merchant.type` badge, no
+ * tail, no label pill, and blue is not used by any `MERCHANT_TYPE_BADGE`
+ * color, so it never reads as "just another merchant". A plain function
+ * (not memoized) same as `createMerchantIcon` — cheap to build, and Leaflet
+ * icons aren't meaningfully expensive to recreate on re-render.
+ */
+function createUserLocationIcon(): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    html: `
+      <span class="fudo-map-user-location">
+        <span class="fudo-map-user-location__halo" aria-hidden="true"></span>
+        <span class="fudo-map-user-location__dot" aria-hidden="true"></span>
+      </span>
+    `,
+    iconSize: [USER_LOCATION_ICON_SIZE, USER_LOCATION_ICON_SIZE],
+    iconAnchor: [USER_LOCATION_ICON_SIZE / 2, USER_LOCATION_ICON_SIZE / 2],
   });
 }
 
@@ -204,9 +231,29 @@ export interface LeafletMapProps {
   showLabels?: boolean;
   /** See `PopupWatcher`'s doc comment above. Omitted where no ancestor needs to react (e.g. the desktop split view). */
   onPopupOpenChange?: (open: boolean) => void;
+  /**
+   * The visitor's own live position, already resolved elsewhere
+   * (`useLocation()`'s `coords`, header "Activar ubicación" flow) — this
+   * component only ever passively renders it, it never calls
+   * `requestLocation()` itself. `null`/omitted (idle, denied, unsupported,
+   * or simply not asked yet) just renders the map with no marker — no fake
+   * default position, no re-prompt, no crash. Kept as its own prop instead
+   * of a synthetic entry in `merchants`: `Merchant` has several required
+   * fields (id, name, type, address, …) a fake "you are here" row would have
+   * to stub with meaningless values just to satisfy the type, and it would
+   * also need `createMerchantIcon`-style type styling it has no real type
+   * for — a dedicated prop + a dedicated icon (`createUserLocationIcon`
+   * above) is the honest shape for data that isn't a merchant at all.
+   */
+  userLocation?: Coordinates | null;
 }
 
-export function LeafletMap({ merchants, showLabels = false, onPopupOpenChange }: LeafletMapProps) {
+export function LeafletMap({
+  merchants,
+  showLabels = false,
+  onPopupOpenChange,
+  userLocation,
+}: LeafletMapProps) {
   const center: [number, number] = [
     USER_LOCATION.latitude,
     USER_LOCATION.longitude,
@@ -272,6 +319,15 @@ export function LeafletMap({ merchants, showLabels = false, onPopupOpenChange }:
           onSearchingChange={setSearchingZone}
         />
         <PopupWatcher onPopupOpenChange={onPopupOpenChange} />
+        {userLocation ? (
+          <Marker
+            position={[userLocation.latitude, userLocation.longitude]}
+            icon={createUserLocationIcon()}
+            interactive={false}
+            keyboard={false}
+            zIndexOffset={1000}
+          />
+        ) : null}
         {markers.map((merchant, index) => {
           const next = markers.length > 1 ? markers[(index + 1) % markers.length] : null;
           return (

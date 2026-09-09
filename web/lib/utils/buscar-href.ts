@@ -12,6 +12,14 @@ export interface BuscarParams {
   type: string;
   tags: string;
   mode: string;
+  /** "map" while the phone/desktop map view is open, "" (omitted from the
+   * URL, same falsy-default convention every other field here uses) while
+   * showing the list. Lets `/buscar?tab=map` (a shared link, a bookmark, a
+   * back-navigation) land straight in map view instead of always defaulting
+   * to the list — see BuscarView's `showMap` initialization. Deliberately no
+   * literal `"list"` value: closed is just the field's default absence, same
+   * as every other non-active filter/param in this interface. */
+  tab: string;
   price: string;
   hood: string;
   dist: string;
@@ -47,6 +55,7 @@ export const DEFAULT_BUSCAR_PARAMS: BuscarParams = {
   type: "",
   tags: "",
   mode: "",
+  tab: "",
   price: "",
   hood: "",
   dist: "",
@@ -64,6 +73,7 @@ const FIELD_ORDER: (keyof BuscarParams)[] = [
   "type",
   "tags",
   "mode",
+  "tab",
   "price",
   "hood",
   "dist",

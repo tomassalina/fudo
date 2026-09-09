@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { useLocation } from "@/lib/location/use-location";
@@ -80,9 +80,41 @@ export function BuscarView({
   // between two entirely different layouts below (sidebar+grid vs.
   // DesktopMapSplit's compact-list+big-map), not just whether one section's
   // own panel is visible — see MapToggleSection's doc comment.
-  const [showMap, setShowMap] = useState(false);
+  //
+  // Derived directly from `current.tab` (same pattern as `mode` above, which
+  // has no local state either) rather than mirrored into local `useState`.
+  // BuscarView is intentionally never remounted across router.push/replace
+  // navigations on /buscar (no `key` anywhere in its ancestor chain — that's
+  // what keeps the Leaflet map instance and its pan/zoom alive across filter
+  // changes), so a `useState` initializer here would only run once on first
+  // mount and go stale on any later navigation that changes `current.tab`
+  // without remounting — e.g. open the map (tab=map), then browser Back to
+  // an earlier `tab`-less history entry: the URL says list view but stale
+  // state would still read `true`. Deriving directly sidesteps that class of
+  // bug entirely — `showMap` always matches whatever `current.tab` the
+  // server most recently rendered with, on every render, no sync needed.
+  const showMap = current.tab === "map";
   const showDesktopMapSplit = mode === "lugares" && showMap && !isPhone;
   const hidePhoneListWhileMapping = mode === "lugares" && showMap && isPhone;
+
+  // Single toggle path for every "open/close the map" control (the phone
+  // pill, desktop's "Ver mapa" button, DesktopMapSplit's "Ver lista" exit) —
+  // mirrors the choice into `?tab=map` (cleared, not set to a literal
+  // "list", when closing — see BuscarParams' own doc comment on `tab`), and
+  // `showMap` above (derived straight from `current.tab`) picks it up on the
+  // next render once the URL update lands — no local state to keep in sync.
+  // `router.replace` (not `push`): opening/closing the map is a view toggle
+  // on the same result set, not a new search — same rationale as the
+  // geolocation-sync effect below, and deliberately NOT the `router.push`
+  // convention PhoneFilterSheet/FilterSidebar's "Aplicar" and SortMenu use
+  // for an actual filter/search change (see SearchBar's own doc comment for
+  // the full push-vs-replace breakdown) — toggling the map open and shut a
+  // few times while browsing shouldn't leave a trail of back-button stops.
+  function handleToggleMap(next: boolean) {
+    router.replace(buscarHref(current, { tab: next ? "map" : null }), {
+      scroll: false,
+    });
+  }
 
   // The Server Component (app/buscar/page.tsx) has no access to the
   // browser's geolocation on its own, so once the visitor activates it via
@@ -123,7 +155,9 @@ export function BuscarView({
   // Kept as its own JSX chunk (rather than inlined twice) so it can also sit
   // above DesktopMapSplit unchanged when that view is active —
   // DesktopMapSplit owns its own self-contained layout and isn't part of
-  // this grid (see its doc comment).
+  // this grid (see its doc comment) — AND so the exact same chunk can be
+  // handed to MapToggleSection as its floating `overlay` while the phone map
+  // is open (`mapOverlay` below), instead of sitting in normal flow above it.
   const searchBar = (
     <div className="flex items-center gap-2.5">
       <div className="min-w-0 flex-1">
@@ -132,11 +166,28 @@ export function BuscarView({
           placeholder={
             isPhone ? undefined : "Buscar por nombre de local, plato, tipo o barrio"
           }
+          current={current}
         />
       </div>
       {isPhone ? <PhoneFilterSheet {...filterFieldsProps} /> : null}
     </div>
   );
+
+  // Same "float on top of the map instead of sitting in flow above it"
+  // treatment for the phone-only mode toggle + AI chips row that normally
+  // stacks right under the search bar — see MapToggleSection's `overlay` doc
+  // comment for why this lives here (BuscarView) rather than inside that
+  // component. Only ever built (and only ever handed to MapToggleSection)
+  // while `hidePhoneListWhileMapping` is true; MapToggleSection itself is a
+  // no-op on wide viewports and renders nothing while `showMap` is false, so
+  // passing `undefined` the rest of the time keeps this cheap.
+  const mapOverlay = hidePhoneListWhileMapping ? (
+    <>
+      {searchBar}
+      <ResultModeToggle current={current} mode={mode} fullWidth />
+      <AiChips current={current} activeTags={activeTags} availableTags={availableTags} />
+    </>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -168,16 +219,22 @@ export function BuscarView({
           <DesktopMapSplit
             merchants={merchants}
             countLabel={countLabel}
-            onExit={() => setShowMap(false)}
+            onExit={() => handleToggleMap(false)}
+            userLocation={coords}
           />
         ) : (
           <>
             {!isPhone ? <FilterSidebar {...filterFieldsProps} /> : null}
 
             <div className="flex min-w-0 flex-col gap-4">
-              {searchBar}
+              {/* List mode (map closed) keeps this in normal document flow
+                  exactly as before. Map open on phone: this same content is
+                  rendered instead as MapToggleSection's floating `overlay`
+                  (`mapOverlay` above) — omitted here so it isn't rendered
+                  twice. */}
+              {hidePhoneListWhileMapping ? null : searchBar}
 
-              {isPhone ? (
+              {hidePhoneListWhileMapping ? null : isPhone ? (
                 <>
                   <ResultModeToggle current={current} mode={mode} fullWidth />
                   <AiChips
@@ -207,7 +264,7 @@ export function BuscarView({
                       // phone-only, see its doc comment).
                       <button
                         type="button"
-                        onClick={() => setShowMap(true)}
+                        onClick={() => handleToggleMap(true)}
                         className="flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface px-4 py-2.5 text-[13px] font-semibold text-foreground transition-colors hover:border-accent/50"
                       >
                         <span aria-hidden className="material-symbols text-[17px]">
@@ -224,7 +281,9 @@ export function BuscarView({
                 <MapToggleSection
                   merchants={merchants}
                   showMap={showMap}
-                  onToggle={setShowMap}
+                  onToggle={handleToggleMap}
+                  overlay={mapOverlay}
+                  userLocation={coords}
                 />
               ) : null}
 
