@@ -31,6 +31,7 @@
 
 import { SearchAnalytics } from "@/components/analytics/SearchAnalytics";
 import { FluidContainer } from "@/components/ui/FluidContainer";
+import { Header } from "@/components/layout/Header";
 import { BuscarView } from "@/components/features/buscar/BuscarView";
 import { AiSearchResolver } from "@/components/features/buscar/AiSearchResolver";
 import type { ResultMode } from "@/components/features/buscar/ResultModeToggle";
@@ -248,6 +249,7 @@ export default async function BuscarPage({
   if (aiQuery) {
     return (
       <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
+        <Header />
         <AiSearchResolver query={aiQuery} presetType={firstString(rawParams.type)} />
       </FluidContainer>
     );
@@ -362,6 +364,7 @@ export default async function BuscarPage({
 
   return (
     <FluidContainer as="main" className="flex flex-1 flex-col gap-6 pt-8 pb-28">
+      <Header />
       <SearchAnalytics
         hasQuery={query.length > 0}
         queryText={query}
