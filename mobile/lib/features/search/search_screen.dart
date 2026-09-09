@@ -300,6 +300,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               // so a `Positioned.bottom` here is measured from the same
               // screen edge the nav floats above.
               //
+              // Second bug fix 2026-09-09 (product-reported: "el mapa
+              // debería estar exactamente encima del bottom navigation bar
+              // y centrado en el centro del bottom navigation bar,
+              // actualmente está flotando en cualquier lado"): the old
+              // `right: 16` anchor right-aligned the button instead of
+              // centering it on the nav pill at all — not even close to the
+              // nav's own horizontal center. The nav pill itself
+              // (`main_shell.dart`'s `_FloatingBottomNav`) is NOT
+              // screen-width: it's wrapped in `Padding(fromLTRB(20, 0, 20,
+              // ...))` inside a full-screen-width slot, so its horizontal
+              // center is `20 + (screenWidth - 40) / 2`, which reduces to
+              // exactly `screenWidth / 2` because the left/right padding is
+              // symmetric (20 == 20) — i.e. the nav pill's real center
+              // coincides with this Stack's own horizontal center (this
+              // screen's body spans the same full screen width as the
+              // nav's slot). So centering within this `Positioned`'s full
+              // width (`left: 0, right: 0`) lands on the nav's actual
+              // center, not a coincidentally-equal but conceptually
+              // different "screen center" hardcode — if the nav's padding
+              // ever becomes asymmetric, this would need to read the same
+              // margin values instead.
+              //
               // Same bug report: the button must hide/reappear in sync with
               // the nav's own scroll-hide behavior instead of always
               // showing — driven here by the shared [navVisibleProvider]
@@ -308,14 +330,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               // independent, potentially-desynced listeners.
               if (_resultMode == _ResultMode.lugares)
                 Positioned(
-                  right: 16,
+                  left: 0,
+                  right: 0,
                   bottom:
                       mainShellNavBottomMargin(context) +
                       mainShellNavPillHeight +
                       12,
-                  child: _FloatingMapButton(
-                    onTap: _toggleResultsMode,
-                    visible: ref.watch(navVisibleProvider),
+                  child: Center(
+                    child: _FloatingMapButton(
+                      onTap: _toggleResultsMode,
+                      visible: ref.watch(navVisibleProvider),
+                    ),
                   ),
                 ),
             ],
