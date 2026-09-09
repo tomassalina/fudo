@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/cn";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-full font-semibold " +
@@ -25,6 +25,9 @@ const sizes: Record<ButtonSize, string> = {
   sm: "px-3.5 py-1.5 text-[13px]",
   md: "px-4.5 py-2.5 text-[14px]",
   lg: "px-7 py-[15px] text-[15px]",
+  // Square, icon-only trigger (e.g. a circular submit/action button) —
+  // no horizontal text padding, fixed footprint instead.
+  icon: "h-11 w-11 p-0",
 };
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

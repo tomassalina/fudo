@@ -55,11 +55,17 @@ export function searchMerchants(
   });
 }
 
-/** Rotating placeholder examples for the search input, per the PRD. */
+/**
+ * Rotating placeholder examples for the search input — the exact `HINTS`
+ * array from the design reference (`docs/design-reference/Fudo App.dc.html`),
+ * not an approximation. Shared by the home hero's typewriter animation and
+ * the /buscar search bar's placeholder rotation, so both stay in sync with
+ * the same design-sourced copy.
+ */
 export const SEARCH_EXAMPLES = [
   "Algo picante y barato cerca mío",
   "Café tranquilo para laburar en Palermo",
-  "Sushi para pedir en pareja",
-  "Un lugar con buena onda para cumpleaños",
-  "Hamburguesas con descuento hoy",
+  "Parrilla para ir con amigos esta noche",
+  "Opción sin TACC para almorzar",
+  "Sushi que no sea carísimo",
 ];

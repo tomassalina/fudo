@@ -96,6 +96,12 @@
      shipping a font-size + line-height together as one utility. */
   --text-hero-fluid: clamp(32px, 5vw, 62px);
   --text-hero-fluid--line-height: 1.02;
+  /* Phone hero (`--hero` in Fudo App.dc.html's home template) — a distinct,
+     smaller clamp curve from the wide hero above, not a scaled-down version
+     of it. Switched via useIsPhoneViewport (900px), the design's one hard
+     breakpoint — see lib/hooks/use-viewport.ts. */
+  --text-hero-fluid-phone: clamp(25px, 8.4vw, 36px);
+  --text-hero-fluid-phone--line-height: 1.1;
   --text-title-fluid: clamp(28px, 3.5vw, 44px);
   --text-title-fluid--line-height: 1.04;
 

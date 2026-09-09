@@ -1,31 +1,40 @@
 // Server Component (default) — public landing page, rendered at `/`.
 //
-// Kept intentionally modest: this is the lowest-priority piece of the
-// product (a public, SEO-oriented entry point into the Buscar experience),
-// not a marketing site to over-invest in. Visual tokens now come from the
-// real design reference (see globals.css) instead of the earlier violet
-// placeholder guess.
+// Structure and copy come from the design reference's `isHome` view:
+//   docs/design-reference/Fudo App.dc.html        (phone, vw < 900)
+//   docs/design-reference/Fudo Customers.dc.html  (wide, vw >= 900)
+// The hero (headline + typewriter search card) is the one client island —
+// see components/features/home/HeroSearch.tsx — everything else, including
+// the featured-places fetch, stays server-rendered.
 
-import Link from "next/link";
+import { FluidContainer } from "@/components/ui/FluidContainer";
+import { HeroSection } from "@/components/features/home/HeroSection";
+import { HeroSearch } from "@/components/features/home/HeroSearch";
+import { FeaturedGrid } from "@/components/features/home/FeaturedGrid";
+import { getMerchants } from "@/lib/data/merchants";
 
-export default function MarketingLandingPage() {
+const FEATURED_COUNT = 6;
+
+export default async function MarketingLandingPage() {
+  const merchants = await getMerchants();
+  const featured = merchants.slice(0, FEATURED_COUNT);
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-16 text-center">
-      <h1 className="max-w-2xl font-heading text-4xl font-black leading-tight tracking-tight text-foreground sm:text-5xl">
-        Encontrá dónde comer.{" "}
-        <span className="italic text-accent">Ganá descuentos</span> por cada
-        visita.
-      </h1>
-      <p className="max-w-md text-base text-foreground-muted">
-        Buscá restaurantes, bares y cafés cerca tuyo en lenguaje natural, y
-        sumá recompensas en tus locales favoritos cada vez que volvés.
-      </p>
-      <Link
-        href="/buscar"
-        className="rounded-full bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-dark"
-      >
-        Buscar un lugar
-      </Link>
+    <main className="flex flex-1 flex-col">
+      <HeroSection>
+        <FluidContainer className="relative animate-fudo-fade">
+          <HeroSearch />
+        </FluidContainer>
+      </HeroSection>
+
+      {featured.length > 0 ? (
+        <FluidContainer as="section" className="flex flex-col gap-4 pb-16">
+          <h2 className="font-heading text-title-fluid font-black text-foreground">
+            Lugares destacados
+          </h2>
+          <FeaturedGrid merchants={featured} />
+        </FluidContainer>
+      ) : null}
     </main>
   );
 }
