@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +40,19 @@ class SearchMapView extends ConsumerStatefulWidget {
 class _SearchMapViewState extends ConsumerState<SearchMapView> {
   Merchant? _selected;
 
+  /// Owns pan/zoom programmatically (bug fix 2026-09-09, product-reported
+  /// missing "locate me" button): previously `FlutterMap` used its default
+  /// internal controller, which nothing outside the widget could drive.
+  /// Needed so [_LocateMeButton] can re-center the camera on tap instead of
+  /// only being able to set a one-time `initialCenter`.
+  final MapController _mapController = MapController();
+
+  /// Matches web's `LOCATE_MIN_ZOOM` (`LeafletMap.tsx`): locating never
+  /// zooms *out* past this level even if the map is currently zoomed out
+  /// further, but it also never zooms in past whatever the user already
+  /// set.
+  static const double _locateMinZoom = AppConstants.defaultMapZoom;
+
   @override
   Widget build(BuildContext context) {
     final merchantsAsync = ref.watch(merchantsProvider);
@@ -77,8 +92,25 @@ class _SearchMapViewState extends ConsumerState<SearchMapView> {
             return Stack(
               children: [
                 FlutterMap(
+                  mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: AppConstants.defaultMapCenter,
+                    // Bug fix 2026-09-09 (product-reported: map defaulted to
+                    // a fixed Palermo center even with the user's real
+                    // location known): a fresh/unfiltered view
+                    // (`widget.query.isEmpty`) reads straight off
+                    // [userLocationController] the same way the "you are
+                    // here" marker below does — passive read only, no
+                    // forced location request from here — and falls back to
+                    // [AppConstants.defaultMapCenter] only when that isn't
+                    // available. `initialCenter` is genuinely read only
+                    // once, on this `FlutterMap`'s first build (see the
+                    // class doc comment on State reuse across rebuilds), so
+                    // this doesn't fight [_LocateMeButton] or later
+                    // `userLocation` updates once the map is already
+                    // mounted.
+                    initialCenter: widget.query.isEmpty && userLocation != null
+                        ? userLocation
+                        : AppConstants.defaultMapCenter,
                     initialZoom: AppConstants.defaultMapZoom,
                     onTap: (_, _) => setState(() => _selected = null),
                   ),
@@ -154,6 +186,20 @@ class _SearchMapViewState extends ConsumerState<SearchMapView> {
                     child: const Icon(Symbols.view_list),
                   ),
                 ),
+                // "Locate me" (bug fix 2026-09-09, product-reported: this
+                // button was completely missing, before and after granting
+                // permission). Bottom-left, matching web's equivalent
+                // (`web/components/features/buscar/LeafletMap.tsx`'s
+                // `bottom-4 left-4` button + `my_location` icon) — unlike
+                // web's passive-only version (only rendered once a position
+                // already exists), this one is always present so a
+                // not-yet-granted visitor has something to tap in the first
+                // place; see [_handleLocateMeTap].
+                Positioned(
+                  left: 16,
+                  bottom: 16,
+                  child: _LocateMeButton(onTap: _handleLocateMeTap),
+                ),
                 if (_selected != null)
                   Positioned(
                     left: 16,
@@ -183,6 +229,32 @@ class _SearchMapViewState extends ConsumerState<SearchMapView> {
   Future<void> _openLink(String url) async {
     final uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  /// [_LocateMeButton]'s tap handler (bug fix 2026-09-09). Two cases, same
+  /// as the product report:
+  ///  - Permission not yet granted (`userLocationController.value == null`):
+  ///    reuses [UserLocationController.requestLocation] — the exact same
+  ///    permission-request path the home header's "Activar ubicación" pill
+  ///    already calls — instead of a second, parallel permission flow.
+  ///  - Permission already granted (a resolved value already sitting in
+  ///    the controller): pans straight to it, no new location fetch.
+  ///
+  /// If a fresh request still resolves to `null` (denied, services off, or
+  /// any platform failure — see [UserLocationController]'s contract), this
+  /// silently no-ops: same "never throws, just stays at no real location"
+  /// contract as everywhere else this controller is read.
+  Future<void> _handleLocateMeTap() async {
+    var location = userLocationController.value;
+    if (location == null) {
+      await userLocationController.requestLocation();
+      location = userLocationController.value;
+    }
+    if (location == null || !mounted) return;
+    _mapController.move(
+      location,
+      math.max(_mapController.camera.zoom, _locateMinZoom),
+    );
   }
 }
 
@@ -264,6 +336,41 @@ class _UserLocationMarkerState extends State<_UserLocationMarker>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Locate me" floating button (bug fix 2026-09-09) — a circular button,
+/// bottom-left, matching web's equivalent in
+/// `web/components/features/buscar/LeafletMap.tsx` (`h-10 w-10
+/// rounded-full border border-border bg-surface`, `my_location` icon).
+/// Purely presentational; [_SearchMapViewState._handleLocateMeTap] owns the
+/// permission-request-or-pan behavior.
+class _LocateMeButton extends StatelessWidget {
+  const _LocateMeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.surface,
+      shape: const CircleBorder(side: BorderSide(color: AppTheme.border)),
+      elevation: 8,
+      shadowColor: AppTheme.shadow,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: const SizedBox(
+          width: 40,
+          height: 40,
+          child: Icon(
+            Symbols.my_location,
+            size: 20,
+            color: AppTheme.textPrimary,
+          ),
+        ),
       ),
     );
   }
