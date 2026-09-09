@@ -49,6 +49,16 @@ class _SearchHomeViewState extends ConsumerState<SearchHomeView> {
     'Sushi que no sea carísimo',
   ];
 
+  /// Mirrors web's `pb-28` (112px) bottom-nav clearance subtracted from
+  /// `HeroSection.tsx`'s centering box — see the centering comment in
+  /// [build] for why this widget needs the same number. Added as an
+  /// invisible trailing spacer inside the centered [Column] rather than
+  /// subtracted from the box height itself: centering a group whose last
+  /// child is this spacer shifts the *visible* content (everything above
+  /// it) up by exactly half the spacer's height, which is the same
+  /// arithmetic effect as web's "shrink the box, then center" approach.
+  static const _bottomNavClearance = 112.0;
+
   static const _typeDelay = Duration(milliseconds: 45);
   static const _deleteDelay = Duration(milliseconds: 25);
   static const _pauseAfterTyped = Duration(milliseconds: 1400);
@@ -155,6 +165,21 @@ class _SearchHomeViewState extends ConsumerState<SearchHomeView> {
     // the full space left over after chrome instead of pinning it near the
     // top — `LayoutBuilder` + a `minHeight` constraint reproduces that here
     // while still allowing the column to scroll on short screens.
+    //
+    // Correction from the previous round (commit 8bc4285): that version
+    // centered within the *entire* `constraints.maxHeight`, but this widget
+    // always renders inside `MainShell` (`shared/widgets/main_shell.dart`),
+    // whose `Scaffold` uses `extendBody: true` with a *floating* bottom-nav
+    // pill (`_FloatingBottomNav`) that does NOT reserve layout space — so
+    // `constraints.maxHeight` already extends behind the pill. Web avoids
+    // this by explicitly subtracting `164px` (`~52px` header + `112px`
+    // `pb-28`, "the same bottom-nav clearance used everywhere else in this
+    // app") from `100vh` *before* centering (`HeroSection.tsx`), since its
+    // own `PhoneNav` is equally a floating overlay that reserves no space.
+    // `_bottomNavClearance` below mirrors that same `112px` figure — the
+    // header offset itself is already handled for free here, since
+    // `HomeHeader`/the "Buscar" tab's own top bar sit in a sibling
+    // `Column` slot above this `Expanded`, not inside it.
     return LayoutBuilder(
       builder: (context, constraints) {
         // Web's `--text-hero-fluid-phone` token: `clamp(25px, 8.4vw, 36px)`.
@@ -210,6 +235,11 @@ class _SearchHomeViewState extends ConsumerState<SearchHomeView> {
                     onTap: () => widget.onSearch(lastQuery),
                   ),
                 ],
+                // Invisible trailing spacer — NOT rendered content. See the
+                // `_bottomNavClearance` doc comment: this is what actually
+                // shifts the visible block above it up and off the floating
+                // bottom-nav pill, matching web's centering math.
+                const SizedBox(height: _bottomNavClearance),
               ],
             ),
           ),
