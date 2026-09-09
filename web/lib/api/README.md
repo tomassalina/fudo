@@ -131,21 +131,30 @@ filtering it client-side just works, same as the mock layer always did.
 them yet (~30 rows, no real need for that server-side filtering). Documented
 here for whoever wants to add them later.
 
-## Out of scope: auth
+## Auth (superseded — kept for history)
 
-`POST /api/v1/registrations` and `POST /api/v1/sessions` (email + password
-login, JWT/session token) are part of the Fase 3 backend contract but are
-**intentionally not implemented anywhere in this app.** Per the PRD, this
-Next.js app's scope is public, unauthenticated search and merchant detail
-pages only — no login, no per-user data (favorites, gifts, visit history
-live in the mobile app). This also means `POST /api/v1/search` can never
-be used here as-is (see point 4 above) — not an oversight either time.
+This section originally said `POST /api/v1/registrations` /
+`POST /api/v1/sessions` were **intentionally not implemented anywhere in
+this app**, per a PRD reading that this Next.js app's scope was public,
+unauthenticated pages only. A later session added a real login/registro
+flow anyway (`auth.ts`, `favorites.ts`, `consumer-settings.ts` in this
+directory, plus `lib/session/session-provider.tsx`) — see those files'
+header comments for the real, confirmed request/response shapes. Unlike
+merchants/menu-items, auth and every protected endpoint are NOT behind the
+`isApiConfigured()` mock/real switch described above: there is no mocked
+login anymore, so these always call the real backend directly.
+`POST /api/v1/search` is still not called here (see point 4 above) — that
+reasoning is unaffected by auth becoming real.
 
 ## Layout
 
 - `client.ts` — `apiFetch`, `ApiError`, `isApiConfigured`.
 - `merchants.ts`, `menu-items.ts` — real `fetch` implementations per
   endpoint, returning the same shapes as `lib/types`.
+- `auth.ts` — real `POST /api/v1/sessions` / `POST /api/v1/registrations`.
+- `favorites.ts`, `consumer-settings.ts` — real, authenticated
+  (`Authorization: Bearer <token>`) CRUD for the current consumer's own
+  favorites and settings.
 - `../data/*` — the facade pages actually import from; picks mock vs. real
   per `isApiConfigured()` and exposes one async function per screen need,
   regardless of which backend answers it.

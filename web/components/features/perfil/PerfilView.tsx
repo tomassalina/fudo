@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/session/use-session";
+import { useRequireAuth } from "@/lib/session/use-require-auth";
 import { FluidContainer } from "@/components/ui/FluidContainer";
 import { SegmentedControl, type SegmentedOption } from "@/components/ui/SegmentedControl";
 import { ProfileHeader } from "./ProfileHeader";
@@ -40,33 +41,29 @@ const PROFILE_TABS: SegmentedOption<ProfileTab>[] = [
  * expecting exactly this redirect (see WideNav.tsx), the strongest signal
  * slice 1 anticipated this exact behavior.
  *
- * Client-side `router.replace` (not `.push`, so a logged-out visit to
- * /perfil doesn't leave a dead entry in browser history) — there's no
- * middleware/session cookie to redirect on the server with yet, since the
- * whole session is a client-only mock (localStorage), so a server redirect
- * isn't possible here regardless.
+ * The redirect-when-logged-out and "brief flash of nothing" logic live in
+ * `useRequireAuth()` (lib/session/use-require-auth.ts), not inline here
+ * anymore — see that file's header comment for why a plain
+ * `useEffect(() => { if (!isAuthenticated) router.replace("/login") })`
+ * incorrectly bounced a real, logged-in consumer to `/login` on every hard
+ * reload of this exact page, and how the hook fixes it. `router.replace`
+ * (not `.push`) so a logged-out visit doesn't leave a dead entry in browser
+ * history — there's no middleware/session cookie to redirect on the server
+ * with yet, since the whole session is client-only (localStorage), so a
+ * server redirect isn't possible here regardless.
  */
 export function PerfilView() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useSession();
+  const { logout } = useSession();
+  const { ready, suppressNextRedirect } = useRequireAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTab>("visitas");
-  // `logout()` flips `isAuthenticated` to false synchronously, while this
-  // page is still mounted (client-side navigation away hasn't resolved
-  // yet) — without this guard, the effect below would race handleLogout's
-  // own `router.push("/")` with its own `router.replace("/login")` and the
-  // logout button would land the consumer on /login instead of home.
-  const loggingOutRef = useRef(false);
 
-  useEffect(() => {
-    if (!isAuthenticated && !loggingOutRef.current) {
-      router.replace("/login");
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    // Brief flash before the effect above redirects — render nothing rather
-    // than a half-populated profile for a consumer that doesn't exist.
+  if (!ready) {
+    // Either still settling (see useRequireAuth) or genuinely logged out
+    // and a redirect to /login is already in flight — render nothing
+    // rather than a half-populated profile for a consumer that doesn't
+    // exist yet/anymore.
     return null;
   }
 
@@ -77,7 +74,11 @@ export function PerfilView() {
     : "Bronce";
 
   function handleLogout() {
-    loggingOutRef.current = true;
+    // Without this, useRequireAuth's own redirect effect would race this
+    // function's `router.push("/")` the moment `logout()` flips
+    // `isAuthenticated` to false, and could land the consumer on /login
+    // instead of home.
+    suppressNextRedirect();
     logout();
     router.push("/");
   }

@@ -10,12 +10,11 @@ import type { Merchant } from "@/lib/types";
 /**
  * "TUS FAVORITOS" — Perfil's `pFavs` tab (`docs/design-reference/Fudo
  * App.dc.html`, `favList`/`noFavs`). Reads favorited merchant ids from the
- * shared `lib/favorites/favorites-store.ts` (localStorage-backed — see that
- * module's header comment for why this isn't the real `favorites` table
- * yet) and resolves each id to a full `Merchant` via the existing
- * `getMerchantById` data facade, so a merchant's name/photo/type here is
- * real data (mock or the live backend, whichever `isApiConfigured()` picks)
- * even though the *favorited* flag itself is local-only.
+ * shared `lib/favorites/favorites-store.ts` — now backed for real by
+ * `GET/POST/DELETE /api/v1/favorites` (see that module's header comment) —
+ * and resolves each id to a full `Merchant` via the existing
+ * `getMerchantById` data facade, so both the *favorited* flag and the
+ * merchant details it resolves to are real.
  */
 export function FavoritesTab() {
   const favoriteIds = useFavoriteMerchantIds();

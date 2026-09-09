@@ -4,33 +4,39 @@ import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { Consumer } from "@/lib/session/use-session";
 import { formatConsumerQrId } from "@/lib/mock/qr-grid";
+import { useNotificationsSetting } from "@/lib/consumer-settings/use-notifications-setting";
 
 /**
  * "Ajustes" tab — Perfil's `pConfig` view (`docs/design-reference/Fudo
  * App.dc.html`: `dataRows`, `prefRows`, `resetPass`/`deleteAccount`, lines
- * ~746-807). What's real vs. UI-only here, and why (see
- * `docs/visual-qa-report.md` section 6 for the full trace):
+ * ~746-807). What's real vs. UI-only here, and why:
  *
- * - Nombre/Email/Teléfono/DNI/Alta + "Actualizar mis datos": real — reads
- *   `consumer` from the (mocked-login) session and opens the same
- *   `EditProfileForm` sheet PerfilView already wires up via `onEdit`.
- * - Notificaciones / Alertas de precio toggles: **UI-only, local state**.
- *   The backend does have a real per-consumer settings resource
- *   (`ConsumerSetting` — `notifications_enabled`/`theme`,
- *   `backend/app/controllers/api/v1/consumer_settings_controller.rb`,
- *   confirmed present) but reaching it needs a real authenticated request,
- *   which this app cannot make yet (same auth gap as
- *   `lib/favorites/favorites-store.ts` — no bearer token anywhere). A price-
- *   alerts field doesn't exist on that resource at all yet regardless.
+ * - Nombre/Email/Teléfono/DNI/Alta + "Actualizar mis datos": reads
+ *   `consumer` from the real session and opens the same `EditProfileForm`
+ *   sheet PerfilView already wires up via `onEdit` — but see that form's own
+ *   doc comment: there is no `PATCH /api/v1/consumers/:id` (or `/me`) route
+ *   anywhere in `backend/config/routes.rb` at all (confirmed absent), so
+ *   saving there is still local-only, not a real limitation of THIS tab.
+ * - Notificaciones: **real** — `useNotificationsSetting()`
+ *   (lib/consumer-settings/use-notifications-setting.ts) reads/writes the
+ *   actual `ConsumerSetting.notifications_enabled` column via
+ *   `backend/app/controllers/api/v1/consumer_settings_controller.rb`, now
+ *   that there's a real bearer token to authenticate with.
+ * - Alertas de precio: still **UI-only, local state** — that field doesn't
+ *   exist on `ConsumerSetting` at all (confirmed against
+ *   `backend/app/models/consumer_setting.rb`: only `theme` and
+ *   `notifications_enabled`), so there's nothing real to persist it to.
  * - The design's "Tema claro/oscuro" toggle is intentionally NOT
  *   reproduced: this app has no light theme to switch to (`app/globals.css`
  *   only ever defines the dark palette) — a toggle with nothing to toggle
- *   would be worse than no toggle.
+ *   would be worse than no toggle. `ConsumerSetting.theme` exists on the
+ *   backend but has no UI here for the same reason.
  * - "DNI · Verificado y cifrado": real-ish — reflects whether *this*
- *   consumer actually has a `dni` on file (never true for a mocked
- *   login/registro, which collects no DNI — see `ProfileHeader`'s
- *   `formatMaskedDni` doc comment), instead of unconditionally claiming
- *   "verified" the way the design's own static mock does.
+ *   consumer actually has a `dni` on file. Always "Pendiente" today: the
+ *   `ConsumerBlueprint` used by login/registro never returns `dni`
+ *   (deliberately excludes encrypted PII — see session-provider.tsx's
+ *   `Consumer` doc comment), so the client never actually sees it even for
+ *   a consumer who has one on file server-side.
  * - "Enviar link" (password reset) and "Eliminar mi cuenta": **UI-only**.
  *   Neither `POST /api/v1/passwords` (or similar) nor any consumer-destroy
  *   route exists in `backend/config/routes.rb` at all — confirmed absent,
@@ -39,8 +45,9 @@ import { formatConsumerQrId } from "@/lib/mock/qr-grid";
  *   anything, so the label says so explicitly instead of silently doing
  *   nothing (or, worse, faking a real deletion via `logout()`).
  * - "Cerrar sesión": real — the same `logout()` + redirect PerfilView always
- *   had, just relocated here to match the design's "SEGURIDAD Y CUENTA"
- *   grouping instead of living outside every tab.
+ *   had (now backed by a real session, see session-provider.tsx), just
+ *   relocated here to match the design's "SEGURIDAD Y CUENTA" grouping
+ *   instead of living outside every tab.
  */
 
 function formatMaskedDni(dni: string | undefined): string {
@@ -147,7 +154,7 @@ export interface SettingsTabProps {
 }
 
 export function SettingsTab({ consumer, onEdit, onLogout }: SettingsTabProps) {
-  const [notifications, setNotifications] = useState(true);
+  const { notificationsEnabled, toggleNotifications } = useNotificationsSetting();
   const [priceAlerts, setPriceAlerts] = useState(false);
   const [resetLinkSent, setResetLinkSent] = useState(false);
   const [deleteArmed, setDeleteArmed] = useState(false);
@@ -207,8 +214,8 @@ export function SettingsTab({ consumer, onEdit, onLogout }: SettingsTabProps) {
           <ToggleRow
             icon="notifications"
             label="Notificaciones"
-            on={notifications}
-            onToggle={() => setNotifications((value) => !value)}
+            on={notificationsEnabled}
+            onToggle={toggleNotifications}
           />
           <ToggleRow
             icon="sell"

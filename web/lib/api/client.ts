@@ -1,15 +1,18 @@
 // Typed fetch wrapper for the real Rails backend (`/api/v1/*`, see PLAN.md
-// Fase 3). The backend does not exist yet in this worktree (Fase 3 has not
-// been built) — this client has never been exercised against a live server.
-// See ./README.md for the feature-flag mechanism and its rationale.
+// Fase 3). Confirmed live and exercised end-to-end against a running
+// localhost:3000 (merchants/menu-items originally, and now real auth +
+// protected endpoints — see ./README.md and lib/api/auth.ts). See
+// ./README.md for the feature-flag mechanism and its rationale.
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
-// Fase 3's documented scope also includes `POST /api/v1/registrations` and
-// `POST /api/v1/sessions` (email + password login, JWT/session token). This
-// app is public search only per the PRD — no auth, no logged-in state — so
-// those two endpoints are intentionally NOT implemented anywhere under
-// lib/api/. See ./README.md for the full rationale.
+// `POST /api/v1/registrations` and `POST /api/v1/sessions` (email +
+// password login, JWT/session token) are now implemented for real — see
+// lib/api/auth.ts and lib/session/session-provider.tsx. This app's auth was
+// originally out of scope (see ./README.md's now-superseded "Out of scope:
+// auth" section, kept for history) but a prior session already added a
+// mocked, localStorage-only session; this one replaces that mock with real
+// backend calls.
 
 /** How long a real API call may hang before we treat the backend as
  * unreachable and surface a network error. Doubles as the "cheap
@@ -22,10 +25,27 @@ export class ApiError extends Error {
    * Absent for network-level failures (unreachable host, timeout, DNS). */
   status?: number;
 
-  constructor(message: string, options?: { status?: number; cause?: unknown }) {
+  /**
+   * Parsed JSON error body, when the backend answered with one (e.g.
+   * `{ error: "Invalid email or password" }` from sessions#create, or
+   * `{ errors: { email: ["has already been taken"] } }` from
+   * registrations#create — both confirmed by curling the live backend, see
+   * lib/api/auth.ts). `undefined` when the response had no JSON body, or a
+   * body that failed to parse. Callers that need to surface a specific
+   * backend-provided message (auth flows) should read this instead of
+   * re-parsing the response themselves; every other caller can keep
+   * ignoring it and just catching `ApiError`.
+   */
+  body?: unknown;
+
+  constructor(
+    message: string,
+    options?: { status?: number; cause?: unknown; body?: unknown },
+  ) {
     super(message, { cause: options?.cause });
     this.name = "ApiError";
     this.status = options?.status;
+    this.body = options?.body;
   }
 }
 
@@ -55,9 +75,21 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
+    // Best-effort: most error responses on this API are JSON
+    // (`{ error: "..." }` or `{ errors: {...} }`, see ApiError#body's doc
+    // comment), but this must never throw on a non-JSON or empty body.
+    const body = await response.json().catch(() => undefined);
     throw new ApiError(`API request failed: ${response.status} ${path}`, {
       status: response.status,
+      body,
     });
+  }
+
+  // 204 No Content (e.g. DELETE /favorites/:id, DELETE /consumer_settings/:id)
+  // has no body — `.json()` on an empty body throws a SyntaxError. Every
+  // caller of a 204 endpoint expects `Promise<void>` anyway.
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

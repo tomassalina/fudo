@@ -21,11 +21,14 @@ export interface EditProfileFormProps {
  * LoginForm/RegisterForm via `authInputClassName` — both already-established
  * patterns from slice 1, not new ones invented for this form.
  *
- * On save, calls `updateProfile()` (session-provider.tsx) — a small,
- * deliberate addition to SessionProvider rather than re-calling `login()`:
- * `login()` mints a brand-new mocked consumer (new random `id`) every call,
- * which is correct for "signing in" but wrong for "editing the current
- * session" — it would silently change the consumer's identity on every save.
+ * On save, calls `updateProfile()` (session-provider.tsx) — deliberately
+ * NOT `login()` (which authenticates as a *different* real account) nor a
+ * real backend write: there is no `PATCH /api/v1/consumers/:id` (or `/me`)
+ * route anywhere in `backend/config/routes.rb` (confirmed absent), so this
+ * only ever updates the locally-cached session copy — see
+ * `updateProfile`'s own doc comment on `SessionContextValue` for the full
+ * reasoning and what that means for this form (edits don't survive a
+ * logout/login or another device).
  *
  * The actual field state lives in `EditProfileFields` below, mounted only
  * while `open` (Sheet renders `null` and drops its children while closed —

@@ -17,10 +17,9 @@ import { isValidEmail } from "@/lib/utils/validation";
  * reference's "Continuar con Google" button and "o con email" divider are
  * intentionally left out for that reason.
  *
- * Mock rule (no real backend to check credentials against): any
- * syntactically valid email + a non-empty password succeeds — see the TODO
- * in lib/session/session-provider.tsx. The only "invalid credentials" this
- * form can actually show is a client-side format error.
+ * Calls the real `POST /api/v1/sessions` (via `useSession().login`,
+ * session-provider.tsx) — invalid credentials surface as a real 401 from
+ * the backend, rendered via `error.message` below.
  */
 export function LoginForm() {
   const router = useRouter();
@@ -49,6 +48,8 @@ export function LoginForm() {
     try {
       await login(email, password);
       router.push("/perfil");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ocurrió un error. Intentá de nuevo.");
     } finally {
       setSubmitting(false);
     }

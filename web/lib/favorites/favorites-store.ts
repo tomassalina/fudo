@@ -4,34 +4,57 @@
 // cards/detail pages (components/features/buscar/FavoriteButton.tsx) and
 // the Perfil "Favoritos" tab (components/features/perfil/FavoritesTab.tsx).
 //
-// The real backend already exposes a per-consumer `favorites` resource
-// (`GET/POST/DELETE /api/v1/favorites`, `backend/app/controllers/api/v1/
-// favorites_controller.rb`, Fase 3) — confirmed present by reading the
-// controller and routes, not assumed. It is NOT called from here: this
-// entire web app's session is a mocked, local-only login
-// (`lib/session/session-provider.tsx`'s own TODOs — no real
-// `POST /api/v1/sessions` call anywhere) and `apiFetch` (`lib/api/client.ts`)
-// has no bearer/JWT header support at all yet, so any authenticated request
-// — this one included — would 401 unconditionally today. Wiring real
-// consumer auth through the whole app is a separate, materially larger
-// change than "add a Favoritos tab to Perfil", so until that lands, favorited
-// ids live in `localStorage` only: same honest-mock architecture as
-// `lib/mock/visit-history.ts` (plausible, not a live table) and the exact
-// same external-store shape as `lib/location/use-location.ts` (state that
-// must survive a reload and must never cause a server/first-paint hydration
-// mismatch). Swap this module's internals for real `favorites` API calls
-// once real consumer auth exists — every call site already reads through
-// this module's public API, not `localStorage` directly, so that swap stays
-// contained here.
+// Now backed for real by `GET/POST/DELETE /api/v1/favorites`
+// (backend/app/controllers/api/v1/favorites_controller.rb, via
+// lib/api/favorites.ts) — this used to be `localStorage`-only, because
+// reaching that endpoint needed a real bearer token that didn't exist yet
+// (see session-provider.tsx). There is no mock/anonymous mode here anymore:
+// favoriting only exists for a real, logged-in consumer, so
+// `toggleFavoriteMerchant` is a silent no-op while logged out (see below)
+// instead of a fake localStorage-only favorite that would vanish/never
+// existed the moment auth became real.
+//
+// This keeps the exact same external-store shape
+// (`useFavoriteMerchantIds`/`useIsMerchantFavorite`/`toggleFavoriteMerchant`)
+// call sites already use — same pattern `lib/location/use-location.ts` uses
+// for "state that must survive a reload and must never cause a
+// server/first-paint hydration mismatch" — but the network fetch that
+// hydrates it is triggered from `useFavoriteMerchantIds` (a hook, where a
+// `useEffect` is allowed), not from `getSnapshot` itself (which must stay a
+// pure, side-effect-light read for `useSyncExternalStore`'s contract).
+//
+// Not optimistic: `toggleFavoriteMerchant` waits for the real
+// POST/DELETE to resolve before flipping the heart, same tradeoff as
+// `useNotificationsSetting` (lib/consumer-settings/use-notifications-setting.ts)
+// and for the same reason — simpler and safer than reconciling an
+// optimistic add against the real `favorite.id` DELETE needs, at the cost
+// of one round-trip of visible delay.
 
-import { useSyncExternalStore } from "react";
-
-const STORAGE_KEY = "fudo:favorite-merchant-ids";
+import { useEffect, useSyncExternalStore } from "react";
+import {
+  createFavorite,
+  deleteFavorite,
+  fetchFavorites,
+  type RawFavorite,
+} from "@/lib/api/favorites";
+import { ApiError } from "@/lib/api/client";
+import { getStoredToken } from "@/lib/auth/token-storage";
+import { forceLogout, subscribeToSession } from "@/lib/session/session-provider";
 
 type Listener = () => void;
 
-let favoriteIds: number[] = [];
-let hydrated = false;
+interface FavoriteEntry {
+  merchantId: number;
+  favoriteId: number;
+}
+
+let entries: FavoriteEntry[] = [];
+// The token these `entries` were loaded for — `undefined` means "never
+// loaded", distinct from `null` ("loaded, and confirmed logged out") so a
+// fresh module always attempts one real load instead of assuming "no
+// token" up front.
+let loadedForToken: string | null | undefined;
+let loadInFlight: Promise<void> | null = null;
 const listeners = new Set<Listener>();
 
 function notify() {
@@ -43,54 +66,116 @@ function subscribe(listener: Listener) {
   return () => listeners.delete(listener);
 }
 
-function isNumberArray(value: unknown): value is number[] {
-  return Array.isArray(value) && value.every((entry) => typeof entry === "number");
+function currentIds(): number[] {
+  return entries.map((entry) => entry.merchantId);
 }
 
-function readStored(): number[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return isNumberArray(parsed) ? parsed : [];
-  } catch {
-    // Corrupted or blocked storage (private mode, quota) — fall back to "no
-    // favorites" instead of throwing during render.
-    return [];
-  }
-}
-
-function persist(ids: number[]) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch {
-    // Storage blocked/full — state still updates in memory for this tab, it
-    // just won't survive a reload.
-  }
-}
+// Stable per-render-cycle reference: `useSyncExternalStore` requires
+// `getSnapshot` to return a value that's `Object.is`-stable when nothing
+// changed, or it re-renders forever. `entries` (module state) only ever
+// gets reassigned (never mutated in place) by `setEntries`, so caching the
+// derived id array alongside it is enough to keep this stable.
+let cachedIds: number[] = [];
+let cachedForEntries: FavoriteEntry[] = entries;
 
 function getSnapshot(): number[] {
-  if (!hydrated) {
-    favoriteIds = readStored();
-    hydrated = true;
+  if (cachedForEntries !== entries) {
+    cachedIds = currentIds();
+    cachedForEntries = entries;
   }
-  return favoriteIds;
+  return cachedIds;
 }
 
 function getServerSnapshot(): number[] {
   return [];
 }
 
-function setFavoriteIds(next: number[]) {
-  favoriteIds = next;
-  hydrated = true;
-  persist(next);
+function setEntries(next: FavoriteEntry[]) {
+  entries = next;
   notify();
 }
 
-/** Every favorited merchant id, in the order they were favorited. */
+function handleFavoriteError(error: unknown) {
+  if (error instanceof ApiError && error.status === 401) {
+    // Expired/invalid token on a protected call — clear the session so
+    // useRequireAuth() (any page that requires one) redirects to /login,
+    // per this session's auth-integration brief.
+    forceLogout();
+  }
+  // Every other failure (network, 422 already-favorited from a stale
+  // double-click, ...): nothing to reconcile since this store isn't
+  // optimistic — the UI already reflects the last confirmed server state.
+}
+
+/** Loads this consumer's favorites once per token — a no-op if already
+ * loaded for the current token (including "loaded, logged out"), and
+ * de-duplicated against a load already in flight (every mounted
+ * `FavoriteButton` + `FavoritesTab` calls this on mount). */
+async function ensureLoaded(): Promise<void> {
+  const token = getStoredToken();
+  if (token === loadedForToken) return;
+  if (loadInFlight) {
+    await loadInFlight;
+    return;
+  }
+
+  loadInFlight = (async () => {
+    if (!token) {
+      loadedForToken = null;
+      setEntries([]);
+      return;
+    }
+    try {
+      const favorites = await fetchFavorites();
+      loadedForToken = token;
+      setEntries(favorites.map(toEntry));
+    } catch (error) {
+      // Leave `loadedForToken` unset so a future `ensureLoaded()` call
+      // (e.g. after a real reconnect) retries instead of caching a failure
+      // forever.
+      handleFavoriteError(error);
+    }
+  })();
+
+  try {
+    await loadInFlight;
+  } finally {
+    loadInFlight = null;
+  }
+}
+
+function toEntry(favorite: RawFavorite): FavoriteEntry {
+  return { merchantId: favorite.merchant_id, favoriteId: favorite.id };
+}
+
+// Resync with the session, not just with each hook's own mount. Without
+// this, an already-mounted `FavoriteButton` (e.g. on /buscar, which isn't
+// gated by `useRequireAuth()`) kept showing its last-known heart state
+// after a forced logout — this store's `entries`/`loadedForToken` are
+// module state, independent of session-provider.tsx's, so nothing told it
+// to reset. Fires on every login/register/logout/forceLogout: clears the
+// stale snapshot synchronously (so no component can render or toggle a
+// heart for a session that no longer applies) and re-triggers
+// `ensureLoaded()` for whatever the new token is — a no-op fetch (empty
+// list) when logged out, a real refetch for a newly logged-in consumer
+// without requiring every mounted component to remount first.
+subscribeToSession(() => {
+  const token = getStoredToken();
+  if (token === loadedForToken) return;
+  setEntries([]);
+  loadedForToken = undefined;
+  void ensureLoaded();
+});
+
+/** Every favorited merchant id, in the order the backend returned them. */
 export function useFavoriteMerchantIds(): number[] {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const ids = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  useEffect(() => {
+    void ensureLoaded();
+  }, []);
+
+  return ids;
 }
 
 /** Whether one specific merchant is favorited — the hook `FavoriteButton` reads. */
@@ -98,11 +183,30 @@ export function useIsMerchantFavorite(merchantId: number): boolean {
   return useFavoriteMerchantIds().includes(merchantId);
 }
 
-/** Adds or removes one merchant id from the favorited set. */
+/**
+ * Adds or removes one merchant from the current consumer's real favorites.
+ * Silently does nothing while logged out — there's no anonymous favoriting
+ * once auth is real; callers (FavoriteButton, FavoritesTab) don't currently
+ * render for a clearly-anonymous flow that would need its own "please log
+ * in" affordance, so this stays a no-op rather than throwing.
+ */
 export function toggleFavoriteMerchant(merchantId: number): void {
-  const current = getSnapshot();
-  const next = current.includes(merchantId)
-    ? current.filter((id) => id !== merchantId)
-    : [...current, merchantId];
-  setFavoriteIds(next);
+  const token = getStoredToken();
+  if (!token) return;
+
+  const existing = entries.find((entry) => entry.merchantId === merchantId);
+
+  if (existing) {
+    deleteFavorite(existing.favoriteId)
+      .then(() => {
+        setEntries(entries.filter((entry) => entry.merchantId !== merchantId));
+      })
+      .catch(handleFavoriteError);
+  } else {
+    createFavorite(merchantId)
+      .then((favorite) => {
+        setEntries([...entries, toEntry(favorite)]);
+      })
+      .catch(handleFavoriteError);
+  }
 }

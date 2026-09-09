@@ -24,16 +24,23 @@ import { isValidEmail } from "@/lib/utils/validation";
  * DNI is deliberately NOT collected here: per design.md Decision 1, the DNI
  * is loaded by the waiter at checkout, not typed in by the consumer at
  * signup — the design reference only ever shows it as a masked, read-only
- * profile field ("•••• 4821"), never as an editable input.
+ * profile field ("•••• 4821"), never as an editable input. This used to be
+ * a real conflict with the backend (`Consumer` required `dni` presence,
+ * confirmed with a live curl returning `422 {"errors":{"dni":["can't be
+ * blank"]}}` on any registration with no `dni`) — fixed backend-side
+ * (commit 1cdb20e, `dni` is now optional on `POST /api/v1/registrations`,
+ * re-confirmed live: `201` + a real JWT with no `dni` in the payload), so
+ * this form staying DNI-less is now correct per Decision 1, not a
+ * known gap.
  *
- * "Registering" is mocked as a login: it calls the same `login()` from
- * SessionProvider, passing the entered name/phone through its optional
- * `profile` argument so the mocked consumer reflects what was actually
- * typed instead of a name derived from the email.
+ * Calls the real `POST /api/v1/registrations` (via `useSession().register`,
+ * session-provider.tsx) — a `password`/`password_confirmation` mismatch or a
+ * duplicate email surface as a real 422 from the backend, rendered via
+ * `error.message` below.
  */
 export function RegisterForm() {
   const router = useRouter();
-  const { login } = useSession();
+  const { register } = useSession();
   const isPhone = useIsPhoneViewport();
 
   const [firstName, setFirstName] = useState("");
@@ -71,12 +78,16 @@ export function RegisterForm() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password, {
+      await register({
+        email: email.trim(),
+        password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
       });
       router.push("/perfil");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ocurrió un error. Intentá de nuevo.");
     } finally {
       setSubmitting(false);
     }

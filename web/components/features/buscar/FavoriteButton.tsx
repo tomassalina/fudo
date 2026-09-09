@@ -5,12 +5,13 @@ import { toggleFavoriteMerchant, useIsMerchantFavorite } from "@/lib/favorites/f
 
 // The heart/favorite toggle on merchant cards and the detail page header
 // (`p.fav`/`favCurrent` in the design references). Backed by the shared
-// `lib/favorites/favorites-store.ts` (localStorage, not the real
-// `favorites` table — see that module's header comment for exactly why),
-// so toggling a merchant here is what makes it show up under Perfil →
-// Favoritos, and stays consistent across every card/instance for the same
-// merchant instead of each button keeping its own independent, page-reload-
-// losing `useState` (the previous implementation).
+// `lib/favorites/favorites-store.ts` — now the real `favorites` table (see
+// that module's header comment) — so toggling a merchant here is what makes
+// it show up under Perfil → Favoritos, and stays consistent across every
+// card/instance for the same merchant instead of each button keeping its
+// own independent `useState`. Silently does nothing while logged out (see
+// `toggleFavoriteMerchant`'s doc comment) — there's no "log in to favorite"
+// prompt here yet, out of scope for this pass.
 
 interface FavoriteButtonProps {
   merchantId: number;
