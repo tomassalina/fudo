@@ -37,6 +37,7 @@ Fudo Consumers es una app mobile de fidelización, descubrimiento con IA y regal
 3. `backend/db/structure.sql`
 4. `docs/database-schema.drawio`
 5. `openspec/changes/fudo-consumers-mvp/design.md`
+6. `openspec/changes/fudo-consumers-mvp/learnings.md`
 
 ## Convenciones
 
@@ -44,6 +45,10 @@ Fudo Consumers es una app mobile de fidelización, descubrimiento con IA y regal
 - RSpec para tests de backend.
 - No tocar el QR de pedidos/pago existente de Fudo Comensal — es producto de otro equipo, límite de alcance explícito (ver `openspec/changes/fudo-consumers-mvp/design.md`, Decisión 1).
 - Nunca self-hostear PostHog.
+
+## Documentar decisiones antes de cerrar una tarea (obligatorio)
+
+Cualquier persona o agente que trabaje en este repo y, durante su tarea, tome una **decisión de arquitectura o de producto no trivial** (una elección con alternativas descartadas, no un detalle de implementación mecánico) o aprenda **algo no obvio** (un gotcha, una limitación técnica real, una razón de negocio que no estaba escrita en ningún lado) **tiene que documentarlo en `openspec/`** — en `openspec/changes/fudo-consumers-mvp/learnings.md` (o el archivo de decisiones vigente del change activo) — **antes de dar la tarea por cerrada**. No es opcional ni queda a criterio de "si hay tiempo". Seguí el formato ya usado en `design.md`/`learnings.md`: qué se decidió, por qué, y qué alternativas se descartaron y por qué. No inventes decisiones que no pasaron de verdad — documentá solo lo que efectivamente se decidió o se aprendió en tu tarea.
 
 ## Cómo levantar cada app
 
