@@ -420,7 +420,152 @@ Giménez").
    misma causa raíz, no dos hallazgos independientes.
 
 Ninguno de estos puntos es un fix de "bajo riesgo" (todos requieren agregar estado/lógica
-nueva, no solo CSS) — quedan documentados para decisión de producto/diseño, no los tocamos.
+nueva, no solo CSS) — quedaron documentados para decisión de producto/diseño. **Estado
+actual: los 4 hallazgos de arriba están resueltos**, ver el detalle punto por punto abajo.
+
+### Hallazgos #1-#4 — RESUELTOS
+
+**Archivos nuevos:** `web/components/ui/SegmentedControl.tsx` (segmented control genérico,
+primera extracción del patrón — ver su comentario de cabecera para por qué no se tocó
+`ResultModeToggle.tsx` ni el switcher hecho a mano de `QrSheetContent.tsx`, los otros dos
+lugares que ya repetían este patrón), `web/lib/favorites/favorites-store.ts` (favoritos
+client-side), `web/components/features/perfil/FavoritesTab.tsx`,
+`web/components/features/perfil/SettingsTab.tsx`. **Modificados:**
+`web/components/features/perfil/PerfilView.tsx` (agrega el estado de tab + arma las 3
+tabpanels), `web/components/features/perfil/ProfileHeader.tsx` (recorta a
+avatar/nombre/email/tier — DNI/Teléfono/"Actualizar mis datos" se mudaron a Ajustes),
+`web/components/features/perfil/VisitHistoryList.tsx` (color de los puntitos),
+`web/components/features/buscar/FavoriteButton.tsx` (pasa a estado compartido, ver hallazgo
+#3 de abajo), `web/lib/session/session-provider.tsx` (agrega `createdAt` para la fila
+"Alta"). **Tests:** `__tests__/app/perfil/page.test.tsx` reescrito para navegar por tabs,
+`__tests__/lib/favorites/favorites-store.test.ts` y
+`__tests__/components/features/perfil/FavoritesTab.test.tsx` nuevos — 144 tests en verde
+(vs. 127 antes), `pnpm lint` y `pnpm build` (41 páginas) también limpios.
+
+1. **Segmented control "Visitas/Favoritos/Ajustes" — implementado.** Verificado real en el
+   browser (`orca`, sesión con `info@tomassalina.com`/`Demo1234`, viewport 390×844): las 3
+   tabs existen (`role="tablist"`/`"tab"`), cambian el panel visible al hacer click, y el
+   tratamiento visual es el del pill naranja de `ResultModeToggle` ("Lugares/Platos" en
+   Buscar) tal como pidió la tarea — **no** el `var(--surf2)` sutil que usa el `.dc.html` de
+   referencia para este mismo control, una diferencia de estilo ya aceptada en el resto de
+   la app (ver hallazgo #1 de la sección 2, mismo criterio). **Nota de layout no pedida
+   explícitamente pero relevante:** la referencia wide (`Fudo Customers.dc.html`, ~línea
+   805) muestra este mismo `pTabs` como una nav vertical dentro de un sidebar sticky, un
+   layout de 2 columnas distinto del de phone. No se reprodujo esa variante — Perfil ahora
+   es una sola columna centrada (`max-w-[620px]`) en cualquier viewport, igual que
+   `/regalar`. Documentado como simplificación deliberada, no como gap sin resolver.
+
+2. **Puntitos de progreso por visita — ya existían en el código, con el color equivocado;
+   corregido.** Verificación importante antes de asumir el hallazgo original: `VisitStamps`
+   (dentro de `VisitHistoryList.tsx`) **ya estaba implementado y wireado** desde el commit
+   `bff9bad` (anterior a este QA), no faltaba como decía el hallazgo #2 original — se
+   confirmó leyendo `lib/mock/loyalty.ts` (el conteo mock de visitas nunca supera 8, así que
+   `nextStep` siempre existe) y con `orca eval` en vivo (`getComputedStyle` sobre los puntos
+   de "Tostado Café Club": 6 rellenos + 2 vacíos, un `Consumer` con 6 visitas mock). Lo que sí
+   era un bug real: los puntos rellenos usaban `bg-success` (verde, `#8FD46A`) en vez de
+   naranja — la referencia solo llama a `this.stamps()` una vez en todo el archivo, para esta
+   lista exacta, y pasa explícitamente `"#FF5023"` (naranja), no el verde que `stamps()` usa
+   de default en otros lados. Corregido a `bg-accent`; confirmado en vivo que los puntos
+   rellenos computan a `rgb(255, 80, 35)`.
+
+3. **Badge de tier reposicionado — hecho.** `ProfileHeader.tsx` ahora pone `topTier` como
+   último hijo del `flex` que ya contiene avatar + nombre/email, igual que
+   `docs/design-reference/Fudo App.dc.html` línea ~684. Confirmado en el snapshot de
+   accesibilidad en vivo: "Plata" aparece inmediatamente después de "info@tomassalina.com" y
+   antes del `tablist`, no en una fila propia.
+
+4. **Tab "Ajustes" — implementado con el contenido real de `dataRows`/`prefRows`, con una
+   corrección al brief de esta tarea.** El brief de esta tarea (arriba) decía "cada [fila]
+   con chevron que abre el sheet 'Actualizar mis datos'" — **eso no es lo que dice el HTML
+   fuente que la misma tarea pidió revisar**: en `Fudo App.dc.html` (líneas 751-762),
+   `dataRows` (Nombre/Email/Teléfono/DNI/Alta) se renderiza como 5 filas de solo lectura, sin
+   `onClick` ni chevron individual — el chevron y el `onClick={openEdit}` están **únicamente**
+   en el botón separado "Actualizar mis datos" debajo de la lista. Implementado así (matching
+   la fuente, no la descripción del brief): `SettingsTab.tsx` renderiza los 5 `dataRows`
+   estáticos + un botón "Actualizar mis datos" aparte que abre el mismo `EditProfileForm` que
+   ya existía (reusado, no duplicado). Verificado en vivo: click en "Actualizar mis datos" en
+   el tab Ajustes abre el sheet.
+
+   **Qué quedó conectado a backend real vs. qué es UI-only (honesto, no todo es igual):**
+   - **Real:** Nombre/Email/Teléfono/DNI/Alta leen `useSession().consumer` (sesión mockeada
+     pero real dentro de esa mock); "Actualizar mis datos" llama a `updateProfile()` real;
+     "Cerrar sesión" llama a `logout()` real (se reubicó desde fuera de las tabs a "SEGURIDAD
+     Y CUENTA", como en el diseño).
+   - **UI-only, documentado en el propio código (`SettingsTab.tsx`, comentario de cabecera):**
+     toggles de "Notificaciones" y "Alertas de precio" (estado local, se resetea al recargar).
+     Verificado además que el backend **sí** expone un recurso real de settings por consumer
+     (`ConsumerSetting` — campos `theme`/`notifications_enabled`,
+     `backend/app/controllers/api/v1/consumer_settings_controller.rb`, confirmado leyendo el
+     controller) — pero llegar a él requiere un request autenticado, y **esta app web no tiene
+     ningún mecanismo de auth real todavía**: la sesión es 100% mock/localStorage
+     (`lib/session/session-provider.tsx`, sin ningún `fetch`/token) y `apiFetch`
+     (`lib/api/client.ts`) no adjunta ningún header de auth. Conectarlo de verdad implica
+     construir auth real en toda la app — fuera de alcance de "completar Perfil". El toggle
+     de "Tema claro/oscuro" del diseño **no se reprodujo**: esta app no tiene tema claro (solo
+     define paleta dark en `globals.css`), un toggle sin nada que alternar sería peor que no
+     tenerlo.
+   - **UI-only con confirmación pero sin acción real, documentado:** "Enviar link" (reset de
+     contraseña) y "Eliminar mi cuenta". Confirmado leyendo `backend/config/routes.rb`: no
+     existe ninguna ruta de reset de contraseña ni de borrado de cuenta — no es un problema de
+     auth como los toggles, directamente no existe el endpoint. "Eliminar mi cuenta" pide
+     confirmación en 2 pasos (como el diseño) pero el segundo tap muestra explícitamente
+     "Pendiente de backend — tu cuenta no fue eliminada" en vez de simular un borrado real
+     (el propio mock del diseño hace `logout()` en ese punto, lo cual acá se consideró
+     engañoso — un consumer pensaría que su cuenta se borró de verdad).
+   - **Chip "DNI · Verificado y cifrado":** solo se muestra así cuando `consumer.dni` existe
+     de verdad (nunca, en este mock — nada en el flujo de login/registro colecta DNI); si no,
+     muestra "Pendiente", en vez de afirmar "verificado" incondicionalmente como hace el mock
+     estático de la referencia.
+
+### Tab "Favoritos" — implementado, con una aclaración importante sobre qué es real
+
+La tarea pedía confirmar si `GET /api/v1/favorites` existe antes de asumir. **Se confirmó
+que sí existe** (`backend/app/controllers/api/v1/favorites_controller.rb`: `index`/`create`/
+`destroy`, scoped a `current_consumer`, con manejo de unique-index en soft-delete). **Pero no
+se llama desde acá** — mismo motivo que los toggles del punto 4: no hay ningún token de auth
+real que este front pueda adjuntar a ese request (confirmado que `lib/session/
+session-provider.tsx` no hace ningún `fetch` y `apiFetch` no soporta headers de auth), así
+que pegarle a ese endpoint devolvería 401 siempre, con o sin sesión mock activa.
+
+En vez de dejar la tab permanentemente vacía, se armó `lib/favorites/favorites-store.ts`: un
+store client-side (mismo patrón `useSyncExternalStore` + `localStorage` que
+`lib/location/use-location.ts`) que guarda qué `merchantId`s se marcaron como favoritos.
+Esto además corrigió un bug preexistente de paso: `FavoriteButton.tsx` (el corazón de las
+cards/detalle) tenía `useState` **local e independiente por instancia** — favoritear un lugar
+en `/buscar` no se reflejaba en el mismo lugar visto en `/restaurantes/:id`, y se perdía al
+recargar. Ahora usa el store compartido, así que favoritear en cualquier lado es consistente
+y aparece en Perfil → Favoritos. El nombre/foto/tipo de cada merchant favorito sí se resuelve
+con datos reales vía `getMerchantById` (mock o backend real, según `isApiConfigured()`) — lo
+que **no** es real es el flag de "favorito" en sí, que vive solo en ese navegador, no en la
+tabla `favorites` del backend. Verificado en vivo con `orca`: favoritear "El Rincón de
+Gorriti" desde `/restaurantes/257` (persistido en `localStorage['fudo:favorite-merchant-ids']
+= [257]`) lo hizo aparecer en Perfil → Favoritos con nombre real "El Rincón de Gorriti" y meta
+"Bar · Palermo"; sin favoritos, se ve el estado vacío del diseño ("Marcá lugares con el
+corazón y aparecen acá.").
+
+### Hallazgo nuevo, descubierto durante esta verificación (no introducido por este cambio, no arreglado)
+
+**Un hard-reload de `/perfil` con sesión mock válida redirige a `/login` en vez de mostrar el
+perfil.** Reproducido de forma consistente con `orca goto` (navegación de página completa, no
+un `<Link>` del lado del cliente) apuntando a `/perfil` con
+`localStorage['fudo:consumer-session']` ya seteado: la página siempre rebota a `/login`, a
+pesar de que el dato de sesión está ahí (confirmado leyendo `localStorage` después del
+rebote). Causa probable: `useSyncExternalStore` en `session-provider.tsx` usa
+`getServerSnapshot` (`null`) para el render de SSR/primera pintada; el `useEffect` de
+redirect en `PerfilView.tsx` corre con ese `null` antes de que React corrija el snapshot al
+valor real de `localStorage`, y el `router.replace("/login")` ya se disparó para cuando se
+corrige. **Confirmado que no lo causó este cambio:** el `diff` de
+`lib/session/session-provider.tsx` en este commit solo agrega el campo opcional `createdAt` —
+no se tocó `getSnapshot`/`getServerSnapshot` ni el efecto de redirect de `PerfilView.tsx`
+(ambos ya tenían esta forma exacta antes de este trabajo). Navegar a `/perfil` con un
+`<Link>` del lado del cliente (el flujo real: login → redirect interno, o click en el ícono
+"Perfil" del nav) no dispara el bug — solo una recarga completa de esa URL puntual. Queda
+documentado, no arreglado: es un bug de la infraestructura de sesión mockeada, no del
+contenido de Perfil que pedía esta tarea, y tocar `session-provider.tsx` más allá de lo
+mínimo tenía riesgo de pisar trabajo concurrente de otro agente en este mismo working
+directory (ver `git status` al momento de este commit — hay cambios sin commitear ajenos en
+`lib/api/`, `lib/data/search.ts`, `lib/utils/{buscar-href,distance}.ts`, `components/features/
+buscar/`, no tocados por este trabajo).
 
 ---
 
@@ -807,5 +952,9 @@ producto/diseño o trabajo más grande)
   real) — depende de qué dato de negocio se quiera mostrar.
 - Filtro de precio (`price`) en `/buscar` — se queda client-side a propósito, el backend no
   tiene un contrato de rango/banda que traducir sin cambiar la semántica (ver fix #6).
-- Segmented "Visitas/Favoritos/Ajustes" y puntitos de progreso por visita en Perfil.
+- ~~Segmented "Visitas/Favoritos/Ajustes" y puntitos de progreso por visita en Perfil~~ —
+  **resuelto**, ver sección 6 ("Hallazgos #1-#4 — RESUELTOS" y el tab "Favoritos").
 - Botón "Continuar con Google" en Login.
+- **[Nuevo, no arreglado]** Hard-reload de `/perfil` con sesión mock válida redirige a
+  `/login` (bug de hidratación en `session-provider.tsx`, preexistente — ver el cierre de la
+  sección 6).

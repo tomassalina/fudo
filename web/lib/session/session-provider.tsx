@@ -24,6 +24,17 @@ export interface Consumer {
   email: string;
   phone?: string;
   dni?: string;
+  /**
+   * ISO timestamp for the "Alta" row in Perfil → Ajustes (`dataRows`'
+   * `Alta` field in the design reference, e.g. "12 mar 2025"). There is no
+   * `created_at` on this mocked session — the real column lives on
+   * `public.consumers` (backend), never fetched here (see the `login`
+   * TODO below) — so this is simply "when this mock session started",
+   * stamped once at login/registro and carried across edits. Optional so
+   * existing test fixtures that construct a bare `Consumer` literal don't
+   * need updating; callers show a "—" fallback when absent.
+   */
+  createdAt?: string;
 }
 
 export type ConsumerProfileInput = Partial<
@@ -175,6 +186,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         lastName: profile?.lastName || derived.lastName,
         email,
         phone: profile?.phone,
+        createdAt: new Date().toISOString(),
       });
     },
     [],

@@ -3,13 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/session/use-session";
-import { useIsPhoneViewport } from "@/lib/hooks/use-viewport";
 import { FluidContainer } from "@/components/ui/FluidContainer";
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/SegmentedControl";
 import { ProfileHeader } from "./ProfileHeader";
 import { EditProfileForm } from "./EditProfileForm";
 import { VisitHistoryList } from "./VisitHistoryList";
 import { RewardsSection } from "./RewardsSection";
+import { FavoritesTab } from "./FavoritesTab";
+import { SettingsTab } from "./SettingsTab";
 import { getAvailableRewards, getVisitHistory, tierForVisits } from "@/lib/mock/visit-history";
+
+type ProfileTab = "visitas" | "favoritos" | "ajustes";
+
+// `pTabs` in both design references — same 3 tabs/icons/order
+// (`docs/design-reference/Fudo App.dc.html`, ~line 1876). The wide
+// reference (`Fudo Customers.dc.html`) renders this same list as a
+// vertical sidebar nav instead of a horizontal pill (see its ~line 805) —
+// deliberately not reproduced here: this app reads as one centered column
+// at every width (same pattern `app/regalar/page.tsx` already uses), so the
+// tab switcher stays the one horizontal `SegmentedControl` regardless of
+// viewport instead of a second bespoke wide-only layout.
+const PROFILE_TABS: SegmentedOption<ProfileTab>[] = [
+  { key: "visitas", label: "Visitas", icon: "history" },
+  { key: "favoritos", label: "Favoritos", icon: "favorite_border" },
+  { key: "ajustes", label: "Ajustes", icon: "settings" },
+];
 
 /**
  * /perfil requires a session — there's no anonymous "browse your own
@@ -31,8 +49,8 @@ import { getAvailableRewards, getVisitHistory, tierForVisits } from "@/lib/mock/
 export function PerfilView() {
   const router = useRouter();
   const { isAuthenticated, logout } = useSession();
-  const isPhone = useIsPhoneViewport();
   const [editOpen, setEditOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTab>("visitas");
   // `logout()` flips `isAuthenticated` to false synchronously, while this
   // page is still mounted (client-side navigation away hasn't resolved
   // yet) — without this guard, the effect below would race handleLogout's
@@ -65,34 +83,70 @@ export function PerfilView() {
   }
 
   return (
-    <FluidContainer as="main" className="flex flex-col gap-8 py-8 pb-24">
-      <div
-        className={
-          isPhone
-            ? "flex flex-col gap-8"
-            : "grid grid-cols-[minmax(240px,280px)_minmax(0,1fr)] items-start gap-8"
-        }
-      >
-        <ProfileHeader topTier={topTier} onEdit={() => setEditOpen(true)} />
+    <FluidContainer as="main" className="flex flex-col items-center py-8 pb-24">
+      <div className="flex w-full max-w-[620px] flex-col gap-6">
+        <ProfileHeader topTier={topTier} />
 
-        <div className="flex flex-col gap-8">
-          <VisitHistoryList entries={visitHistory} />
-          <RewardsSection entries={rewards} />
+        <SegmentedControl
+          options={PROFILE_TABS}
+          value={activeTab}
+          onChange={setActiveTab}
+          label="Secciones de tu perfil"
+        />
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-2.5 rounded-full border border-border bg-surface px-4 py-3.5 text-[14px] font-semibold text-accent-light transition-colors hover:border-accent/50"
+        {activeTab === "visitas" ? (
+          <div
+            role="tabpanel"
+            id="segmented-tabpanel-visitas"
+            aria-labelledby="segmented-tab-visitas"
+            className="flex flex-col gap-8"
           >
-            <span aria-hidden className="material-symbols text-[19px]">
-              logout
-            </span>
-            Cerrar sesión
-          </button>
-        </div>
+            <VisitHistoryList entries={visitHistory} />
+            <RewardsSection entries={rewards} />
+          </div>
+        ) : null}
+
+        {activeTab === "favoritos" ? (
+          <div
+            role="tabpanel"
+            id="segmented-tabpanel-favoritos"
+            aria-labelledby="segmented-tab-favoritos"
+          >
+            <FavoritesTab />
+          </div>
+        ) : null}
+
+        {activeTab === "ajustes" ? (
+          <div
+            role="tabpanel"
+            id="segmented-tabpanel-ajustes"
+            aria-labelledby="segmented-tab-ajustes"
+          >
+            {/* PerfilView already returned `null` above when logged out, so
+                `useSession().consumer` is guaranteed non-null here — but
+                TypeScript can't see that guard from inside a sibling
+                component. Re-read it locally instead of threading a
+                possibly-null prop through SettingsTab. */}
+            <SettingsTabContent onEdit={() => setEditOpen(true)} onLogout={handleLogout} />
+          </div>
+        ) : null}
       </div>
 
       <EditProfileForm open={editOpen} onClose={() => setEditOpen(false)} />
     </FluidContainer>
   );
+}
+
+/** Thin wrapper so `SettingsTab` (which needs a non-null `Consumer`) doesn't
+ * have to re-derive/guard `useSession()` itself. */
+function SettingsTabContent({
+  onEdit,
+  onLogout,
+}: {
+  onEdit: () => void;
+  onLogout: () => void;
+}) {
+  const { consumer } = useSession();
+  if (!consumer) return null;
+  return <SettingsTab consumer={consumer} onEdit={onEdit} onLogout={onLogout} />;
 }

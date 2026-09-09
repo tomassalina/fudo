@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { toggleFavoriteMerchant, useIsMerchantFavorite } from "@/lib/favorites/favorites-store";
 
 // The heart/favorite toggle on merchant cards and the detail page header
-// (`p.fav`/`favCurrent` in the design references). Ephemeral component
-// state only — a real favorite needs the `favorites` table + a logged-in
-// consumer (see lib/api/README.md's "Out of scope: auth": favorites live in
-// the mobile app, not this web platform), so this resets on reload instead
-// of pretending to persist something this app has no backend call for yet.
-// Swap the two state hooks below for a real mutation once that lands; every
-// caller already passes `merchantId` it would need.
+// (`p.fav`/`favCurrent` in the design references). Backed by the shared
+// `lib/favorites/favorites-store.ts` (localStorage, not the real
+// `favorites` table — see that module's header comment for exactly why),
+// so toggling a merchant here is what makes it show up under Perfil →
+// Favoritos, and stays consistent across every card/instance for the same
+// merchant instead of each button keeping its own independent, page-reload-
+// losing `useState` (the previous implementation).
 
 interface FavoriteButtonProps {
   merchantId: number;
-  initialFavorite?: boolean;
   /** "overlay" (card corner, dark translucent chip) vs "plain" (detail header, on top of the cover photo). */
   variant?: "overlay" | "plain";
   className?: string;
@@ -22,21 +21,20 @@ interface FavoriteButtonProps {
 
 export function FavoriteButton({
   merchantId,
-  initialFavorite = false,
   variant = "overlay",
   className,
 }: FavoriteButtonProps) {
-  const [favorite, setFavorite] = useState(initialFavorite);
+  const favorite = useIsMerchantFavorite(merchantId);
 
   return (
     <button
       type="button"
       aria-pressed={favorite}
-      aria-label={favorite ? `Quitar ${merchantId} de favoritos` : `Guardar en favoritos`}
+      aria-label={favorite ? "Quitar de favoritos" : "Guardar en favoritos"}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        setFavorite((current) => !current);
+        toggleFavoriteMerchant(merchantId);
       }}
       className={cn(
         "flex h-9 w-9 flex-none items-center justify-center rounded-full transition-transform active:scale-90",

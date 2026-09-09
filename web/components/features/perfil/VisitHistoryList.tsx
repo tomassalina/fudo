@@ -11,7 +11,10 @@ import type { VisitHistoryEntry } from "@/lib/mock/visit-history";
  * threshold. Mirrors `stamps()` in the design reference (`v.stamps`, capped
  * to a `LADDER_LENGTH`-ranged rule) — capped at 8 dots here so a merchant
  * with a far-off ladder step (e.g. 10 visits) doesn't render an oddly long
- * row on phone widths. */
+ * row on phone widths. Filled dots are `bg-accent` (orange), matching the
+ * design's own `this.stamps(p, "#FF5023")` call for this exact list — the
+ * only call site of `stamps()` in the reference, and it explicitly passes
+ * orange, not the green `stamps()` defaults to elsewhere. */
 function VisitStamps({ visits, target }: { visits: number; target: number }) {
   const dots = Math.min(target, 8);
   return (
@@ -22,7 +25,7 @@ function VisitStamps({ visits, target }: { visits: number; target: number }) {
           className={cn(
             "h-2.5 w-2.5 rounded-full border",
             index < visits
-              ? "border-transparent bg-success"
+              ? "border-transparent bg-accent"
               : "border-border bg-transparent",
           )}
         />
