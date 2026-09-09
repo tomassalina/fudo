@@ -10,9 +10,9 @@ import '../../features/loyalty/qr_sheet.dart';
 
 /// Tab labels in [MainShell.currentIndex] order, also used as the
 /// `tab_name` analytics property (see [AnalyticsService.trackTabChanged]).
-const List<String> _tabNames = ['Buscar', 'Mis Lugares', 'Regalar'];
+const List<String> _tabNames = ['Inicio', 'Buscar', 'Mis Lugares', 'Regalar'];
 
-/// Bottom navigation shell shared by the three main tabs (Search,
+/// Bottom navigation shell shared by the four main tabs (Inicio, Search,
 /// My Places, Gifting). Wraps whatever branch go_router is currently
 /// showing and drives navigation via [onTap].
 ///
@@ -121,26 +121,34 @@ class _FloatingBottomNav extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _NavItem(
-                          icon: Symbols.search,
-                          label: 'Buscar',
+                          icon: Symbols.home,
+                          label: 'Inicio',
                           selected: currentIndex == 0,
                           onTap: () => onTap(0),
                         ),
                       ),
                       Expanded(
                         child: _NavItem(
-                          icon: Symbols.storefront,
-                          label: 'Mis Lugares',
+                          icon: Symbols.search,
+                          label: 'Buscar',
                           selected: currentIndex == 1,
                           onTap: () => onTap(1),
                         ),
                       ),
                       Expanded(
                         child: _NavItem(
-                          icon: Symbols.card_giftcard,
-                          label: 'Regalar',
+                          icon: Symbols.storefront,
+                          label: 'Mis Lugares',
                           selected: currentIndex == 2,
                           onTap: () => onTap(2),
+                        ),
+                      ),
+                      Expanded(
+                        child: _NavItem(
+                          icon: Symbols.card_giftcard,
+                          label: 'Regalar',
+                          selected: currentIndex == 3,
+                          onTap: () => onTap(3),
                         ),
                       ),
                     ],

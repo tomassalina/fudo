@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- Required by geolocator for the "Inicio" tab's "Activar ubicación"
+         pill (lib/core/location/location_service.dart). Coarse is enough
+         for the "which merchant is closer" distance chips this drives, but
+         fine is requested too since it's what most devices grant by
+         default and geolocator falls back gracefully either way. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:label="mobile"
         android:name="${applicationName}"

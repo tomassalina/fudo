@@ -36,12 +36,14 @@ Future<void> _pumpShell(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('tapping each of the 3 tabs calls onTap with its index', (
+  testWidgets('tapping each of the 4 tabs calls onTap with its index', (
     tester,
   ) async {
     final tapped = <int>[];
     await _pumpShell(tester, currentIndex: 0, onTap: tapped.add);
 
+    await tester.tap(find.byIcon(Symbols.home));
+    await tester.pump();
     await tester.tap(find.byIcon(Symbols.search));
     await tester.pump();
     await tester.tap(find.byIcon(Symbols.storefront));
@@ -49,7 +51,7 @@ void main() {
     await tester.tap(find.byIcon(Symbols.card_giftcard));
     await tester.pump();
 
-    expect(tapped, [0, 1, 2]);
+    expect(tapped, [0, 1, 2, 3]);
   });
 
   testWidgets(
@@ -78,17 +80,20 @@ void main() {
   testWidgets('the active tab renders visually distinct from inactive ones', (
     tester,
   ) async {
-    await _pumpShell(tester, currentIndex: 1, onTap: (_) {});
+    await _pumpShell(tester, currentIndex: 2, onTap: (_) {});
 
+    final homeIcon = tester.widget<Icon>(find.byIcon(Symbols.home));
     final searchIcon = tester.widget<Icon>(find.byIcon(Symbols.search));
     final placesIcon = tester.widget<Icon>(find.byIcon(Symbols.storefront));
     final giftIcon = tester.widget<Icon>(find.byIcon(Symbols.card_giftcard));
 
-    // "Mis Lugares" (index 1) is the active tab here.
+    // "Mis Lugares" (index 2) is the active tab here.
     expect(placesIcon.color, AppTheme.accent);
+    expect(homeIcon.color, isNot(AppTheme.accent));
     expect(searchIcon.color, isNot(AppTheme.accent));
     expect(giftIcon.color, isNot(AppTheme.accent));
     expect(searchIcon.color, equals(giftIcon.color));
+    expect(homeIcon.color, equals(giftIcon.color));
 
     // Labels are always mounted (so the width/opacity transition can
     // animate), but only the active tab's label is actually visible.
@@ -100,6 +105,7 @@ void main() {
     );
 
     expect(labelOpacityFor('Mis Lugares').opacity, 1);
+    expect(labelOpacityFor('Inicio').opacity, 0);
     expect(labelOpacityFor('Buscar').opacity, 0);
     expect(labelOpacityFor('Regalar').opacity, 0);
   });
